@@ -1,0 +1,40 @@
+﻿第一步，配置：
+1)system.web节点下添加配置 httpHandlers
+    <httpHandlers>
+      <add verb="*" path="API/*/Json" type="LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi"/>
+      <add verb="*" path="API/*" type="LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi"/>
+    </httpHandlers>
+2)system.webServer下添加配置
+     <handlers>
+      <add name="APIJsonHandler" path="API/*/Json" verb="*" type="LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi" modules="IsapiModule" scriptProcessor="%windir%\Microsoft.NET\Framework64\V4.0.30319\aspnet_isapi.dll" resourceType="Unspecified" requireAccess="Script" preCondition="bitness64" />
+      <add name="APIFunHandler" path="API/*" verb="*" type="LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi" modules="IsapiModule" scriptProcessor="%windir%\Microsoft.NET\Framework64\V4.0.30319\aspnet_isapi.dll" resourceType="Unspecified" requireAccess="Script" preCondition="bitness64" />
+    </handlers>
+
+
+
+第二步，开发，要暴露的方法加APIMethod属性，目前为了方便起见要求方法为public并且不能为static：
+ [APIMethod]
+  public string apifun(apiparam xx)
+  {
+      return string.Format("tt:{0},pp:{1},SS:{2}", xx.tt, xx.pp, xx.SS);
+  }
+
+  则api接口地址为: http://网站虚拟目录url/api/api1
+  接口文档地址为:http://网站虚拟目录url/api/api1/json
+
+  第三步，global.asax注册接口:
+   void Application_Start(object sender, EventArgs e)
+   {
+            // 在应用程序启动时运行的代码
+            WebAPI.APIFactory.Init(apifun所在的程序集); 
+   }
+
+  其它约定：
+  1）APIMethod只能有一个参数或者无参,如果有多个参数，请包装成一个对象，建议全部用对象来作为方法参数。
+  如下面是错误的
+     fun(参数1，参数2，参数3)
+  正确的写法是
+     fun(对象参数:{参数1，参数2，参数3}) 
+  2)如果对象很复杂(比如数组，列表)，要用post传参，格式为data=参数json，简单的也可以用get，参数直接附加在url后
+
+
