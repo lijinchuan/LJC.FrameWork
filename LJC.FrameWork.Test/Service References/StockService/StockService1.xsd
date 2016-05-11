@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:tns="http://tempuri.org/" elementFormDefault="qualified" targetNamespace="http://tempuri.org/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:import schemaLocation="http://localhost/StockService/StockService.svc?xsd=xsd2" namespace="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" />
+  <xs:import schemaLocation="http://localhost/StockService/StockService.svc?xsd=xsd4" namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays" />
+  <xs:element name="GetHisDayQuoteSpan">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="innerCode" nillable="true" type="xs:string" />
+        <xs:element minOccurs="0" name="start" type="xs:dateTime" />
+        <xs:element minOccurs="0" name="end" type="xs:dateTime" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetHisDayQuoteSpanResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q1="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" minOccurs="0" name="GetHisDayQuoteSpanResult" nillable="true" type="q1:ArrayOfStockQuoteContract" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetHisDayQuote">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="innerCode" nillable="true" type="xs:string" />
+        <xs:element minOccurs="0" name="lastest" type="xs:boolean" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetHisDayQuoteResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q2="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" minOccurs="0" name="GetHisDayQuoteResult" nillable="true" type="q2:ArrayOfStockQuoteContract" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetStockInfo">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="innerCode" nillable="true" type="xs:string" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetStockInfoResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q3="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" minOccurs="0" name="GetStockInfoResult" nillable="true" type="q3:StockInfoDataContract" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetStockInfoBySecurityCodeA">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="securityCodeA" nillable="true" type="xs:string" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetStockInfoBySecurityCodeAResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q4="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" minOccurs="0" name="GetStockInfoBySecurityCodeAResult" nillable="true" type="q4:ArrayOfStockInfoDataContract" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetAllStockInfo">
+    <xs:complexType>
+      <xs:sequence />
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetAllStockInfoResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q5="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" minOccurs="0" name="GetAllStockInfoResult" nillable="true" type="q5:ArrayOfStockInfoDataContract" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetSimpleStockInfoList">
+    <xs:complexType>
+      <xs:sequence />
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetSimpleStockInfoListResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q6="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" minOccurs="0" name="GetSimpleStockInfoListResult" nillable="true" type="q6:ArrayOfStockSimpleInfoDataContract" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetRealQuote">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="innerCode" nillable="true" type="xs:string" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetRealQuoteResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q7="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" minOccurs="0" name="GetRealQuoteResult" nillable="true" type="q7:StockQuoteContract" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetFundInfo">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="fundCode" nillable="true" type="xs:string" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetFundInfoResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q8="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" minOccurs="0" name="GetFundInfoResult" nillable="true" type="q8:FundInfoDataContract" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="NextTradeDate">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="now" type="xs:dateTime" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="NextTradeDateResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="NextTradeDateResult" type="xs:dateTime" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="NextOpenTime">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="now" type="xs:dateTime" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="NextOpenTimeResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="NextOpenTimeResult" type="xs:dateTime" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="IsOpen">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="dt" type="xs:dateTime" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="IsOpenResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="IsOpenResult" type="xs:boolean" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetCurrMonthTradeDay">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="year" type="xs:int" />
+        <xs:element minOccurs="0" name="mon" type="xs:int" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetCurrMonthTradeDayResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q9="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="GetCurrMonthTradeDayResult" nillable="true" type="q9:ArrayOfdateTime" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="SetTradeDate">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="dt" type="xs:dateTime" />
+        <xs:element minOccurs="0" name="canTrade" type="xs:boolean" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="SetTradeDateResponse">
+    <xs:complexType>
+      <xs:sequence />
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetIndexRealQuote">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q10="http://schemas.microsoft.com/2003/10/Serialization/Arrays" minOccurs="0" name="indexCodes" nillable="true" type="q10:ArrayOfstring" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetIndexRealQuoteResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element xmlns:q11="http://schemas.datacontract.org/2004/07/WCFService.DataContracts" minOccurs="0" name="GetIndexRealQuoteResult" nillable="true" type="q11:ArrayOfStockQuoteContract" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
