@@ -32,13 +32,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="HtmlAgilityPack">
-      <HintPath>..\..\DLL\HtmlAgilityPack.1.4.6\Net40\HtmlAgilityPack.dll</HintPath>
+      <HintPath>..\DLL\HtmlAgilityPack.1.4.6\Net40\HtmlAgilityPack.dll</HintPath>
     </Reference>
     <Reference Include="log4net">
       <HintPath>..\DLL\Log4\net40\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Practices.EnterpriseLibrary.Data">
-      <HintPath>..\..\DLL\EL5\Microsoft.Practices.EnterpriseLibrary.Data.dll</HintPath>
+      <HintPath>..\DLL\EL5\Microsoft.Practices.EnterpriseLibrary.Data.dll</HintPath>
     </Reference>
     <Reference Include="MySql.Data">
       <HintPath>..\DLL\Mysql\MySql.Data.dll</HintPath>

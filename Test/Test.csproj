@@ -36,24 +36,24 @@
       <HintPath>..\DLL\EL5\Framework.Logging.V2.API.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Practices.EnterpriseLibrary.Common">
-      <HintPath>..\..\..\Code\李金川\Lib\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
+      <HintPath>..\DLL\EL5\Microsoft.Practices.EnterpriseLibrary.Common.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Practices.EnterpriseLibrary.Data, Version=5.0.414.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\DLL\EL5\Microsoft.Practices.EnterpriseLibrary.Data.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Practices.ServiceLocation">
-      <HintPath>..\..\..\Code\李金川\Lib\Microsoft.Practices.ServiceLocation.dll</HintPath>
+      <HintPath>..\DLL\EL5\Microsoft.Practices.ServiceLocation.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Practices.Unity">
-      <HintPath>..\..\..\Code\李金川\Lib\Microsoft.Practices.Unity.dll</HintPath>
+      <HintPath>..\DLL\EL5\Microsoft.Practices.Unity.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Practices.Unity.Interception">
-      <HintPath>..\..\..\Code\李金川\Lib\Microsoft.Practices.Unity.Interception.dll</HintPath>
+      <HintPath>..\DLL\EL5\Microsoft.Practices.Unity.Interception.dll</HintPath>
     </Reference>
     <Reference Include="MySql.Data, Version=6.4.4.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Code\李金川\Lib\MySql.Data.dll</HintPath>
+      <HintPath>..\DLL\Mysql\MySql.Data.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

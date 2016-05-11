@@ -39,13 +39,13 @@
       <HintPath>..\DLL\Redis\ServiceStack.Common.3.9.71\lib\net35\ServiceStack.Common.dll</HintPath>
     </Reference>
     <Reference Include="ServiceStack.Interfaces">
-      <HintPath>..\..\Lib\Redis\ServiceStack.Interfaces.dll</HintPath>
+      <HintPath>..\DLL\Redis\ServiceStack.Common.3.9.71\lib\net35\ServiceStack.Interfaces.dll</HintPath>
     </Reference>
     <Reference Include="ServiceStack.Redis">
       <HintPath>..\DLL\Redis\ServiceStack.Redis.3.9.71\lib\net35\ServiceStack.Redis.dll</HintPath>
     </Reference>
     <Reference Include="ServiceStack.Text">
-      <HintPath>..\..\Lib\Redis\ServiceStack.Text.dll</HintPath>
+      <HintPath>..\DLL\Redis\ServiceStack.Text.3.9.11\lib\net35\ServiceStack.Text.dll</HintPath>
     </Reference>
     <Reference Include="System" />
   </ItemGroup>

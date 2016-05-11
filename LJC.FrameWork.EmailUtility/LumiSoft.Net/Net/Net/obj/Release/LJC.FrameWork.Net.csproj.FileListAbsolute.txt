@@ -19,3 +19,6 @@ E:\Work\learn\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\bin\
 E:\Work\learn\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\bin\Release\LumiSoft.Net.xml
 E:\Work\learn\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\Release\LJC.FrameWork.Net.dll
 D:\程序\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\Release\LJC.FrameWork.Net.csprojResolveAssemblyReference.cache
+D:\GitHub\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\bin\Release\LJC.FrameWork.Net.dll
+D:\GitHub\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\bin\Release\LumiSoft.Net.xml
+D:\GitHub\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\Release\LJC.FrameWork.Net.dll
