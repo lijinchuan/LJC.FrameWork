@@ -103,7 +103,11 @@ namespace LJC.FrameWork.EntityBuf
                     ebtype.EntityType = EntityType.LIST;
                     break;
                 default:
-                    if (ebtype.ClassType.IsEnum)
+                    if(isArray)
+                    {
+                        ebtype.EntityType = EntityType.ARRAY;
+                    }
+                    else if (ebtype.ClassType.IsEnum)
                     {
                         ebtype.EntityType = EntityType.ENUM;
                     }
@@ -433,6 +437,36 @@ namespace LJC.FrameWork.EntityBuf
                         var list = (IList)val;
                         msWriter.WriteInt32(list.Count);
                         foreach (var item in list)
+                        {
+                            Serialize(item, msWriter);
+                        }
+                    }
+                    break;
+                case EntityType.ARRAY:
+                    if (isArray)
+                    {
+                        if (val == null)
+                        {
+                            msWriter.WriteInt32(-1);
+                            break;
+                        }
+                        var listarr = (Array)val;
+                        msWriter.WriteInt32(listarr.Length);
+                        for (int i = 0; i < listarr.Length; i++)
+                        {
+                            Serialize(listarr.GetValue(i), msWriter);
+                        }
+                    }
+                    else
+                    {
+                        if (val == null)
+                        {
+                            msWriter.WriteInt32(-1);
+                            break;
+                        }
+                        var arr = (Array)val;
+                        msWriter.WriteInt32(arr.Length);
+                        foreach (var item in arr)
                         {
                             Serialize(item, msWriter);
                         }
@@ -784,6 +818,32 @@ namespace LJC.FrameWork.EntityBuf
                             list.Add(DeSerialize(listvaluetype, msReader));
                         }
                         return list;
+                    }
+                case EntityType.ARRAY:
+                    if (isArray)
+                    {
+                        var listarrlen = msReader.ReadInt32();
+                        if (listarrlen == -1)
+                            return null;
+                        var listArray = (Array)Activator.CreateInstance(buftype.ValueType, listarrlen);
+                        for (int i = 0; i < listarrlen; i++)
+                        {
+                            listArray.SetValue(DeSerialize(buftype.ClassType, msReader), i);
+                        }
+                        return listArray;
+                    }
+                    else
+                    {
+                        var arrlen = msReader.ReadInt32();
+                        if (arrlen == -1)
+                            return null;
+                        var arr = (Array)Activator.CreateInstance(buftype.ValueType,arrlen);
+                        var listvaluetype = GetListValueType(buftype.ValueType);
+                        for (int i = 0; i < arrlen; i++)
+                        {
+                            arr.SetValue(DeSerialize(listvaluetype, msReader), i);
+                        }
+                        return arr;
                     }
                 default:
                     throw new Exception("反序列化错误");

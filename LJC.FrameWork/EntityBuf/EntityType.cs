@@ -53,6 +53,7 @@ namespace LJC.FrameWork.EntityBuf
         /// 列表类型
         /// </summary>
         LIST,
+        ARRAY,
         /// <summary>
         /// 复杂类型
         /// </summary>
