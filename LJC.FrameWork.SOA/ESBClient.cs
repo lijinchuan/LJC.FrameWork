@@ -70,24 +70,11 @@ namespace LJC.FrameWork.SOA
         {
             using (var client = new ESBClient())
             {
-                try
-                {
-                    client.StartClient();
-                    client.Error += client_Error;
-                    var result = client.DoRequest<T>(serviceId, functionId, param);
+                client.StartClient();
+                client.Error += client_Error;
+                var result = client.DoRequest<T>(serviceId, functionId, param);
 
-                    return result;
-                }
-                catch (Exception ex)
-                {
-                    Logger.TextLog(string.Format("SOA请求超时,服务ID:{0},功能ID：{1}",
-                        serviceId,functionId),
-                        ex,LogCategory.SOA);
-
-                    //throw ex;
-
-                    return default(T);
-                }
+                return result;
             }
         }
 
