@@ -14,7 +14,7 @@ namespace LJC.FrameWork.SOA
     public class ESBServer:SessionServer
     {
         private static object LockObj = new object();
-        private List<ESBServiceInfo> ServiceContainer = new List<ESBServiceInfo>();
+        protected List<ESBServiceInfo> ServiceContainer = new List<ESBServiceInfo>();
         private Dictionary<string,Session> ClientSessionList = new Dictionary<string,Session>();
         private static ReaderWriterLockSlim ConatinerLock = new ReaderWriterLockSlim();
 

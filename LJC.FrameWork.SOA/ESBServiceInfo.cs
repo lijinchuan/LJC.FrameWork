@@ -6,7 +6,7 @@ using LJC.FrameWork.SocketApplication;
 
 namespace LJC.FrameWork.SOA
 {
-    internal class ESBServiceInfo
+    public class ESBServiceInfo
     {
         public int ClientID
         {
