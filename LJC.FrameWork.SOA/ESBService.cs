@@ -145,8 +145,8 @@ namespace LJC.FrameWork.SOA
 
         public bool RegisterService()
         {
-            if (this.ServiceNo <= 0)
-                throw new Exception("注册服务失败：服务号未分配");
+            if (this.ServiceNo < 0)
+                throw new Exception("注册服务失败：服务号不能为负数");
 
             Message msg = new Message((int)SOAMessageType.RegisterService);
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();

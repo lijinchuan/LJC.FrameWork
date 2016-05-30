@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Diagnostics;
 using System.Threading;
 using LJC.FrameWork.LogManager;
+using LJC.FrameWork.EntityBuf;
 
 namespace LJC.FrameWork.SOA
 {
@@ -87,7 +88,12 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        internal void DoTransferRequest(Session session,string msgTransactionID,SOARequest request)
+        public virtual object DoRequest(int funcId,byte[] param)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void DoTransferRequest(Session session, string msgTransactionID, SOARequest request)
         {
             session.BusinessTimeStamp = DateTime.Now;
             session.Tag = new Tuple<int, int>(request.ServiceNo, request.FuncId);
@@ -97,86 +103,109 @@ namespace LJC.FrameWork.SOA
             msgRet.MessageHeader.TransactionID = msgTransactionID;
             resp.IsSuccess = true;
 
-            //查询服务
-            var serviceInfos= ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo));
-            if (serviceInfos == null||serviceInfos.Count==0)
+            //调用本地的方法
+            if (request.ServiceNo == 0)
             {
-                resp.IsSuccess = false;
-                resp.ErrMsg = string.Format("{0}服务未注册。", request.ServiceNo);
-            }
-           
-            if (resp.IsSuccess)
-            {
-                ESBServiceInfo serviceInfo = null;
-                if (serviceInfos.Count == 1)
-                {
-                    serviceInfo = serviceInfos[0];
-                }
-                else
-                {
-                    Random rd = new Random();
-                    var idx = rd.Next(1, serviceInfos.Count + 1);
-                    serviceInfo = serviceInfos[idx - 1];
-                }
-
                 try
                 {
-                    SOATransferRequest transferrequest = new SOATransferRequest();
-                    transferrequest.ClientId = session.SessionID;
-                    transferrequest.FundId = request.FuncId;
-                    transferrequest.Param = request.Param;
-                    transferrequest.ClientTransactionID = msgTransactionID;
-
-                    Message msg = new Message((int)SOAMessageType.DoSOATransferRequest);
-                    msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
-                    msg.SetMessageBody(transferrequest);
-
-                    try
-                    {
-                        ConatinerLock.EnterWriteLock();
-                        ClientSessionList.Add(session.SessionID, session);
-                    }
-                    finally
-                    {
-                        ConatinerLock.ExitWriteLock();
-                    }
-
-                    if (serviceInfo.Session.SendMessage(msg))
-                    {
-                        Logger.DebugTextLog(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2}",
-                            msgTransactionID, request.ServiceNo, request.FuncId), string.Empty, LogCategory.Other);
-                        return;
-                    }
-                    else
-                    {
-                        try
-                        {
-                            ConatinerLock.EnterWriteLock();
-                            ClientSessionList.Remove(session.SessionID);
-                        }
-                        finally
-                        {
-                            ConatinerLock.ExitWriteLock();
-                        }
-                    }
-                    //var result = SendMessageAnsy<byte[]>(serviceInfo.Session, msg);
-
-                    //resp.Result = result;
+                    var obj = DoRequest(request.FuncId, request.Param);
+                    resp.Result = EntityBuf.EntityBufCore.Serialize(obj);
                 }
                 catch (Exception ex)
                 {
                     resp.IsSuccess = false;
                     resp.ErrMsg = ex.Message;
                 }
+                
+                msgRet.SetMessageBody(resp);
+                session.Socket.SendMessge(msgRet);
             }
+            else
+            {
+                //查询服务
+                var serviceInfos = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo));
+                if (serviceInfos == null || serviceInfos.Count == 0)
+                {
+                    resp.IsSuccess = false;
+                    resp.ErrMsg = string.Format("{0}服务未注册。", request.ServiceNo);
+                }
 
-            msgRet.SetMessageBody(resp);
-            session.Socket.SendMessge(msgRet);
+                if (resp.IsSuccess)
+                {
+                    ESBServiceInfo serviceInfo = null;
+                    if (serviceInfos.Count == 1)
+                    {
+                        serviceInfo = serviceInfos[0];
+                    }
+                    else
+                    {
+                        Random rd = new Random();
+                        var idx = rd.Next(1, serviceInfos.Count + 1);
+                        serviceInfo = serviceInfos[idx - 1];
+                    }
 
-            Logger.TextLog(string.Format("SOA请求失败,服务可能未注册,请求序列号:{0},服务号:{1},功能号:{2}",
-                msgTransactionID, request.ServiceNo, request.FuncId)
-                , DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒",
-                LogCategory.SOA);
+                    try
+                    {
+                        SOATransferRequest transferrequest = new SOATransferRequest();
+                        transferrequest.ClientId = session.SessionID;
+                        transferrequest.FundId = request.FuncId;
+                        transferrequest.Param = request.Param;
+                        transferrequest.ClientTransactionID = msgTransactionID;
+
+                        Message msg = new Message((int)SOAMessageType.DoSOATransferRequest);
+                        msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                        msg.SetMessageBody(transferrequest);
+
+                        try
+                        {
+                            ConatinerLock.EnterWriteLock();
+                            ClientSessionList.Add(session.SessionID, session);
+                        }
+                        finally
+                        {
+                            ConatinerLock.ExitWriteLock();
+                        }
+
+                        if (serviceInfo.Session.SendMessage(msg))
+                        {
+                            Logger.DebugTextLog(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2}",
+                                msgTransactionID, request.ServiceNo, request.FuncId), string.Empty, LogCategory.Other);
+                            return;
+                        }
+                        else
+                        {
+                            try
+                            {
+                                ConatinerLock.EnterWriteLock();
+                                ClientSessionList.Remove(session.SessionID);
+                            }
+                            finally
+                            {
+                                ConatinerLock.ExitWriteLock();
+                            }
+                        }
+                        //var result = SendMessageAnsy<byte[]>(serviceInfo.Session, msg);
+
+                        //resp.Result = result;
+                    }
+                    catch (Exception ex)
+                    {
+                        resp.IsSuccess = false;
+                        resp.ErrMsg = ex.Message;
+                    }
+                }
+
+                if (!resp.IsSuccess)
+                {
+                    msgRet.SetMessageBody(resp);
+                    session.Socket.SendMessge(msgRet);
+
+                    Logger.TextLog(string.Format("SOA请求失败,服务可能未注册,请求序列号:{0},服务号:{1},功能号:{2}",
+                        msgTransactionID, request.ServiceNo, request.FuncId)
+                        , DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒",
+                        LogCategory.SOA);
+                }
+            }
         }
 
         protected sealed override void FormAppMessage(Message message, Session session)
@@ -188,6 +217,9 @@ namespace LJC.FrameWork.SOA
                 try
                 {
                     var req = message.GetMessageBody<RegisterServiceRequest>();
+
+                    if (req.ServiceNo == 0)
+                        throw new NotSupportedException("不允许使用服务号:0");
 
                     lock (LockObj)
                     {
