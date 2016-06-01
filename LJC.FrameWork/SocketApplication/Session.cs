@@ -47,13 +47,20 @@ namespace LJC.FrameWork.SocketApplication
             internal set;
         }
 
+        private DateTime _lastSessionTime = DateTime.Now;
         /// <summary>
         /// 上次心跳时间
         /// </summary>
         public DateTime LastSessionTime
         {
-            get;
-            internal set;
+            get
+            {
+                return _lastSessionTime;
+            }
+            internal set
+            {
+                _lastSessionTime = value;
+            }
         }
 
         /// <summary>

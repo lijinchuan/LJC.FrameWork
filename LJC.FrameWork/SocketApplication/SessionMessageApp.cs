@@ -145,6 +145,11 @@ namespace LJC.FrameWork.SocketApplication
         {
             base.OnMessage(message);
 
+            if (SessionContext != null)
+            {
+                SessionContext.LastSessionTime = DateTime.Now;
+            }
+
             if (message.IsMessage(MessageType.LOGIN))
             {
                 LoginResponseMessage loginMsg = message.GetMessageBody<LoginResponseMessage>();
@@ -217,6 +222,9 @@ namespace LJC.FrameWork.SocketApplication
         {
             try
             {
+                if (DateTime.Now.Subtract(SessionContext.LastSessionTime).TotalSeconds < 15)
+                    return;
+
                 if (SessionContext.IsTimeOut() && isFirstTimeOut)
                 {
                     isFirstTimeOut = false;
@@ -259,6 +267,7 @@ namespace LJC.FrameWork.SocketApplication
             msg.SetMessageBody(session.SessionID);
 
             //s.Send(msg.ToBytes());
+            session.LastSessionTime = DateTime.Now;
             session.Socket.SendMessge(message);
 
             SocketApplicationComm.Debug(string.Format("{0}发来心跳！", session.SessionID));
@@ -379,6 +388,8 @@ namespace LJC.FrameWork.SocketApplication
         /// <param name="message"></param>
         protected override void FormApp(Message message, Session session)
         {
+            session.LastSessionTime = DateTime.Now;
+
             if (ServerModeNeedLogin && !session.IsLogin && !message.IsMessage(MessageType.LOGIN))
             {
                 Message msg = new Message(MessageType.RELOGIN);
