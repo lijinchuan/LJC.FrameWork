@@ -146,6 +146,19 @@ namespace LJC.FrameWork.SOA
 
                     try
                     {
+                        if(DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds>30)
+                        {
+                            lock (LockObj)
+                            {
+                                ServiceContainer.Remove(serviceInfo);
+                            }
+                            serviceInfo = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo)).LastOrDefault();
+                            if(serviceInfo==null)
+                            {
+                                throw new Exception(string.Format("{0}服务未注册。", request.ServiceNo));
+                            }
+                        }
+
                         SOATransferRequest transferrequest = new SOATransferRequest();
                         transferrequest.ClientId = session.SessionID;
                         transferrequest.FundId = request.FuncId;
