@@ -304,7 +304,7 @@ namespace LJC.FrameWork.SocketApplication
 
         private void Receiving()
         {
-            while (!stop && socketClient.Connected)
+            while (!stop/* && socketClient.Connected*/)
             {
                 try
                 {
@@ -604,6 +604,11 @@ namespace LJC.FrameWork.SocketApplication
 
             stop = true;
             isStartClient = false;
+        }
+
+        ~MessageApp()
+        {
+            Dispose();
         }
     }
 }
