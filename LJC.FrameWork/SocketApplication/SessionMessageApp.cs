@@ -222,7 +222,7 @@ namespace LJC.FrameWork.SocketApplication
         {
             try
             {
-                if (DateTime.Now.Subtract(SessionContext.LastSessionTime).TotalSeconds < 15)
+                if (DateTime.Now.Subtract(SessionContext.LastSessionTime).TotalSeconds < 10)
                     return;
 
                 if (SessionContext.IsTimeOut() && isFirstTimeOut)

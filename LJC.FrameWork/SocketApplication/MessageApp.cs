@@ -443,7 +443,7 @@ namespace LJC.FrameWork.SocketApplication
 
         protected virtual void OnMessage(Message message)
         {
-
+           
         }
 
         protected virtual void OnError(Exception e)

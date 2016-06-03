@@ -110,7 +110,7 @@ namespace LJC.FrameWork.SocketApplication
 
         public bool IsTimeOut()
         {
-            return ((int)DateTime.Now.Subtract(LastSessionTime).TotalMilliseconds) > SessionTimeOut;
+            return ((int)DateTime.Now.Subtract(LastSessionTime).TotalMilliseconds) > SessionTimeOut * 2;
         }
 
         public void Close()

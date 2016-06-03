@@ -184,8 +184,23 @@ namespace LJC.FrameWork.SOA
 
         protected override void OnSessionResume()
         {
-            RegisterService();
             base.OnSessionResume();
+
+            try
+            {
+                if (RegisterService())
+                {
+                    LogHelper.Instance.Info("重新注册服务成功");
+                }
+                else
+                {
+                    LogHelper.Instance.Info("重新注册服务失败");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Instance.Error("重新注册服务失败", ex);
+            }
         }
     }
 }
