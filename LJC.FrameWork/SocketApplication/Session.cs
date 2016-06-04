@@ -125,7 +125,14 @@ namespace LJC.FrameWork.SocketApplication
             if (this.Socket == null)
                 throw new Exception("无套接字");
 
-            return this.Socket.SendMessge(msg);
+            var boo = this.Socket.SendMessge(msg);
+
+            if (boo)
+            {
+                this.LastSessionTime = DateTime.Now;
+            }
+
+            return boo;
         }
     }
 }

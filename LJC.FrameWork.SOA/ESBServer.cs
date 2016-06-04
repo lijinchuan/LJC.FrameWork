@@ -181,6 +181,8 @@ namespace LJC.FrameWork.SOA
 
                         if (serviceInfo.Session.SendMessage(msg))
                         {
+
+
                             Logger.DebugTextLog(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2}",
                                 msgTransactionID, request.ServiceNo, request.FuncId), string.Empty, LogCategory.Other);
                             return;
