@@ -538,8 +538,11 @@ namespace LJC.FrameWork.Comm
                 //string result = string.Empty;
 
                 HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(url);
-                if (buff != null && buff.Length > 0)
+
+                if (buff != null && buff.Length > 0 && method == WebRequestMethodEnum.GET)
                     webRequest.Method = WebRequestMethodEnum.POST.ToString();
+                else
+                    webRequest.Method = method.ToString();
 
                 webRequest.Accept = Accept;
                 webRequest.AllowAutoRedirect = true;

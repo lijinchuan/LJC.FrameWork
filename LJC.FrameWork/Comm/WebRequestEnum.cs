@@ -8,6 +8,13 @@ namespace LJC.FrameWork.Comm
     public enum WebRequestMethodEnum
     {
         POST,
-        GET
+        GET,
+        HEAD,
+        PUT,
+        XPUT,
+        DELETE,
+        XDELETE,
+        TRACE,
+        OPTIONS,
     }
 }
