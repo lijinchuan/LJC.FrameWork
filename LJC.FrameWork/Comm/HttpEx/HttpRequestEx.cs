@@ -334,7 +334,7 @@ namespace LJC.FrameWork.Comm
 
             if (!response.Successed)
             {
-                throw response.ErrorMsg;
+                return response;
             }
 
             try
