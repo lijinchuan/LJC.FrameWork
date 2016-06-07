@@ -347,18 +347,21 @@ namespace LJC.FrameWork.Comm
                 WebEncoding = DefaultEncoding;
             }
 
-            response.ResponseContent = WebEncoding.GetString(response.ResponseBytes);
-            if (SupportCompression)
+            if (response.ResponseBytes != null && response.ResponseBytes.Length > 0)
             {
-                var htmlEncoding = GetHTMLMetaEncoding(response.ResponseContent);
-                if (htmlEncoding != null && htmlEncoding != WebEncoding)
+                response.ResponseContent = WebEncoding.GetString(response.ResponseBytes);
+                if (SupportCompression)
                 {
-                    response.ResponseContent = htmlEncoding.GetString(response.ResponseBytes);
-                    WebEncoding = htmlEncoding;
+                    var htmlEncoding = GetHTMLMetaEncoding(response.ResponseContent);
+                    if (htmlEncoding != null && htmlEncoding != WebEncoding)
+                    {
+                        response.ResponseContent = htmlEncoding.GetString(response.ResponseBytes);
+                        WebEncoding = htmlEncoding;
+                    }
                 }
-            }
 
-            response.ResponseBytes = null;
+                response.ResponseBytes = null;
+            }
             return response;
         }
 
@@ -587,7 +590,8 @@ namespace LJC.FrameWork.Comm
 
                 using (HttpWebResponse webResponse = (HttpWebResponse)webRequest.GetResponse())
                 {
-                    if (webResponse.StatusCode == HttpStatusCode.OK)
+                    int statusCode = (int)webResponse.StatusCode;
+                    if (/*webResponse.StatusCode == HttpStatusCode.OK*/statusCode >= 200 && statusCode < 400)
                     {
                         ret.PraseHeader(webResponse);
 
