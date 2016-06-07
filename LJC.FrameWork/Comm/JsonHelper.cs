@@ -8,6 +8,7 @@ using System.Dynamic;
 using System.Collections;
 using Newtonsoft.Json;
 using System.IO;
+using System.Linq.Expressions;
 
 namespace LJC.FrameWork.Comm
 {
@@ -142,6 +143,41 @@ namespace LJC.FrameWork.Comm
             {
                 yield return ret;
                 ret = ret.Next;
+            }
+        }
+
+        public static string GetJsonTag<T>(Expression<Func<T,object>> predicate)
+        {
+            string mn = string.Empty;
+
+            return GetJsonTag(predicate, out mn);
+        }
+
+        public static string GetJsonTag<T>(Expression<Func<T, object>> predicate,out string membername)
+        {
+            MemberExpression expression = null;
+            if (predicate.Body is UnaryExpression)
+            {
+                expression = ((predicate.Body as UnaryExpression).Operand as MemberExpression);
+            }
+            else if (predicate.Body is MemberExpression)
+            {
+                expression = predicate.Body as MemberExpression;
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+            
+            var jsonprop = (JsonPropertyAttribute)expression.Member.GetCustomAttributes(typeof(JsonPropertyAttribute), true).FirstOrDefault();
+            membername = expression.Member.Name;
+            if (jsonprop != null)
+            {
+                return jsonprop.PropertyName;
+            }
+            else
+            {
+                return membername;
             }
         }
 
