@@ -590,8 +590,8 @@ namespace LJC.FrameWork.Comm
 
                 using (HttpWebResponse webResponse = (HttpWebResponse)webRequest.GetResponse())
                 {
-                    int statusCode = (int)webResponse.StatusCode;
-                    if (/*webResponse.StatusCode == HttpStatusCode.OK*/statusCode >= 200 && statusCode < 400)
+                    //int statusCode = (int)webResponse.StatusCode;
+                    //if (statusCode >= 200 && statusCode < 400)
                     {
                         ret.PraseHeader(webResponse);
 
@@ -650,6 +650,13 @@ namespace LJC.FrameWork.Comm
                 }
 
                 ret.Successed = true;
+            }
+            catch (WebException ex)
+            {
+                ret.PraseHeader((HttpWebResponse)ex.Response);
+                ret.Successed = false;
+                ret.ErrorMsg = ex;
+                ret.ResponseContent = string.Empty;
             }
             catch (Exception ex)
             {

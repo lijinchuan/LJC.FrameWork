@@ -179,8 +179,14 @@ namespace LJC.FrameWork.Comm
         /// </summary>
         public string ResponseContent
         {
-            get;
-            set;
+            get
+            {
+                return _responseContent;
+            }
+            set
+            {
+                _responseContent = value;
+            }
         }
 
         private static string GetHeaderValue(WebHeaderCollection header,string name)
@@ -236,6 +242,18 @@ namespace LJC.FrameWork.Comm
             internal set;
         }
 
+        public int StatusCode
+        {
+            get;
+            set;
+        }
+
+        public string StatusDescription
+        {
+            get;
+            set;
+        }
+
         public HttpResponseEx PraseHeader(HttpWebResponse httpWebResponse)
         {
             if (httpWebResponse != null)
@@ -269,6 +287,8 @@ namespace LJC.FrameWork.Comm
                 this.Via = httpWebResponse.Headers.Get("Via");
                 this.Warning = httpWebResponse.Headers.Get("Warning");
                 this.WwwAuthenticate = httpWebResponse.Headers.Get("WwwAuthenticate");
+                this.StatusCode = (int)httpWebResponse.StatusCode;
+                this.StatusDescription = httpWebResponse.StatusDescription;
 
                 this.ResponseUrl = httpWebResponse.ResponseUri.AbsoluteUri;
             }
