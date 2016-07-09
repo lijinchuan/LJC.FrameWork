@@ -370,11 +370,12 @@ namespace LJC.FrameWork.WebApi
                     ebtype.EntityType = LJC.FrameWork.EntityBuf.EntityType.LIST;
                     break;
                 default:
-                    if(isArray)
-                    {
-                        ebtype.EntityType = LJC.FrameWork.EntityBuf.EntityType.ARRAY;
-                    }
-                    else if (ebtype.ClassType.IsEnum)
+                    //if(isArray)
+                    //{
+                    //    ebtype.EntityType = LJC.FrameWork.EntityBuf.EntityType.ARRAY;
+                    //}
+                    //else 
+                        if (ebtype.ClassType.IsEnum)
                     {
                         ebtype.EntityType = LJC.FrameWork.EntityBuf.EntityType.ENUM;
                     }
