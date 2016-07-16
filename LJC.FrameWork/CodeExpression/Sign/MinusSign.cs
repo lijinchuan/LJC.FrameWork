@@ -18,8 +18,8 @@ namespace LJC.FrameWork.CodeExpression
                 if (value == null)
                     value = new CalResult
                     {
-                        Result = 0,
-                        ResultType = typeof(decimal)
+                        Result = 0d,
+                        ResultType = typeof(double)
                     };
 
                 base.LeftVal = value;
@@ -50,9 +50,9 @@ namespace LJC.FrameWork.CodeExpression
             try
             {
             if (lVal==null||object.Equals(lVal,string.Empty))
-                return -(decimal)rVal;
+                return -(double)rVal;
             
-                return (decimal)lVal - (decimal)rVal;
+                return (double)lVal - (double)rVal;
             }
             catch (Exception ex)
             {

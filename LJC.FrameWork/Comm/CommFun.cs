@@ -184,7 +184,7 @@ namespace LJC.FrameWork.Comm
         /// <param name="data"></param>
         /// <param name="point"></param>
         /// <returns></returns>
-        public static decimal ToDecimal(this decimal data,int point=2)
+        public static double ToDouble(this double data,int point=2)
         {
             return Math.Round(data, point);
         }
@@ -344,12 +344,12 @@ namespace LJC.FrameWork.Comm
             return path.Substring(0, path.LastIndexOf('\\') + 1);
         }
 
-        public static decimal TryParseDecimal(string decimalstr)
-        {
-            decimal tryvalue = default(decimal);
-            decimal.TryParse(decimalstr, out tryvalue);
-            return tryvalue;
-        }
+        //public static decimal TryParseDecimal(string decimalstr)
+        //{
+        //    decimal tryvalue = default(decimal);
+        //    decimal.TryParse(decimalstr, out tryvalue);
+        //    return tryvalue;
+        //}
 
         public static double TryParseDouble(string doublestr)
         {

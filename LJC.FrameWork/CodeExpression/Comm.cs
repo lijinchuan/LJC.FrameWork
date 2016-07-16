@@ -12,8 +12,8 @@ namespace LJC.FrameWork.CodeExpression
 
         public static object Parse(string val)
         {
-            decimal result1;
-            if (decimal.TryParse(val, out result1))
+            double result1;
+            if (double.TryParse(val, out result1))
             {
                 return result1;
             }
@@ -59,27 +59,27 @@ namespace LJC.FrameWork.CodeExpression
 
         //}
 
-        public static decimal ToDecimal(this object o, uint point = 2)
+        public static double ToDouble(this object o, uint point = 2)
         {
             ++CallCount_ToDecimal;
 
             if (o == null)
-                return 0.00M;
+                return 0.00;
 
-            if (o is decimal)
+            if (o is double)
             {
-                decimal orial = (decimal)o;
-                var pow = (decimal)Math.Pow(10, point);
-                return ((int)(orial * pow)) / pow;
+                double orial = (double)o;
+                var pow = Math.Pow(10, point);
+                return (orial * pow) / pow;
             }
 
-            decimal d;
-            if (decimal.TryParse(o.ToString(), out d))
+            double d;
+            if (double.TryParse(o.ToString(), out d))
             {
-                return decimal.Parse(d.ToString("f" + point));
+                return double.Parse(d.ToString("f" + point));
             }
 
-            return 0M;
+            return 0.00;
 
         }
 

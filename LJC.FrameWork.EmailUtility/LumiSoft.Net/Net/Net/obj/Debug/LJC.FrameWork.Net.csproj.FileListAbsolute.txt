@@ -33,3 +33,8 @@ E:\Work\learn\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\
 E:\Work\learn\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\Debug\LJC.FrameWork.Net.pdb
 E:\Work\learn\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\Debug\LJC.FrameWork.Net.csprojResolveAssemblyReference.cache
 D:\程序\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\Debug\LJC.FrameWork.Net.csprojResolveAssemblyReference.cache
+D:\GitHub\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\bin\Debug\LJC.FrameWork.Net.dll
+D:\GitHub\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\bin\Debug\LJC.FrameWork.Net.pdb
+D:\GitHub\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\bin\Debug\LumiSoft.Net.xml
+D:\GitHub\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\Debug\LJC.FrameWork.Net.dll
+D:\GitHub\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\Debug\LJC.FrameWork.Net.pdb

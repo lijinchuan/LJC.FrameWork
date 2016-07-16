@@ -67,6 +67,7 @@
     <Compile Include="PrestigeInfo_CompareEntity.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RunConfig.cs" />
     <Compile Include="UserActive.cs" />
     <Compile Include="UserActive1.cs" />
     <Compile Include="UserPrestigeBand_CompareEntity.cs" />
