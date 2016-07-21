@@ -121,6 +121,7 @@ namespace LJC.FrameWork.Data.QuickDataBase
         {
             rpAttrList = CommFun.GetQuickDataBaseAttr<T>();
 
+
             if (rpAttrList.Count <= 0)
                 throw new Exception("无法操作空表！");
 

@@ -51,6 +51,9 @@ UDP属于运输层,下面我们由下至上一步一步来看:
 
         static void Main(string[] args)
         {
+            var xx=DataContextMoudelFactory<RunConfig>.GetDataContext()
+               .ExecuteList().FirstOrDefault() ?? new RunConfig();
+
             //var list = DataContextMoudelFactory<UserPrestigeBand_CompareEntity>.GetDataContext()
             //    .WhereEq(p => p.用户ID, "1").ExecuteEntity();
 

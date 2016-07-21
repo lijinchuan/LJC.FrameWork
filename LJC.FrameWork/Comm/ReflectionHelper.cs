@@ -182,7 +182,21 @@ namespace LJC.FrameWork.Comm
         {
             if (property.IsSetSetValueMethed)
             {
-                property.SetValueMethed(o, val);
+                try
+                {
+                    property.SetValueMethed(o, val);
+                }
+                catch
+                {
+                    try
+                    {
+                        property.SetValueMethed(o, Convert.ChangeType(val, property.PropertyInfo.PropertyType));
+                    }
+                    catch
+                    {
+                        throw new Exception(string.Format("字符串转换失败，无法从{0}转到{1}:{2}", val.GetType().Name, property.PropertyInfo.PropertyType.Name, val));
+                    }
+                }
                 return;
             }
 
@@ -199,7 +213,21 @@ namespace LJC.FrameWork.Comm
             var lamexpress = Expression.Lambda<Action<object, object>>(body, instance, valParameter).Compile();
 
             property.SetValueMethed = lamexpress;
-            lamexpress(o, val);
+            try
+            {
+                lamexpress(o, val);
+            }
+            catch
+            {
+                try
+                {
+                    lamexpress(o, Convert.ChangeType(val, property.PropertyInfo.PropertyType));
+                }
+                catch
+                {
+                    throw new Exception(string.Format("字符串转换失败，无法从{0}转到{1}:{2}", val.GetType().Name, property.PropertyInfo.PropertyType.Name, val));
+                }
+            }
         }
 
         public static void SetValue(this object o, PropertyInfo property, object val)
