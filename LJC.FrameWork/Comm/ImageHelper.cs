@@ -174,8 +174,9 @@ namespace LJC.FrameWork.Comm
             {
                 iHeight = h - StartY;
             }
-
-            Bitmap bmpOut = new Bitmap(iWidth, iHeight, PixelFormat.Format24bppRgb);
+            
+            //Bitmap bmpOut = new Bitmap(iWidth, iHeight, PixelFormat.Format24bppRgb);
+            Bitmap bmpOut = new Bitmap(iWidth, iHeight, b.PixelFormat);
             Graphics g = Graphics.FromImage(bmpOut);
             g.DrawImage(b, new Rectangle(0, 0, iWidth, iHeight), new Rectangle(StartX, StartY, iWidth, iHeight), GraphicsUnit.Pixel);
             g.Dispose();
