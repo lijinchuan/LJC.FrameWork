@@ -155,7 +155,7 @@ namespace LJC.FrameWork.SOA
                             serviceInfo = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo)).LastOrDefault();
                             if(serviceInfo==null)
                             {
-                                throw new Exception(string.Format("{0}服务未注册。", request.ServiceNo));
+                                throw new Exception(string.Format("{0}服务未注册,服务超过30秒无应答。", request.ServiceNo));
                             }
                         }
 
