@@ -146,14 +146,13 @@ namespace LJC.FrameWork.Comm
             }
         }
 
-        public static string GetJsonTag<T>(Expression<Func<T,object>> predicate)
+        public static string GetJsonTag(LambdaExpression predicate)
         {
             string mn = string.Empty;
-
             return GetJsonTag(predicate, out mn);
         }
 
-        public static string GetJsonTag<T>(Expression<Func<T, object>> predicate,out string membername)
+        public static string GetJsonTag(LambdaExpression predicate,out string membername)
         {
             MemberExpression expression = null;
             if (predicate.Body is UnaryExpression)
