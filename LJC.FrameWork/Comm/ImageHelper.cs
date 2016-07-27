@@ -183,5 +183,18 @@ namespace LJC.FrameWork.Comm
             return bmpOut;
 
         }
+
+        public static Bitmap ResizeImageX(Bitmap bmp, int newW)
+        {
+            int newH = (int)(newW * 1.0 / bmp.Width * bmp.Height);
+            return ResizeImage(bmp, newW, newH, 0);
+        }
+
+        public static Bitmap ResizeImageY(Bitmap bmp, int newH)
+        {
+            int newW = (int)(newH * 1.0 / bmp.Height * bmp.Width);
+            return ResizeImage(bmp, newW, newH, 0);
+        }
+
     }
 }
