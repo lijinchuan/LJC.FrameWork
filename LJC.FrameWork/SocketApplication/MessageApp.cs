@@ -215,7 +215,7 @@ namespace LJC.FrameWork.SocketApplication
                 catch (SocketException e)
                 {
                     var ne = new Exception(string.Format("连接到远程服务器{0}失败，端口:{1}，原因:{2},网络错误号:{3}",
-                        ipString,ipPort,e.Message,e.SocketErrorCode));
+                        ipString, ipPort, e.Message, e.SocketErrorCode));
                     throw ne;
 
                 }
@@ -236,7 +236,7 @@ namespace LJC.FrameWork.SocketApplication
             }
             catch (Exception e)
             {
-                OnError(e);
+                //OnError(e);
                 return false;
             }
         }
@@ -453,7 +453,7 @@ namespace LJC.FrameWork.SocketApplication
 
             if (socketClient != null &&errorResume&& !socketClient.Connected)
             {
-                StartClient();
+                new Action(() => StartClient()).BeginInvoke(null, null);
             }
 
             if (Error != null)
