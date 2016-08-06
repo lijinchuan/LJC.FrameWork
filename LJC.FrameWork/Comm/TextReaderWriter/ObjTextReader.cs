@@ -13,7 +13,8 @@ namespace LJC.FrameWork.Comm
         private ObjTextReader(string textfile)
         {
             this.readwritePath = textfile;
-            var fs = File.Open(textfile, FileMode.Open, FileAccess.Read);
+            //var fs = File.Open(textfile, FileMode.Open, FileAccess.Read);
+            var fs = new FileStream(textfile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             _sr = new StreamReader(fs, Encoding.UTF8);
             int firstchar = _sr.BaseStream.ReadByte();
             if (firstchar == -1)
@@ -79,6 +80,11 @@ namespace LJC.FrameWork.Comm
 
         public T ReadObject<T>() where T : class
         {
+            if(CheckNexIsEndSpan(_sr.BaseStream))
+            {
+                _sr.BaseStream.Position += 3;
+            }
+
             if (_encodeType == ObjTextReaderWriterEncodeType.protobuf
                 || _encodeType == ObjTextReaderWriterEncodeType.protobufex)
             {
