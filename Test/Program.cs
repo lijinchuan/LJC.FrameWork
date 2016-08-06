@@ -10,6 +10,7 @@ using System.Data.Common;
 using System.Data.SqlClient;
 using LJC.FrameWork.Data;
 using System.Linq.Expressions;
+using System.Threading;
 
 namespace Test
 {
@@ -24,7 +25,15 @@ namespace Test
 
     class Program
     {
-        static void Main0(string[] args)
+        static void Main2(string[] args)
+        {
+            LJC.FrameWork.SocketApplication.SessionServer server = new LJC.FrameWork.SocketApplication.SessionServer(5555);
+            server.StartServer();
+
+            Console.Read();
+        }
+
+        static void Main1(string[] args)
         {
 
             LJC.FrameWork.SocketApplication.MessageApp appServer = new LJC.FrameWork.SocketApplication.MessageApp();
@@ -49,10 +58,38 @@ UDP属于运输层,下面我们由下至上一步一步来看:
             appServer.MultiCast(msg);
         }
 
+
+        static void TestRWObj()
+        {
+            int i = 0;
+            string filename="testrwobj.bin";
+            using(LJC.FrameWork.Comm.ObjTextWriter writer = ObjTextWriter.CreateWriter(filename, ObjTextReaderWriterEncodeType.protobuf))
+            {
+                while ((i++) < 100000)
+                {
+                    writer.AppendObject<Man>(new Man
+                    {
+                        Name = "李金川"+i,
+                        IDCard = "421182198612301310",
+                        Addr = "湖北省武穴市",
+                        Sex = 1
+                    });
+
+                    //writer.Flush();
+
+                    Console.WriteLine("写入成功一条！"+i);
+
+                    Thread.Sleep(1000);
+                }
+            }
+        }
+
         static void Main(string[] args)
         {
-            var xx=DataContextMoudelFactory<RunConfig>.GetDataContext()
-               .ExecuteList().FirstOrDefault() ?? new RunConfig();
+            TestRWObj();
+
+            //var xx=DataContextMoudelFactory<RunConfig>.GetDataContext()
+            //   .ExecuteList().FirstOrDefault() ?? new RunConfig();
 
             //var list = DataContextMoudelFactory<UserPrestigeBand_CompareEntity>.GetDataContext()
             //    .WhereEq(p => p.用户ID, "1").ExecuteEntity();
@@ -95,12 +132,12 @@ UDP属于运输层,下面我们由下至上一步一步来看:
             //}
             //cachtb.FlushToTable();
 
-            int x = 3;
-            TestEnum te = (TestEnum)x;
+           // int x = 3;
+           // TestEnum te = (TestEnum)x;
 
-           bool b= Enum.IsDefined(typeof(TestEnum), x);
+           //bool b= Enum.IsDefined(typeof(TestEnum), x);
 
-           var cc= Enum.Parse(typeof(TestEnum), x.ToString());
+           //var cc= Enum.Parse(typeof(TestEnum), x.ToString());
             
             //var cc= (TestEnum)Convert.ChangeType(x, typeof(TestEnum));
         }
