@@ -23,6 +23,20 @@ namespace LJC.FrameWork.Comm
             }
         }
 
+        protected bool CheckNexIsEndSpan(Stream s)
+        {
+            if(s.Length-s.Position<4)
+            {
+                return false;
+            }
+
+            var oldpos = s.Position;
+            var byts3 = new byte[3];
+            s.Read(byts3, 0, 3);
+
+            s.Position = oldpos;
+            return byts3[0] == endSpanChar[0] && byts3[1] == endSpanChar[1] && byts3[2] == endSpanChar[2];
+        }
 
         protected bool CheckHasEndSpan(Stream s)
         {

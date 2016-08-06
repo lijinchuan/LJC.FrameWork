@@ -13,7 +13,7 @@ namespace LJC.FrameWork.Comm
         private ObjTextWriter(string textfile, ObjTextReaderWriterEncodeType encodetype)
         {
             this.readwritePath = textfile;
-            var fs = File.Open(textfile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+            var fs = File.Open(textfile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
             _sw = new StreamWriter(fs, Encoding.UTF8);
             int firstchar = fs.ReadByte();
             if (firstchar == -1)
@@ -42,6 +42,11 @@ namespace LJC.FrameWork.Comm
         public static ObjTextWriter CreateWriter(string textfile, ObjTextReaderWriterEncodeType encodetype = ObjTextReaderWriterEncodeType.json)
         {
             return new ObjTextWriter(textfile, encodetype);
+        }
+
+        public void Flush()
+        {
+            _sw.Flush();
         }
 
         public void AppendObject<T>(T obj) where T : class
