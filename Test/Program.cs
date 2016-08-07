@@ -65,7 +65,7 @@ UDP属于运输层,下面我们由下至上一步一步来看:
             string filename="testrwobj.bin";
             using(LJC.FrameWork.Comm.ObjTextWriter writer = ObjTextWriter.CreateWriter(filename, ObjTextReaderWriterEncodeType.protobuf))
             {
-                while ((i++) < 1000)
+                while ((i++) < 100)
                 {
                     writer.AppendObject<Man>(new Man
                     {

@@ -167,7 +167,7 @@ namespace LJC.FrameWork.Comm
         public IEnumerable<T> ReadObjectWating<T>() where T : class
         {
             //var oldpost = _sr.BaseStream.Position;
-            var oldlen = _sr.BaseStream.Length;
+            var oldlen = 0L;
             T item=default(T);
             while(true)
             {
@@ -176,7 +176,7 @@ namespace LJC.FrameWork.Comm
                     yield return item;
                 }
                 oldlen=_sr.BaseStream.Length;
-                while(_sr.BaseStream.Length==oldlen)
+                while (_sr.BaseStream.Length - oldlen < 4)
                 {
                     Thread.Sleep(1);
                 }

@@ -13,7 +13,7 @@ namespace LJC.FrameWork.Comm
         private ObjTextWriter(string textfile, ObjTextReaderWriterEncodeType encodetype)
         {
             this.readwritePath = textfile;
-            var fs = File.Open(textfile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+            var fs = File.Open(textfile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
             _sw = new StreamWriter(fs, Encoding.UTF8);
             int firstchar = fs.ReadByte();
             if (firstchar == -1)
@@ -34,7 +34,7 @@ namespace LJC.FrameWork.Comm
                     _sw.BaseStream.Position = _sw.BaseStream.Length;
                 }
             }
-
+            _sw.Flush();
             _canReadFromBack = CanReadFormBack;
         }
 
