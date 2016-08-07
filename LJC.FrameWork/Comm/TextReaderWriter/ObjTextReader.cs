@@ -185,7 +185,7 @@ namespace LJC.FrameWork.Comm
 
         public long ReadedPostion()
         {
-            return _sr.BaseStream.Length;
+            return _sr.BaseStream.Position;
         }
 
         public void Dispose()
