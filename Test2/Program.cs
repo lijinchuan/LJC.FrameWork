@@ -10,7 +10,7 @@ namespace Test2
     {
         static void TryRead()
         {
-            string filename=@"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Debug\testrwobj.bin";
+            string filename = @"D:\GitHub\LJC.FrameWork\Test\bin\Debug\testrwobj.bin";
             using (LJC.FrameWork.Comm.ObjTextReader reader = LJC.FrameWork.Comm.ObjTextReader.CreateReader(filename))
             {
                 int i = 0;
@@ -25,9 +25,21 @@ namespace Test2
             }
         }
 
+        static void TryRead2()
+        {
+            string filename = @"D:\GitHub\LJC.FrameWork\Test\bin\Debug\testrwobj.bin";
+            using (LJC.FrameWork.Comm.ObjTextReader reader = LJC.FrameWork.Comm.ObjTextReader.CreateReader(filename))
+            {
+                foreach(var item in reader.ReadObjectWating<Man>())
+                {
+                    Console.WriteLine(item.Name);
+                }
+            }
+        }
+
         static void Main(string[] args)
         {
-            TryRead();
+            TryRead2();
 
             //LJC.FrameWork.SocketApplication.SessionClient client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
             //client.LoginSuccess += client_LoginSuccess;

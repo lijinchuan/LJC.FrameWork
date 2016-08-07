@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace LJC.FrameWork.Comm
 {
@@ -94,6 +95,14 @@ namespace LJC.FrameWork.Comm
                 //239 187 191
                 if (len == 0 || len == 12565487)
                     return default(T);
+
+                //检查长度
+                if (_sr.BaseStream.Length - _sr.BaseStream.Position < len)
+                {
+                    _sr.BaseStream.Position -= 4;
+                    return default(T);
+                }
+
                 var contentbyte = new Byte[len];
                 _sr.BaseStream.Read(contentbyte, 0, len);
 
@@ -114,6 +123,14 @@ namespace LJC.FrameWork.Comm
                 var len = BitConverter.ToInt32(bylen, 0);
                 if (len == 0 || len == 12565487)
                     return default(T);
+
+                //检查长度
+                if (_sr.BaseStream.Length - _sr.BaseStream.Position < len)
+                {
+                    _sr.BaseStream.Position -= 4;
+                    return default(T);
+                }
+
                 var contentbyte = new Byte[len];
                 _sr.BaseStream.Read(contentbyte, 0, len);
 
@@ -145,6 +162,30 @@ namespace LJC.FrameWork.Comm
 
                 return default(T);
             }
+        }
+
+        public IEnumerable<T> ReadObjectWating<T>() where T : class
+        {
+            //var oldpost = _sr.BaseStream.Position;
+            var oldlen = _sr.BaseStream.Length;
+            T item=default(T);
+            while(true)
+            {
+                while((item=ReadObject<T>())!=null)
+                {
+                    yield return item;
+                }
+                oldlen=_sr.BaseStream.Length;
+                while(_sr.BaseStream.Length==oldlen)
+                {
+                    Thread.Sleep(1);
+                }
+            }
+        }
+
+        public long ReadedPostion()
+        {
+            return _sr.BaseStream.Length;
         }
 
         public void Dispose()
