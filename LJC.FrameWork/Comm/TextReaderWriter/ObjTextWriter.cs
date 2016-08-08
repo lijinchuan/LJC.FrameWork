@@ -58,6 +58,7 @@ namespace LJC.FrameWork.Comm
                 {
                     ProtoBuf.Serializer.Serialize<T>(ms, obj);
                     Append(ms.ToArray());
+                    _sw.BaseStream.Write(ObjTextReaderWriterBase.splitBytes, 0, 2);
                 }
             }
             else

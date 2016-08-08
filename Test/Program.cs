@@ -84,9 +84,34 @@ UDP属于运输层,下面我们由下至上一步一步来看:
             }
         }
 
+        static void TestRWObjEx()
+        {
+            int i = 0;
+            string filename = "testrwobjex.bin";
+            using (LJC.FrameWork.Comm.ObjTextWriter writer = ObjTextWriter.CreateWriter(filename, ObjTextReaderWriterEncodeType.protobufex))
+            {
+                while ((i++) < 100)
+                {
+                    writer.AppendObject<Man>(new Man
+                    {
+                        Name = "李金川" + i,
+                        IDCard = "421182198612301310",
+                        Addr = "湖北省武穴市",
+                        Sex = 1
+                    });
+
+                    //writer.Flush();
+
+                    Console.WriteLine("写入成功一条！" + i);
+
+                    Thread.Sleep(10);
+                }
+            }
+        }
+
         static void Main(string[] args)
         {
-            TestRWObj();
+            TestRWObjEx();
 
             //var xx=DataContextMoudelFactory<RunConfig>.GetDataContext()
             //   .ExecuteList().FirstOrDefault() ?? new RunConfig();

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LJC.FrameWork.Comm;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ namespace Test2
     {
         static void TryRead()
         {
-            string filename = @"D:\GitHub\LJC.FrameWork\Test\bin\Debug\testrwobj.bin";
+            string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Debug\testrwobjex.bin";
             using (LJC.FrameWork.Comm.ObjTextReader reader = LJC.FrameWork.Comm.ObjTextReader.CreateReader(filename))
             {
                 int i = 0;
@@ -27,7 +28,7 @@ namespace Test2
 
         static void TryRead2()
         {
-            string filename = @"D:\GitHub\LJC.FrameWork\Test\bin\Debug\testrwobj.bin";
+            string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Debug\testrwobjex.bin";
             using (LJC.FrameWork.Comm.ObjTextReader reader = LJC.FrameWork.Comm.ObjTextReader.CreateReader(filename))
             {
                 foreach(var item in reader.ReadObjectWating<Man>())
@@ -37,9 +38,24 @@ namespace Test2
             }
         }
 
+        static void TryRead3()
+        {
+            string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Debug\testrwobjex.bin";
+            using (LJC.FrameWork.Comm.ObjTextReader reader = LJC.FrameWork.Comm.ObjTextReader.CreateReader(filename))
+            {
+                var man = reader.ReadObjectFromBack<Man>();
+                Console.WriteLine(man.Name);
+                //Man man = null;
+                while((man=reader.ReadObjectFromBack<Man>())!=null)
+                {
+                    Console.WriteLine(man.Name);
+                }
+            }
+        }
+
         static void Main(string[] args)
         {
-            TryRead2();
+            TryRead3();
 
             //LJC.FrameWork.SocketApplication.SessionClient client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
             //client.LoginSuccess += client_LoginSuccess;

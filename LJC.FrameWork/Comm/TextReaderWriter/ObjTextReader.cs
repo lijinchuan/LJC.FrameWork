@@ -36,30 +36,45 @@ namespace LJC.FrameWork.Comm
             return new ObjTextReader(textfile);
         }
 
-        public T ReadObjectFromBack<T>(bool firstRead) where T : class
+        private bool PostionLast()
+        {
+            if (_sr.BaseStream.Length < 7)
+                return false;
+
+            if (_sr.BaseStream.Position <= 1)
+                _sr.BaseStream.Position = _sr.BaseStream.Length - 2;
+            else
+                _sr.BaseStream.Position -= 2;
+
+            while (true)
+            {
+                if (_sr.BaseStream.Position < 7)
+                    return false;
+
+                byte[] buf = new byte[2];
+
+                _sr.BaseStream.Read(buf, 0, 2);
+
+                if (buf[0] == ObjTextReaderWriterBase.splitBytes[0] && buf[1] == ObjTextReaderWriterBase.splitBytes[1])
+                {
+                    _sr.BaseStream.Position -= 6;
+                    return true;
+                }
+
+                _sr.BaseStream.Position -= 3;
+            }
+        }
+
+        public T ReadObjectFromBack<T>() where T : class
         {
             if (!_canReadFromBack)
                 throw new Exception("不支持从后向前读");
 
-            if (_sr.BaseStream.Position <= 1)
-            {
-                if (!firstRead)
-                    return default(T);
-                else
-                {
-                    int offset = 4;
-                    if (CheckHasEndSpan(_sr.BaseStream))
-                    {
-                        offset = 7;
-                    }
+            if (!PostionLast())
+                return default(T);
 
-                    if (_sr.BaseStream.Length < offset)
-                        return default(T);
-
-                    _sr.BaseStream.Position = _sr.BaseStream.Length - offset;
-                }
-            }
             var oldpostion = _sr.BaseStream.Position;
+            
             byte[] bylen = new byte[4];
             _sr.BaseStream.Read(bylen, 0, 4);
             var len = BitConverter.ToInt32(bylen, 0);
@@ -68,10 +83,11 @@ namespace LJC.FrameWork.Comm
             oldpostion = _sr.BaseStream.Position;
             var contentbyte = new Byte[len];
             _sr.BaseStream.Read(contentbyte, 0, len);
-            if (oldpostion > 8)
-                _sr.BaseStream.Position = oldpostion - 8;
-            else
-                _sr.BaseStream.Position = oldpostion - 4;
+
+            //if (oldpostion >= 8)
+            //    _sr.BaseStream.Position = oldpostion - 8;
+            //else
+            //    _sr.BaseStream.Position = oldpostion - 4;
 
             using (MemoryStream ms = new MemoryStream(contentbyte))
             {
@@ -110,6 +126,9 @@ namespace LJC.FrameWork.Comm
                 {
                     _sr.BaseStream.Position += 4;
                 }
+
+                //扫过分隔符
+                _sr.BaseStream.Position += 2;
 
                 using (MemoryStream ms = new MemoryStream(contentbyte))
                 {

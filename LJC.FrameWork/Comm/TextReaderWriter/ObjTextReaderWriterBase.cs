@@ -9,6 +9,7 @@ namespace LJC.FrameWork.Comm
     public class ObjTextReaderWriterBase
     {
         protected const char splitChar = '☺';
+        protected static byte[] splitBytes = BitConverter.GetBytes(splitChar);
         protected string readwritePath = string.Empty;
         protected ObjTextReaderWriterEncodeType _encodeType = ObjTextReaderWriterEncodeType.json;
         //是否可以从后往前读
