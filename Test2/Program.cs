@@ -11,19 +11,48 @@ namespace Test2
     {
         static void TryRead()
         {
-            string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Debug\testrwobjex.bin";
+            //string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Debug\testrwobjex.bin";
+            string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Release\testrwobj.bin";
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
+            int i = 0;
             using (LJC.FrameWork.Comm.ObjTextReader reader = LJC.FrameWork.Comm.ObjTextReader.CreateReader(filename))
             {
-                int i = 0;
-
                 Man man = null;
                 while ((man=reader.ReadObject<Man>())!=null)
                 {
+                    i++;
                     //var man = reader.ReadObject<Man>();
-                    Console.WriteLine(man.Name);
-                    Thread.Sleep(1);
+                    //Console.WriteLine(man.Name);
+                    //Thread.Sleep(1);
                 }
             }
+            sw.Stop();
+
+            Console.WriteLine("读取完毕，共用时" + sw.Elapsed.TotalSeconds + "秒，共" + i + "条");
+        }
+
+        static void TryRead1()
+        {
+            //string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Debug\testrwobjex.bin";
+            string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Release\testrwobj1.bin";
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
+            int i = 0;
+            using (LJC.FrameWork.Comm.ObjTextReader reader = LJC.FrameWork.Comm.ObjTextReader.CreateReader(filename))
+            {
+                Man man = null;
+                while ((man = reader.ReadObjectFromBack<Man>()) != null)
+                {
+                    i++;
+                    //var man = reader.ReadObject<Man>();
+                    //Console.WriteLine(man.Name);
+                    //Thread.Sleep(1);
+                }
+            }
+            sw.Stop();
+
+            Console.WriteLine("读取完毕，共用时" + sw.Elapsed.TotalSeconds + "秒，共" + i + "条");
         }
 
         static void TryRead2()
@@ -55,7 +84,7 @@ namespace Test2
 
         static void Main(string[] args)
         {
-            TryRead3();
+            TryRead1();
 
             //LJC.FrameWork.SocketApplication.SessionClient client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
             //client.LoginSuccess += client_LoginSuccess;

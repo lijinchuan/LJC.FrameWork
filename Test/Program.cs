@@ -63,9 +63,12 @@ UDP属于运输层,下面我们由下至上一步一步来看:
         {
             int i = 0;
             string filename="testrwobj.bin";
+
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
             using(LJC.FrameWork.Comm.ObjTextWriter writer = ObjTextWriter.CreateWriter(filename, ObjTextReaderWriterEncodeType.protobuf))
             {
-                while ((i++) < 100)
+                while ((i++) < 1000000)
                 {
                     writer.AppendObject<Man>(new Man
                     {
@@ -77,12 +80,47 @@ UDP属于运输层,下面我们由下至上一步一步来看:
 
                     //writer.Flush();
 
-                    Console.WriteLine("写入成功一条！"+i);
+                    if (i % 10000 == 0)
+                        Console.WriteLine("写入成功到" + i);
 
-                    Thread.Sleep(1000);
+                    //Thread.Sleep(1000);
                 }
             }
+            sw.Stop();
+            Console.WriteLine("共用时："+sw.Elapsed.TotalSeconds+"秒");
         }
+
+        static void TestRWObj1()
+        {
+            int i = 0;
+            string filename = "testrwobj1.bin";
+
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
+            using (LJC.FrameWork.Comm.ObjTextWriter writer = ObjTextWriter.CreateWriter(filename, ObjTextReaderWriterEncodeType.protobufex))
+            {
+                while ((i++) < 1000000)
+                {
+                    writer.AppendObject<Man>(new Man
+                    {
+                        Name = "李金川" + i,
+                        IDCard = "421182198612301310",
+                        Addr = "湖北省武穴市",
+                        Sex = 1
+                    });
+
+                    //writer.Flush();
+
+                    if (i % 10000 == 0)
+                        Console.WriteLine("写入成功到" + i);
+
+                    //Thread.Sleep(1000);
+                }
+            }
+            sw.Stop();
+            Console.WriteLine("共用时：" + sw.Elapsed.TotalSeconds + "秒");
+        }
+
 
         static void TestRWObjEx()
         {
@@ -111,7 +149,7 @@ UDP属于运输层,下面我们由下至上一步一步来看:
 
         static void Main(string[] args)
         {
-            TestRWObjEx();
+            TestRWObj1();
 
             //var xx=DataContextMoudelFactory<RunConfig>.GetDataContext()
             //   .ExecuteList().FirstOrDefault() ?? new RunConfig();

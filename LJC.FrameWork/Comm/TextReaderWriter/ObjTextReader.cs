@@ -92,6 +92,8 @@ namespace LJC.FrameWork.Comm
             //else
             //    _sr.BaseStream.Position = oldpostion - 4;
 
+            _sr.BaseStream.Position = oldpostion-4;
+
             using (MemoryStream ms = new MemoryStream(contentbyte))
             {
                 return ProtoBuf.Serializer.Deserialize<T>(ms);
