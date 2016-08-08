@@ -61,7 +61,10 @@ namespace LJC.FrameWork.Comm
                     return true;
                 }
 
-                _sr.BaseStream.Position -= 3;
+                if (buf[0] == ObjTextReaderWriterBase.splitBytes[1])
+                    _sr.BaseStream.Position -= 3;
+                else
+                    _sr.BaseStream.Position -= 4;
             }
         }
 
