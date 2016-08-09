@@ -57,8 +57,7 @@ namespace LJC.FrameWork.Comm
                 using (MemoryStream ms = new MemoryStream())
                 {
                     ProtoBuf.Serializer.Serialize<T>(ms, obj);
-                    Append(ms.ToArray());
-                    _sw.BaseStream.Write(ObjTextReaderWriterBase.splitBytes, 0, 2);
+                    Append(ms.ToArray(),true);
                 }
             }
             else
@@ -68,7 +67,7 @@ namespace LJC.FrameWork.Comm
                 {
                     var jsonByte = Encoding.UTF8.GetBytes(str);
                     var compressbytes = GZip.Compress(jsonByte);
-                    Append(compressbytes);
+                    Append(compressbytes, false);
                 }
                 else
                 {
@@ -90,7 +89,7 @@ namespace LJC.FrameWork.Comm
             }
         }
 
-        private void Append(byte[] objstream)
+        private void Append(byte[] objstream,bool writesplit)
         {
             if (objstream == null)
                 return;
@@ -104,6 +103,11 @@ namespace LJC.FrameWork.Comm
                 if (_canReadFromBack)
                 {
                     _sw.BaseStream.Write(lenbyte, 0, lenbyte.Length);
+                }
+
+                if(writesplit)
+                {
+                    _sw.BaseStream.Write(ObjTextReaderWriterBase.splitBytes, 0, 2);
                 }
             }
         }
