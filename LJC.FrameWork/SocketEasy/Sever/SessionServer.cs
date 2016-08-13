@@ -221,20 +221,10 @@ namespace LJC.FrameWork.SocketEasy.Sever
             }
         }
 
-        /// <summary>
-        /// 处理自定义消息
-        /// </summary>
-        /// <param name="message"></param>
-        /// <returns></returns>
-        protected virtual byte[] DoMessage(Message message)
-        {
-            return null;
-        }
-
         protected void FormAppMessage(Message message, Session session)
         {
             //base.ReciveMessage(message);
-            byte[] result = DoMessage(message);
+            byte[] result = message.MessageBuffer;
 
             if (result != null && !string.IsNullOrEmpty(message.MessageHeader.TransactionID))
             {

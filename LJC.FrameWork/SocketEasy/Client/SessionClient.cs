@@ -293,16 +293,6 @@ namespace LJC.FrameWork.SocketEasy.Client
             }
         }
 
-        /// <summary>
-        /// 处理自定义消息
-        /// </summary>
-        /// <param name="message"></param>
-        /// <returns></returns>
-        protected virtual byte[] DoMessage(Message message)
-        {
-            return null;
-        }
-
         protected void ReciveMessage(Message message)
         {
             if (!string.IsNullOrEmpty(message.MessageHeader.TransactionID))
@@ -310,7 +300,7 @@ namespace LJC.FrameWork.SocketEasy.Client
                 if (watingEvents.Count == 0)
                     return;
 
-                byte[] result = DoMessage(message);
+                byte[] result = message.MessageBuffer;
 
                 AutoReSetEventResult autoEvent = watingEvents.First(p => p.Key == message.MessageHeader.TransactionID).Value;
                 if (autoEvent != null)
