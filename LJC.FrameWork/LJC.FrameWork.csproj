@@ -276,6 +276,11 @@
     <Compile Include="SocketApplication\SessionMessageApp.cs" />
     <Compile Include="SocketApplication\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketApplicationComm.cs" />
+    <Compile Include="SocketEasy\Client\ClientBase.cs" />
+    <Compile Include="SocketEasy\Client\SessionClient.cs" />
+    <Compile Include="SocketEasy\Sever\SessionServer.cs" />
+    <Compile Include="SocketEasy\Sever\SeverBase.cs" />
+    <Compile Include="SocketEasy\SocketBase.cs" />
     <Compile Include="WindowsService\WinSrvInstaller.cs" />
   </ItemGroup>
   <ItemGroup>
