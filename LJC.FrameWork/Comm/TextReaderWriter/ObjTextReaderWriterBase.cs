@@ -56,5 +56,37 @@ namespace LJC.FrameWork.Comm
                 return false;
             }
         }
+
+        protected bool PostionLast(Stream s)
+        {
+            if (s.Length < 7)
+                return false;
+
+            if (s.Position <= 1)
+                s.Position = s.Length - 2;
+            else
+                s.Position -= 2;
+
+            while (true)
+            {
+                if (s.Position < 7)
+                    return false;
+
+                byte[] buf = new byte[2];
+
+                s.Read(buf, 0, 2);
+
+                if (buf[0] == ObjTextReaderWriterBase.splitBytes[0] && buf[1] == ObjTextReaderWriterBase.splitBytes[1])
+                {
+                    s.Position -= 6;
+                    return true;
+                }
+
+                if (buf[0] == ObjTextReaderWriterBase.splitBytes[1])
+                    s.Position -= 3;
+                else
+                    s.Position -= 4;
+            }
+        }
     }
 }

@@ -36,6 +36,17 @@ namespace LJC.FrameWork.Comm
             }
             _sw.Flush();
             _canReadFromBack = CanReadFormBack;
+            if(_canReadFromBack)
+            {
+                if(PostionLast(_sw.BaseStream))
+                {
+                    _sw.BaseStream.Position += 6;
+                }
+                else
+                {
+                    _sw.BaseStream.Position = 1;
+                }
+            }
         }
 
 
@@ -116,9 +127,17 @@ namespace LJC.FrameWork.Comm
         {
             if (_sw != null)
             {
-                _sw.Close();
-                _sw = null;
+                lock (this)
+                {
+                    _sw.Close();
+                    _sw = null;
+                }
             }
+        }
+
+        ~ObjTextWriter()
+        {
+            Dispose();
         }
     }
 }

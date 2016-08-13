@@ -36,44 +36,12 @@ namespace LJC.FrameWork.Comm
             return new ObjTextReader(textfile);
         }
 
-        private bool PostionLast()
-        {
-            if (_sr.BaseStream.Length < 7)
-                return false;
-
-            if (_sr.BaseStream.Position <= 1)
-                _sr.BaseStream.Position = _sr.BaseStream.Length - 2;
-            else
-                _sr.BaseStream.Position -= 2;
-
-            while (true)
-            {
-                if (_sr.BaseStream.Position < 7)
-                    return false;
-
-                byte[] buf = new byte[2];
-
-                _sr.BaseStream.Read(buf, 0, 2);
-
-                if (buf[0] == ObjTextReaderWriterBase.splitBytes[0] && buf[1] == ObjTextReaderWriterBase.splitBytes[1])
-                {
-                    _sr.BaseStream.Position -= 6;
-                    return true;
-                }
-
-                if (buf[0] == ObjTextReaderWriterBase.splitBytes[1])
-                    _sr.BaseStream.Position -= 3;
-                else
-                    _sr.BaseStream.Position -= 4;
-            }
-        }
-
         public T ReadObjectFromBack<T>() where T : class
         {
             if (!_canReadFromBack)
                 throw new Exception("不支持从后向前读");
 
-            if (!PostionLast())
+            if (!PostionLast(_sr.BaseStream))
                 return default(T);
 
             var oldpostion = _sr.BaseStream.Position;
