@@ -1,6 +1,8 @@
-﻿using LJC.FrameWork.EntityBuf;
+﻿using LJC.FrameWork.Comm;
+using LJC.FrameWork.EntityBuf;
 using LJC.FrameWork.SocketApplication;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,13 +13,16 @@ using System.Threading;
 
 namespace LJC.FrameWork.SocketEasy.Sever
 {
-    public class ServerBase :SocketBase
+    public class ServerHugeBase:SocketBase
     {
         protected Socket socketServer;
        
         protected string[] bindIpArray;
         protected int ipPort;
         protected bool isStartServer = false;
+
+        private ConcurrentBag<Session> _connectSocketBagList = new ConcurrentBag<Session>();
+        private System.Timers.Timer _socketReadTimer = null;
         
         /// <summary>
         /// 对象清理之前的事件
@@ -30,13 +35,13 @@ namespace LJC.FrameWork.SocketEasy.Sever
         /// <param name="ip"></param>
         /// <param name="port"></param>
         /// <param name="stop">如果为true,不会断开自动重连</param>
-        public ServerBase(string[] bindips, int port)
+        public ServerHugeBase(string[] bindips, int port)
         {
             this.bindIpArray = bindips;
             this.ipPort = port;
         }
 
-        public ServerBase()
+        public ServerHugeBase()
         {
 
         }
@@ -48,7 +53,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 if (socketServer == null)
                 {
                     socketServer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    //socketServer.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
                     socketServer.ReceiveBufferSize = 32000;
                     socketServer.SendBufferSize = 32000;
                     socketServer.NoDelay = true;
@@ -73,6 +77,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     thread.Start();
                 }
 
+                _socketReadTimer = TaskHelper.SetInterval(0, () => { ReadSocketList(); return false; }, 0, true);
+
                 isStartServer = true;
                 return true;
             }
@@ -92,8 +98,16 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 try
                 {
                     Socket socket = socketServer.Accept();
-                    Thread thread = new Thread(new ParameterizedThreadStart(OnSocket));
-                    thread.Start(socket);
+
+                    socket.NoDelay = true;
+                    IPEndPoint endPoint = (IPEndPoint)socket.RemoteEndPoint;
+                    Session appSocket = new Session();
+                    appSocket.IPAddress = endPoint.Address.ToString();
+                    appSocket.IsValid = true;
+                    appSocket.SessionID = SocketApplicationComm.GetSeqNum();
+                    appSocket.Socket = socket;
+
+                    _connectSocketBagList.Add(appSocket);
                 }
                 catch (Exception e)
                 {
@@ -105,66 +119,64 @@ namespace LJC.FrameWork.SocketEasy.Sever
             SocketApplicationComm.Debug("关闭服务器套接字!");
         }
 
-        private void OnSocket(object obj)
+        private void ReadSocketList()
         {
-            Socket socket = (Socket)obj;
-            socket.NoDelay = true;
-            IPEndPoint endPoint = (IPEndPoint)socket.RemoteEndPoint;
-
-            Session appSocket = new Session();
-
-            appSocket.IPAddress = endPoint.Address.ToString();
-            appSocket.IsValid = true;
-            appSocket.SessionID = SocketApplicationComm.GetSeqNum();
-            appSocket.Socket = socket;
-
-            while (appSocket.IsValid && appSocket.Socket.Connected)
+            Session s = null;
+            while (_connectSocketBagList.TryPeek(out s))
             {
                 try
                 {
-                    byte[] buff4 = new byte[4];
-                    int count = socket.Receive(buff4, SocketFlags.None);
-
-                    if (count == 0)
+                    if (s.IsValid && s.Socket.Connected)
                     {
-                        throw new SessionAbortException("接收数据出错。");
-                    }
-
-                    int dataLen = BitConverter.ToInt32(buff4, 0);
-
-
-                    MemoryStream ms = new MemoryStream();
-                    int readLen = 0, timeout = 0;
-
-                    byte[] buffer = new byte[dataLen];
-
-                    while (readLen < dataLen)
-                    {
-                        count = socket.Receive(buffer);
-
-                        if (count == 0)
+                        _connectSocketBagList.Add(s);
+                        //Socket.Select(new )
+                        if (s.Socket.Poll(1,SelectMode.SelectRead))
                         {
-                            Thread.Sleep(1);
-                            timeout += 1;
-                            if (timeout > 10000)
-                                break;
-                            continue;
+
+                            byte[] buff4 = new byte[4];
+                            int count = s.Socket.Receive(buff4, SocketFlags.None);
+
+                            if (count == 0)
+                            {
+                                throw new SessionAbortException("接收数据出错。");
+                            }
+
+                            int dataLen = BitConverter.ToInt32(buff4, 0);
+
+
+                            MemoryStream ms = new MemoryStream();
+                            int readLen = 0, timeout = 0;
+
+                            byte[] buffer = new byte[dataLen];
+
+                            while (readLen < dataLen)
+                            {
+                                count = s.Socket.Receive(buffer);
+
+                                if (count == 0)
+                                {
+                                    Thread.Sleep(1);
+                                    timeout += 1;
+                                    if (timeout > 10)
+                                    {
+                                        break;
+                                    }
+                                    continue;
+                                }
+                                readLen += count;
+                                ms.Write(buffer, 0, count);
+                            }
+                            buffer = ms.ToArray();
+                            ms.Close();
+
+                            //搞成异步的
+                            new Action<byte[], Session>((b, ss) =>
+                            {
+                                Message message = EntityBufCore.DeSerialize<Message>(b);
+                                FormApp(message, ss);
+                            }).BeginInvoke(buffer, s, null, null);
                         }
-                        readLen += count;
-                        ms.Write(buffer, 0, count);
                     }
-                    buffer = ms.ToArray();
-                    ms.Close();
-
-                    //Message message = EntityBufCore.DeSerialize<Message>(buffer);
-                    //FormApp(message, appSocket);
-
-                    //搞成异步的
-                    new Action<byte[], Session>((b, s) =>
-                    {
-                        Message message = EntityBufCore.DeSerialize<Message>(b);
-                        FormApp(message, s);
-                    }).BeginInvoke(buffer, appSocket, null, null);
                 }
                 catch (SessionAbortException exp)
                 {
@@ -181,10 +193,9 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     SocketApplicationComm.Debug(exp.Message);
                     OnError(exp);
                 }
-            }
 
-            socket.Close();
-            SocketApplicationComm.Debug(string.Format("服务器关闭套接字：{0}", appSocket.SessionID));
+                Thread.Sleep(10);
+            }
         }
 
         protected virtual void FormApp(Message message, Session session)

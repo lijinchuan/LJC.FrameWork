@@ -278,6 +278,7 @@
     <Compile Include="SocketApplication\SocketApplicationComm.cs" />
     <Compile Include="SocketEasy\Client\ClientBase.cs" />
     <Compile Include="SocketEasy\Client\SessionClient.cs" />
+    <Compile Include="SocketEasy\Sever\ServerHugeBase.cs" />
     <Compile Include="SocketEasy\Sever\SessionServer.cs" />
     <Compile Include="SocketEasy\Sever\SeverBase.cs" />
     <Compile Include="SocketEasy\SocketBase.cs" />
