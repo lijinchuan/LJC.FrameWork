@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork", "LJC.FrameWork\LJC.FrameWork.csproj", "{77C9B3F8-7EC5-4AB4-AD65-3B0CC9E1A914}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.Net", "LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\LJC.FrameWork.Net.csproj", "{7AB36CCF-5FFD-4780-A54E-A102ECA028B5}"
@@ -110,5 +112,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

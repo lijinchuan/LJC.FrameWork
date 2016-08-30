@@ -14,7 +14,7 @@ namespace LJC.FrameWork.Comm
 {
     public class DynamicJsonObject : DynamicObject
     {
-        private IDictionary<string, object> Dictionary { get; set; }
+        public IDictionary<string, object> Dictionary { get;private set; }
 
         public DynamicJsonObject(IDictionary<string, object> dictionary)
         {

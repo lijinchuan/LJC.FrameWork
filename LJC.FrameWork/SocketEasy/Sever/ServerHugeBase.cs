@@ -21,7 +21,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
         protected int ipPort;
         protected bool isStartServer = false;
 
-        private ConcurrentBag<Session> _connectSocketBagList = new ConcurrentBag<Session>();
+        //private ConcurrentBag<Session> _connectSocketBagList = new ConcurrentBag<Session>();
+        private ConcurrentDictionary<string, Session> _connectSocketDic = new ConcurrentDictionary<string, Session>();
         private System.Timers.Timer _socketReadTimer = null;
         
         /// <summary>
@@ -104,10 +105,11 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     Session appSocket = new Session();
                     appSocket.IPAddress = endPoint.Address.ToString();
                     appSocket.IsValid = true;
-                    appSocket.SessionID = SocketApplicationComm.GetSeqNum();
+                    appSocket.SessionID = socket.Handle.ToInt64().ToString(); //SocketApplicationComm.GetSeqNum();
                     appSocket.Socket = socket;
 
-                    _connectSocketBagList.Add(appSocket);
+                    //_connectSocketBagList.Add(appSocket);
+                    _connectSocketDic.TryAdd(appSocket.SessionID, appSocket);
                 }
                 catch (Exception e)
                 {
@@ -121,80 +123,87 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         private void ReadSocketList()
         {
-            Session s = null;
-            while (_connectSocketBagList.TryPeek(out s))
+            var list= _connectSocketDic.Select(p=>p.Value).ToList();
+            var readlist=list.Select(p=>p.Socket).ToList();
+            var errlist = new List<Socket>();
+
+            if (readlist.Count > 0)
             {
-                try
-                {
-                    if (s.IsValid && s.Socket.Connected)
+                int taskcount = (int)Math.Ceiling(readlist.Count / 1000.0);
+
+                TaskHelper.RunTask<Socket>(readlist, taskcount, (o) =>
                     {
-                        _connectSocketBagList.Add(s);
-                        //Socket.Select(new )
-                        if (s.Socket.Poll(1,SelectMode.SelectRead))
+                        var sublist = ((List<Socket>)o);
+                        Session s = null;
+                        int delcount = 0;
+                        foreach (var item in readlist)
                         {
-
-                            byte[] buff4 = new byte[4];
-                            int count = s.Socket.Receive(buff4, SocketFlags.None);
-
-                            if (count == 0)
+                            try
                             {
-                                throw new SessionAbortException("接收数据出错。");
-                            }
-
-                            int dataLen = BitConverter.ToInt32(buff4, 0);
-
-
-                            MemoryStream ms = new MemoryStream();
-                            int readLen = 0, timeout = 0;
-
-                            byte[] buffer = new byte[dataLen];
-
-                            while (readLen < dataLen)
-                            {
-                                count = s.Socket.Receive(buffer);
-
-                                if (count == 0)
+                                delcount = 0;
+                                while (item.Poll(1, SelectMode.SelectRead)&&delcount<10)
                                 {
-                                    Thread.Sleep(1);
-                                    timeout += 1;
-                                    if (timeout > 10)
+                                    _connectSocketDic.TryGetValue(item.Handle.ToInt64().ToString(), out s);
+                                    if (!(s.IsValid && s.Socket.Connected))
                                     {
+                                        lock (errlist)
+                                        {
+                                            errlist.Add(item);
+                                        }
                                         break;
                                     }
-                                    continue;
+
+                                    byte[] buff4 = new byte[4];
+                                    int count = item.Receive(buff4, SocketFlags.None);
+
+                                    if (count == 0)
+                                    {
+                                        throw new SessionAbortException("接收数据出错。");
+                                    }
+
+                                    int dataLen = BitConverter.ToInt32(buff4, 0);
+
+
+                                    MemoryStream ms = new MemoryStream();
+                                    int readLen = 0;
+
+                                    byte[] buffer = new byte[dataLen];
+
+                                    while (readLen < dataLen)
+                                    {
+                                        count = item.Receive(buffer);
+
+                                        readLen += count;
+                                        ms.Write(buffer, 0, count);
+                                    }
+                                    buffer = ms.ToArray();
+                                    ms.Close();
+
+                                    //搞成异步的
+                                    new Action<byte[], Session>((b, ss) =>
+                                    {
+                                        Message message = EntityBufCore.DeSerialize<Message>(b);
+                                        FormApp(message, ss);
+                                    }).BeginInvoke(buffer, _connectSocketDic[item.Handle.ToInt64().ToString()], null, null);
+
+                                    delcount += 1;
                                 }
-                                readLen += count;
-                                ms.Write(buffer, 0, count);
                             }
-                            buffer = ms.ToArray();
-                            ms.Close();
-
-                            //搞成异步的
-                            new Action<byte[], Session>((b, ss) =>
+                            catch (Exception ex)
                             {
-                                Message message = EntityBufCore.DeSerialize<Message>(b);
-                                FormApp(message, ss);
-                            }).BeginInvoke(buffer, s, null, null);
-                        }
-                    }
-                }
-                catch (SessionAbortException exp)
-                {
-                    SocketApplicationComm.Debug(exp.Message);
-                    break;
-                }
-                catch (SocketException exp)
-                {
-                    SocketApplicationComm.Debug(exp.Message);
-                    break;
-                }
-                catch (Exception exp)
-                {
-                    SocketApplicationComm.Debug(exp.Message);
-                    OnError(exp);
-                }
+                                OnError(ex);
+                            }
+                        };
+                    });
+            }
 
-                Thread.Sleep(10);
+            Session removesession = null;
+            foreach (var item in errlist)
+            {
+                if (_connectSocketDic.TryRemove(item.Handle.ToInt64().ToString(), out removesession))
+                {
+                    item.Close();
+                }
             }
         }
 
