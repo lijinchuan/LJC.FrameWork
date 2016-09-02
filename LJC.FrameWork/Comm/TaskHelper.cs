@@ -22,7 +22,7 @@ namespace LJC.FrameWork.Comm
                 openTaskNum = data.Count;
             }
 
-            var percount = (int)Math.Floor(data.Count * 1.0 / openTaskNum);
+            var percount = (int)Math.Ceiling(data.Count * 1.0 / openTaskNum);
 
             Task[] taskList = new Task[openTaskNum];
 
@@ -51,7 +51,7 @@ namespace LJC.FrameWork.Comm
                 openTaskNum = data.Count;
             }
 
-            var percount = (int)Math.Floor(data.Count * 1.0 / openTaskNum);
+            var percount = (int)Math.Ceiling(data.Count * 1.0 / openTaskNum);
 
             Task[] taskList = new Task[openTaskNum];
 
