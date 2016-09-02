@@ -127,6 +127,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             var readlist=list.Select(p=>p.Socket).ToList();
             var errlist = new List<Socket>();
 
+            Socket.Select(readlist, null, null, 1);
             if (readlist.Count > 0)
             {
                 int taskcount = (int)Math.Ceiling(readlist.Count / 1000.0);
@@ -141,7 +142,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                             try
                             {
                                 delcount = 0;
-                                while (item.Poll(1, SelectMode.SelectRead)&&delcount<10)
+                                while (item.Poll(1, SelectMode.SelectRead)&&delcount<100)
                                 {
                                     _connectSocketDic.TryGetValue(item.Handle.ToInt64().ToString(), out s);
                                     if (!(s.IsValid && s.Socket.Connected))
