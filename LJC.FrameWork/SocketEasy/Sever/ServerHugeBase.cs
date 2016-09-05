@@ -127,17 +127,21 @@ namespace LJC.FrameWork.SocketEasy.Sever
             var readlist=list.Select(p=>p.Socket).ToList();
             var errlist = new List<Socket>();
 
-            Socket.Select(readlist, null, null, 1);
             if (readlist.Count > 0)
             {
                 int taskcount = (int)Math.Ceiling(readlist.Count / 1000.0);
+                taskcount = Math.Max(taskcount, 60);
+                taskcount = Math.Min(readlist.Count, taskcount);
 
                 TaskHelper.RunTask<Socket>(readlist, taskcount, (o) =>
                     {
                         var sublist = ((List<Socket>)o);
+
+                        Socket.Select(sublist, null, null, 1);
+
                         Session s = null;
                         int delcount = 0;
-                        foreach (var item in readlist)
+                        foreach (var item in sublist)
                         {
                             try
                             {
@@ -155,7 +159,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                                     }
 
                                     byte[] buff4 = new byte[4];
-                                    int count = item.Receive(buff4, SocketFlags.None);
+                                    int count = item.Receive(buff4);
 
                                     if (count == 0)
                                     {

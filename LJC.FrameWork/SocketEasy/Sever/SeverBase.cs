@@ -123,7 +123,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 try
                 {
                     byte[] buff4 = new byte[4];
-                    int count = socket.Receive(buff4, SocketFlags.None);
+                    int count = socket.Receive(buff4);
 
                     if (count == 0)
                     {

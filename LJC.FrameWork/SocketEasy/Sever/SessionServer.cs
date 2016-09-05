@@ -86,7 +86,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                 //session.Socket = s;
                 //session.IPAddress = ((System.Net.IPEndPoint)s.RemoteEndPoint).Address.ToString();
-                appSockets.Add(session.SessionID, session);
+                lock (appSockets)
+                {
+                    if (appSockets.ContainsKey(session.SessionID))
+                    {
+                        appSockets.Remove(session.SessionID);
+                    }
+                    appSockets.Add(session.SessionID, session);
+                }
                 Console.WriteLine("{0}成功登陆", request.LoginID);
             }
             else
@@ -127,7 +134,10 @@ namespace LJC.FrameWork.SocketEasy.Sever
             Message msg = new Message(MessageType.LOGOUT);
 
             session.Socket.SendMessge(msg);
-            appSockets.Remove(session.SessionID);
+            lock (appSockets)
+            {
+                appSockets.Remove(session.SessionID);
+            }
             session.IsValid = false;
 
             Console.WriteLine(string.Format("{0}已退出登陆", session.UserName));
