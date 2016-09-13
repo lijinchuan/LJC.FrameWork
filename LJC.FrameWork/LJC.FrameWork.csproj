@@ -146,6 +146,7 @@
     <Compile Include="Comm\EnumUtility.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Comm\ErrorTraceUtil.cs" />
     <Compile Include="Comm\GCHelper.cs" />
     <Compile Include="Comm\GZip.cs" />
     <Compile Include="Comm\HashEncrypt.cs">

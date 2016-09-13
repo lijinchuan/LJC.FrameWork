@@ -63,7 +63,7 @@ namespace LJC.FrameWork.SOA
                     try
                     {
                         var result = DoResponse(request.FundId, request.Param);
-                        responseBody.Result = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(result);
+                        responseBody.Result = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(result,SocketApplicationComm.IsMessageCompress);
                         responseBody.IsSuccess = true;
 
                         Logger.DebugTextLog(string.Format("处理请求：请求号:{0},服务号:{1},功能号:{2}",

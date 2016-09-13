@@ -169,7 +169,7 @@ namespace LJC.FrameWork.SocketEasy
             try
             {
                 byte[] data = (byte[])buffer;
-                Message message = EntityBufCore.DeSerialize<Message>(data);
+                Message message = EntityBufCore.DeSerialize<Message>(data,SocketApplicationComm.IsMessageCompress);
 
                 if (OnMultiCast != null)
                 {
@@ -187,7 +187,7 @@ namespace LJC.FrameWork.SocketEasy
             try
             {
                 byte[] data = (byte[])buffer;
-                Message message = EntityBufCore.DeSerialize<Message>(data);
+                Message message = EntityBufCore.DeSerialize<Message>(data,SocketApplicationComm.IsMessageCompress);
 
                 if (OnBroadCast != null)
                 {

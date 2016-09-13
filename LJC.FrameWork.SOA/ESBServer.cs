@@ -36,7 +36,7 @@ namespace LJC.FrameWork.SOA
                 }
 
                 //这里要改进下
-                return LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(resp.Result);
+                return LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(resp.Result,SocketApplicationComm.IsMessageCompress);
             }
             return base.DoMessage(message);
         }
@@ -109,7 +109,7 @@ namespace LJC.FrameWork.SOA
                 try
                 {
                     var obj = DoRequest(request.FuncId, request.Param);
-                    resp.Result = EntityBuf.EntityBufCore.Serialize(obj);
+                    resp.Result = EntityBuf.EntityBufCore.Serialize(obj,SocketApplicationComm.IsMessageCompress);
                 }
                 catch (Exception ex)
                 {

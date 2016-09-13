@@ -39,12 +39,12 @@ namespace LJC.FrameWork.SOA
             }
             else
             {
-                request.Param = EntityBufCore.Serialize(param);
+                request.Param = EntityBufCore.Serialize(param,SocketApplicationComm.IsMessageCompress);
             }
 
             Message msg = new Message((int)SOAMessageType.DoSOARequest);
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
-            msg.MessageBuffer = EntityBufCore.Serialize(request);
+            msg.MessageBuffer = EntityBufCore.Serialize(request,SocketApplicationComm.IsMessageCompress);
 
             T result= SendMessageAnsy<T>(msg);
             return result;

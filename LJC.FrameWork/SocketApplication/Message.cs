@@ -85,7 +85,7 @@ namespace LJC.FrameWork.SocketApplication
                     }
                     else
                     {
-                        _messageBuffer = EntityBuf.EntityBufCore.Serialize(_messageBody);
+                        _messageBuffer = EntityBuf.EntityBufCore.Serialize(_messageBody,SocketApplicationComm.IsMessageCompress);
                     }
                 }
                 return _messageBuffer;
@@ -98,7 +98,7 @@ namespace LJC.FrameWork.SocketApplication
 
         public T GetMessageBody<T>()
         {
-            return EntityBuf.EntityBufCore.DeSerialize<T>(_messageBuffer);
+            return EntityBuf.EntityBufCore.DeSerialize<T>(_messageBuffer, SocketApplicationComm.IsMessageCompress);
         }
 
         internal bool IsMessage(MessageType msgType)

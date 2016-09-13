@@ -17,7 +17,6 @@ namespace LJC.FrameWork.SocketEasy.Client
         /// 是否第一次报超时
         /// </summary>
         private bool isFirstTimeOut = true;
-        protected Dictionary<string, Session> appSockets;
 
         public event Action SessionTimeOut;
         public event Action SessionResume;
@@ -30,12 +29,11 @@ namespace LJC.FrameWork.SocketEasy.Client
         private string pwd;
 
         protected Exception BuzException = null;
-        private Dictionary<string, AutoReSetEventResult> watingEvents;
+        private Dictionary<string, AutoReSetEventResult> watingEvents=new Dictionary<string,AutoReSetEventResult>();
 
         public SessionClient(string serverip, int serverport, bool startSession)
             : base(serverip, serverport)
         {
-            watingEvents = new Dictionary<string, AutoReSetEventResult>();
             if (startSession)
             {
                 StartSession();
@@ -272,8 +270,12 @@ namespace LJC.FrameWork.SocketEasy.Client
             {
                 watingEvents.Add(reqID, autoResetEvent);
                 BuzException = null;
-                new Func<Message, bool>(SendMessage).BeginInvoke(message, null, null);
-                WaitHandle.WaitAny(new WaitHandle[] { autoResetEvent }, timeOut);
+
+                ThreadPool.QueueUserWorkItem(new WaitCallback(o => { SendMessage((Message)o); }), message);
+                //new Func<Message, bool>(SendMessage).BeginInvoke(message, null, null);
+                autoResetEvent.WaitOne(timeOut);
+                //WaitHandle.WaitAny(new WaitHandle[] { autoResetEvent }, timeOut);
+
                 watingEvents.Remove(reqID);
 
                 if (BuzException != null)
@@ -287,7 +289,7 @@ namespace LJC.FrameWork.SocketEasy.Client
                 }
                 else
                 {
-                    T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult);
+                    T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult,SocketApplicationComm.IsMessageCompress);
                     return result;
                 }
             }
@@ -297,15 +299,11 @@ namespace LJC.FrameWork.SocketEasy.Client
         {
             if (!string.IsNullOrEmpty(message.MessageHeader.TransactionID))
             {
-                if (watingEvents.Count == 0)
-                    return;
-
-                byte[] result = message.MessageBuffer;
-
-                AutoReSetEventResult autoEvent = watingEvents.First(p => p.Key == message.MessageHeader.TransactionID).Value;
-                if (autoEvent != null)
+                AutoReSetEventResult autoEvent = null;
+                
+                if (watingEvents.TryGetValue(message.MessageHeader.TransactionID,out autoEvent))
                 {
-                    autoEvent.WaitResult = result;
+                    autoEvent.WaitResult = message.MessageBuffer;
                     autoEvent.IsTimeOut = false;
                     autoEvent.Set();
                     return;

@@ -24,6 +24,26 @@ namespace LJC.FrameWork.SocketEasy.Sever
         /// </summary>
         public event Action BeforRelease;
 
+        private int _maxPackageLength = 1024 * 1024 * 8;
+        /// <summary>
+        /// 每次最大接收的字节数byte
+        /// </summary>
+        public int MaxPackageLength
+        {
+            get
+            {
+                return _maxPackageLength;
+            }
+            set
+            {
+                if (value <= 0)
+                {
+                    return;
+                }
+                _maxPackageLength = value;
+            }
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -125,44 +145,35 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     byte[] buff4 = new byte[4];
                     int count = socket.Receive(buff4);
 
-                    if (count == 0)
+                    if (count != 4)
                     {
                         throw new SessionAbortException("接收数据出错。");
                     }
 
                     int dataLen = BitConverter.ToInt32(buff4, 0);
 
+                    if (dataLen > MaxPackageLength)
+                    {
+                        throw new Exception("超过了最大字节数：" + MaxPackageLength);
+                    }
 
                     MemoryStream ms = new MemoryStream();
-                    int readLen = 0, timeout = 0;
-
-                    byte[] buffer = new byte[dataLen];
+                    int readLen = 0;
+                    byte[] reciveBuffer = new byte[1024];
 
                     while (readLen < dataLen)
                     {
-                        count = socket.Receive(buffer);
-
-                        if (count == 0)
-                        {
-                            Thread.Sleep(1);
-                            timeout += 1;
-                            if (timeout > 10000)
-                                break;
-                            continue;
-                        }
+                        count = socket.Receive(reciveBuffer, Math.Min(dataLen - readLen, reciveBuffer.Length), SocketFlags.None);
                         readLen += count;
-                        ms.Write(buffer, 0, count);
+                        ms.Write(reciveBuffer, 0, count);
                     }
-                    buffer = ms.ToArray();
+                    var buffer = ms.ToArray();
                     ms.Close();
-
-                    //Message message = EntityBufCore.DeSerialize<Message>(buffer);
-                    //FormApp(message, appSocket);
 
                     //搞成异步的
                     new Action<byte[], Session>((b, s) =>
                     {
-                        Message message = EntityBufCore.DeSerialize<Message>(b);
+                        Message message = EntityBufCore.DeSerialize<Message>(b,SocketApplicationComm.IsMessageCompress);
                         FormApp(message, s);
                     }).BeginInvoke(buffer, appSocket, null, null);
                 }

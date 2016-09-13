@@ -2,6 +2,7 @@
 using LJC.FrameWork.SocketApplication;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -29,6 +30,30 @@ namespace LJC.FrameWork.SocketEasy.Client
         /// 对象清理之前的事件
         /// </summary>
         public event Action BeforRelease;
+
+        private int _maxPackageLength = 10 * 1024 * 1024 * 8;
+        /// <summary>
+        /// 每次最大接收的字节数byte
+        /// </summary>
+        public int MaxPackageLength
+        {
+            get
+            {
+                return _maxPackageLength;
+            }
+            set
+            {
+                if(value<=0)
+                {
+                    return;
+                }
+                _maxPackageLength = value;
+            }
+        }
+
+        private byte[] _reciveBuffer = new byte[1024];
+
+        protected Stopwatch _stopwatch = new Stopwatch();
 
         /// <summary>
         /// 
@@ -126,38 +151,37 @@ namespace LJC.FrameWork.SocketEasy.Client
             {
                 try
                 {
+                    _stopwatch.Restart();
+
                     byte[] buff4 = new byte[4];
                     int count = socketClient.Receive(buff4);
-                    if (count == 0)
+                    if (count != 4)
                         break;
 
                     int dataLen = BitConverter.ToInt32(buff4, 0);
 
-                    MemoryStream ms = new MemoryStream();
-                    int readLen = 0,timeout=0;
+                    Console.WriteLine("接收数据长度:"+dataLen);
 
-                    byte[] buffer = new byte[dataLen];
+                    if(dataLen>MaxPackageLength)
+                    {
+                        throw new Exception("超过了最大字节数：" + MaxPackageLength);
+                    }
+
+                    MemoryStream ms = new MemoryStream();
+                    int readLen = 0;
 
                     while (readLen < dataLen)
                     {
-                        count = socketClient.Receive(buffer);
-                        
-                        if (count == 0)
-                        {
-                            Thread.Sleep(1);
-                            timeout += 1;
-                            if (timeout > 10000)
-                                break;
-                            continue;
-                        }
+                        count = socketClient.Receive(_reciveBuffer, Math.Min(dataLen - readLen, _reciveBuffer.Length), SocketFlags.None);
                         readLen += count;
-                        ms.Write(buffer, 0, count);
+                        ms.Write(_reciveBuffer, 0, count);
                     }
-                    buffer = ms.ToArray();
+                    var buffer = ms.ToArray();
                     ms.Close();
 
-                    //Thread newThread = new Thread(new ParameterizedThreadStart(ProcessMessage));
-                    //newThread.Start(buffer);
+                    _stopwatch.Stop();
+                    Console.WriteLine("接收数据完成,用时:" + _stopwatch.ElapsedMilliseconds + "ms");
+
                     ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), buffer);
                 }
                 catch (SocketException e)
@@ -183,7 +207,7 @@ namespace LJC.FrameWork.SocketEasy.Client
             try
             {
                 byte[] data = (byte[])buffer;
-                Message message = EntityBufCore.DeSerialize<Message>(data);
+                Message message = EntityBufCore.DeSerialize<Message>(data,SocketApplicationComm.IsMessageCompress);
                 OnMessage(message);
             }
             catch (Exception e)

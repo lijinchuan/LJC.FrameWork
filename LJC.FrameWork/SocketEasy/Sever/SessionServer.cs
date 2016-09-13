@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace LJC.FrameWork.SocketEasy.Sever
 {
-    public class SessionServer:/*ServerBase*/ServerHugeBase
+    public class SessionServer:ServerBase/*ServerHugeBase*/
     {
         protected Dictionary<string, Session> appSockets;
 
@@ -220,7 +220,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     }
                     else
                     {
-                        T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult);
+                        T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult,SocketApplicationComm.IsMessageCompress);
                         return result;
                     }
                 }
