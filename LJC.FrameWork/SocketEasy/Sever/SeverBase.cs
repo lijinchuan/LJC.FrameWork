@@ -129,6 +129,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
         {
             Socket socket = (Socket)obj;
             socket.NoDelay = true;
+            socket.ReceiveBufferSize = 32000;
+            socket.SendBufferSize = 32000;
             IPEndPoint endPoint = (IPEndPoint)socket.RemoteEndPoint;
 
             Session appSocket = new Session();

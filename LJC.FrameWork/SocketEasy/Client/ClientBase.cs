@@ -180,7 +180,7 @@ namespace LJC.FrameWork.SocketEasy.Client
                     ms.Close();
 
                     _stopwatch.Stop();
-                    Console.WriteLine("接收数据完成,用时:" + _stopwatch.ElapsedMilliseconds + "ms");
+                    Console.WriteLine(socketClient.Handle.ToString()+"接收数据完成,用时:" + _stopwatch.ElapsedMilliseconds + "ms");
 
                     ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), buffer);
                 }

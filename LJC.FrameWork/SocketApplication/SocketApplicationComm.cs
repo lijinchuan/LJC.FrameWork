@@ -77,20 +77,6 @@ namespace LJC.FrameWork.SocketApplication
                     return false;
                 }
 
-                //byte[] data = EntityBuf.EntityBufCore.Serialize(message);
-                //byte[] dataLen = BitConverter.GetBytes(data.Length);
-
-                //if (data.Length == 0 || data.Length >= Int32.MaxValue)
-                //{
-                //    throw new Exception("发送长度过长或过小");
-                //}
-
-                //MemoryStream ms = new System.IO.MemoryStream();
-                //ms.Write(dataLen, 0, dataLen.Length);
-                //ms.Write(data, 0, data.Length);
-                //s.Send(ms.ToArray(),SocketFlags.None);
-                //ms.Close();
-
                 s.Send(GetSendMessageBytes(message),SocketFlags.None);
                 return true;
             }
