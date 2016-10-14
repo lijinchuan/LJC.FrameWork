@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace LJC.FrameWork.SocketEasy.Sever
 {
-    public class SessionServer:/*ServerBase*/ServerHugeBase
+    public class SessionServer:/*ServerBase*/ServerHugeBase2
     {
         protected Dictionary<string, Session> appSockets;
 

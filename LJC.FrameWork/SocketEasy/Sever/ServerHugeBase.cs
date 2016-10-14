@@ -127,6 +127,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     appSocket.IsValid = true;
                     appSocket.SessionID = socket.Handle.ToInt64().ToString(); //SocketApplicationComm.GetSeqNum();
                     appSocket.Socket = socket;
+                    
 
                     //_connectSocketBagList.Add(appSocket);
                     _connectSocketDic.TryAdd(appSocket.SessionID, appSocket);
