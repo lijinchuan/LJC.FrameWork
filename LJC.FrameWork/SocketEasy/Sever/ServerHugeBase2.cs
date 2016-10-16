@@ -110,7 +110,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         private SocketAsyncEventArgs GetSocketAsyncEventArgs()
         {
-            var args = new SocketAsyncEventArgs();
+            var args = new IOCPSocketAsyncEventArgs();
             args.Completed += Args_Completed;
 
             return args;
@@ -118,12 +118,17 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         void Args_Completed(object sender, SocketAsyncEventArgs e)
         {
-            if (e.ConnectSocket == null)
-                return;
+            Listening();
 
-            Socket socket = e.ConnectSocket;
+            e.Completed -= Args_Completed;
+            if (!e.AcceptSocket.Connected)
+            {
+                e.AcceptSocket = null;
+                return;
+            }
+
+            Socket socket = e.AcceptSocket;
             socket.NoDelay = true;
-            socket.UseOnlyOverlappedIO = true;
 
             IPEndPoint endPoint = (IPEndPoint)socket.RemoteEndPoint;
             Session appSocket = new Session();
@@ -155,20 +160,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         private void Listening()
         {
-            //while (!stop)
-            {
-                try
-                {
-                    socketServer.AcceptAsync(GetSocketAsyncEventArgs());
-                }
-                catch (Exception e)
-                {
-                    OnError(e);
-                }
-            }
-
-            //socketServer.Close();
-            SocketApplicationComm.Debug("关闭服务器套接字!");
+            socketServer.AcceptAsync(GetSocketAsyncEventArgs());
         }
 
         void SocketAsyncEventArgs_Completed(object sender, SocketAsyncEventArgs e)
@@ -184,6 +176,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 {
                     removesession.Close();
                 }
+                return;
             }
             else
             {
@@ -194,7 +187,15 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     int dataLen = BitConverter.ToInt32(bt4, 0);
                     if (dataLen > MaxPackageLength)
                     {
-                        e.ConnectSocket.Close();
+                        e.AcceptSocket.Close();
+                        //e.ConnectSocket.Close();
+                        Session removesession;
+                        if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
+                        {
+                            removesession.Close();
+                        }
+                        return;
+
                     }
                     else
                     {
