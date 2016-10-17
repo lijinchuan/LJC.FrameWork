@@ -21,6 +21,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
         protected int ipPort;
         protected bool isStartServer = false;
         private ConcurrentDictionary<string, Session> _connectSocketDic = new ConcurrentDictionary<string, Session>();
+        private ConcurrentQueue<IOCPSocketAsyncEventArgs> _iocpQueue = new ConcurrentQueue<IOCPSocketAsyncEventArgs>();
         
         /// <summary>
         /// 对象清理之前的事件
@@ -90,8 +91,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                 if (!isStartServer)
                 {
-                    Thread thread = new Thread(Listening);
-                    thread.Start();
+                    Listening();
                 }
 
                 //_socketReadTimer = TaskHelper.SetInterval(1, () => { ReadSocketList(); return false; }, 0, true);
@@ -110,8 +110,20 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         private SocketAsyncEventArgs GetSocketAsyncEventArgs()
         {
-            var args = new IOCPSocketAsyncEventArgs();
-            args.Completed += Args_Completed;
+            IOCPSocketAsyncEventArgs args;
+            if( _iocpQueue.TryDequeue(out args))
+            {
+                //args.Completed += Args_Completed;
+
+                args.IsReadPackLen = false;
+
+                Args_Completed(null, args);
+            }
+            else
+            {
+                args = new IOCPSocketAsyncEventArgs();
+                args.Completed += Args_Completed;
+            }
 
             return args;
         }
@@ -121,11 +133,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
             Listening();
 
             e.Completed -= Args_Completed;
-            if (!e.AcceptSocket.Connected)
-            {
-                e.AcceptSocket = null;
-                return;
-            }
 
             Socket socket = e.AcceptSocket;
             socket.NoDelay = true;
@@ -144,13 +151,17 @@ namespace LJC.FrameWork.SocketEasy.Sever
             socketAsyncEventArgs.UserToken = appSocket.SessionID;
             byte[] buffer = new byte[4];
             socketAsyncEventArgs.SetBuffer(buffer, 0, 4);
+
+            _connectSocketDic.TryAdd(appSocket.SessionID, appSocket);
+
             if (!socket.ReceiveAsync(socketAsyncEventArgs))
             {
+                Session old;
+                _connectSocketDic.TryRemove(appSocket.SessionID, out old);
+                socketAsyncEventArgs.Completed -= SocketAsyncEventArgs_Completed;
+                _iocpQueue.Enqueue(socketAsyncEventArgs);
                 throw new Exception(socketAsyncEventArgs.SocketError.ToString());
             }
-
-            //_connectSocketBagList.Add(appSocket);
-            _connectSocketDic.TryAdd(appSocket.SessionID, appSocket);
         }
 
         private void SetAcceptAsync()
@@ -168,31 +179,35 @@ namespace LJC.FrameWork.SocketEasy.Sever
             e.Completed -= SocketAsyncEventArgs_Completed;
             var args = e as IOCPSocketAsyncEventArgs;
 
-            if (args.BytesTransferred == 0)
+            if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
             {
                 Session removesession;
                 //用户断开了
                 if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                 {
-                    removesession.Close();
+                    args.SetBuffer(new byte[288], 0, 288);
+                    args.AcceptSocket.Disconnect(true);
+                    //removesession.Close();
+                    _iocpQueue.Enqueue(args);
                 }
                 return;
             }
             else
             {
-                if(!args.IsReadPackLen)
+                if (!args.IsReadPackLen)
                 {
-                    byte[] bt4=new byte[4];
+                    byte[] bt4 = new byte[4];
                     e.Buffer.CopyTo(bt4, 0);
                     int dataLen = BitConverter.ToInt32(bt4, 0);
                     if (dataLen > MaxPackageLength)
                     {
-                        e.AcceptSocket.Close();
-                        //e.ConnectSocket.Close();
                         Session removesession;
                         if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                         {
-                            removesession.Close();
+                            args.SetBuffer(new byte[288], 0, 288);
+                            args.AcceptSocket.Disconnect(true);
+                            //removesession.Close();
+                            _iocpQueue.Enqueue(args);
                         }
                         return;
 
@@ -206,7 +221,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 }
                 else
                 {
-                    byte[] bt=new byte[args.BytesTransferred];
+                    byte[] bt = new byte[args.BytesTransferred];
                     e.Buffer.CopyTo(bt, 0);
 
                     ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
