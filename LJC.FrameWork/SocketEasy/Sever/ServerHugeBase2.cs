@@ -94,8 +94,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     Listening();
                 }
 
-                //_socketReadTimer = TaskHelper.SetInterval(1, () => { ReadSocketList(); return false; }, 0, true);
-
                 isStartServer = true;
                 return true;
             }
@@ -182,9 +180,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 //用户断开了
                 if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                 {
-                    args.SetBuffer(null, 0, 0);
+                    args.ClearBuffer();
                     args.AcceptSocket.Disconnect(true);
-                    //removesession.Close();
                     _iocpQueue.Enqueue(args);
                 }
                 return;
@@ -201,9 +198,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                         Session removesession;
                         if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                         {
-                            args.SetBuffer(null, 0, 0);
+                            args.ClearBuffer();
                             args.AcceptSocket.Disconnect(true);
-                            //removesession.Close();
                             _iocpQueue.Enqueue(args);
                         }
                         return;
@@ -224,6 +220,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                     {
                         Message message = EntityBufCore.DeSerialize<Message>((byte[])buf, SocketApplicationComm.IsMessageCompress);
+
+                        if(!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
+                        {
+                            Console.WriteLine(message.MessageHeader.TransactionID);
+                        }
+
                         FormApp(message, _connectSocketDic[args.UserToken.ToString()]);
                     }), bt);
 

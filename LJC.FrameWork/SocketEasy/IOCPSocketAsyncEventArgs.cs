@@ -20,5 +20,10 @@ namespace LJC.FrameWork.SocketEasy
                 _isReadPackLen = value;
             }
         }
+
+        internal void ClearBuffer()
+        {
+            this.SetBuffer(null, 0, 0);
+        }
     }
 }

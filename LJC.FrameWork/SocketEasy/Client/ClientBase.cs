@@ -237,7 +237,6 @@ namespace LJC.FrameWork.SocketEasy.Client
                 //byte[] len = BitConverter.GetBytes(data.Length);
                 //socketClient.Send(len);
                 //socketClient.Send(data);
-
                 return socketClient.SendMessge(message);
             }
             catch (Exception e)

@@ -300,7 +300,9 @@ namespace LJC.FrameWork.SocketEasy.Client
             if (!string.IsNullOrEmpty(message.MessageHeader.TransactionID))
             {
                 AutoReSetEventResult autoEvent = null;
-                
+
+                Console.WriteLine("收到消息:" + message.MessageHeader.TransactionID);
+
                 if (watingEvents.TryGetValue(message.MessageHeader.TransactionID,out autoEvent))
                 {
                     autoEvent.WaitResult = message.MessageBuffer;

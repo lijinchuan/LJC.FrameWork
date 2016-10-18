@@ -77,7 +77,7 @@ namespace LJC.FrameWork.SocketApplication
                     return false;
                 }
 
-                s.Send(GetSendMessageBytes(message),SocketFlags.None);
+                var it = s.Send(GetSendMessageBytes(message), SocketFlags.None);
                 return true;
             }
             catch (Exception ex)
