@@ -113,11 +113,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
             IOCPSocketAsyncEventArgs args;
             if( _iocpQueue.TryDequeue(out args))
             {
-                //args.Completed += Args_Completed;
-
+                args.Completed += Args_Completed;
                 args.IsReadPackLen = false;
-
-                Args_Completed(null, args);
             }
             else
             {
@@ -185,7 +182,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 //用户断开了
                 if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                 {
-                    args.SetBuffer(new byte[288], 0, 288);
+                    args.SetBuffer(null, 0, 0);
                     args.AcceptSocket.Disconnect(true);
                     //removesession.Close();
                     _iocpQueue.Enqueue(args);
@@ -204,7 +201,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                         Session removesession;
                         if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                         {
-                            args.SetBuffer(new byte[288], 0, 288);
+                            args.SetBuffer(null, 0, 0);
                             args.AcceptSocket.Disconnect(true);
                             //removesession.Close();
                             _iocpQueue.Enqueue(args);
