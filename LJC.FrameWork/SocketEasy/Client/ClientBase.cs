@@ -151,16 +151,12 @@ namespace LJC.FrameWork.SocketEasy.Client
             {
                 try
                 {
-                    _stopwatch.Restart();
-
                     byte[] buff4 = new byte[4];
                     int count = socketClient.Receive(buff4);
                     if (count != 4)
                         break;
 
                     int dataLen = BitConverter.ToInt32(buff4, 0);
-
-                    Console.WriteLine("接收数据长度:"+dataLen);
 
                     if(dataLen>MaxPackageLength)
                     {
@@ -178,9 +174,6 @@ namespace LJC.FrameWork.SocketEasy.Client
                     }
                     var buffer = ms.ToArray();
                     ms.Close();
-
-                    _stopwatch.Stop();
-                    Console.WriteLine(socketClient.Handle.ToString()+"接收数据完成,用时:" + _stopwatch.ElapsedMilliseconds + "ms");
 
                     ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), buffer);
                 }

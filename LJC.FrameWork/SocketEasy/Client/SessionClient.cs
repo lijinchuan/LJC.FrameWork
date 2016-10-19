@@ -273,6 +273,7 @@ namespace LJC.FrameWork.SocketEasy.Client
 
                 ThreadPool.QueueUserWorkItem(new WaitCallback(o => { SendMessage((Message)o); }), message);
                 //new Func<Message, bool>(SendMessage).BeginInvoke(message, null, null);
+
                 autoResetEvent.WaitOne(timeOut);
                 //WaitHandle.WaitAny(new WaitHandle[] { autoResetEvent }, timeOut);
 
