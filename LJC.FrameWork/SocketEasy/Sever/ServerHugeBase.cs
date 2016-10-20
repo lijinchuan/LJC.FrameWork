@@ -20,10 +20,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
         protected string[] bindIpArray;
         protected int ipPort;
         protected bool isStartServer = false;
-
-        //private ConcurrentBag<Session> _connectSocketBagList = new ConcurrentBag<Session>();
         private ConcurrentDictionary<string, Session> _connectSocketDic = new ConcurrentDictionary<string, Session>();
-        private System.Timers.Timer _socketReadTimer = null;
+        private ConcurrentQueue<IOCPSocketAsyncEventArgs> _iocpQueue = new ConcurrentQueue<IOCPSocketAsyncEventArgs>();
         
         /// <summary>
         /// 对象清理之前的事件
@@ -89,16 +87,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
                         }
                     }
                 }
-
                 socketServer.Listen(int.MaxValue);
 
                 if (!isStartServer)
                 {
-                    Thread thread = new Thread(Listening);
-                    thread.Start();
+                    Listening();
                 }
-
-                _socketReadTimer = TaskHelper.SetInterval(1, () => { ReadSocketList(); return false; }, 0, true);
 
                 isStartServer = true;
                 return true;
@@ -112,127 +106,136 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         #region server
 
-        private void Listening()
+        private SocketAsyncEventArgs GetSocketAsyncEventArgs()
         {
-            while (!stop)
+            IOCPSocketAsyncEventArgs args;
+            if( _iocpQueue.TryDequeue(out args))
             {
-                try
-                {
-                    Socket socket = socketServer.Accept();
-
-                    socket.NoDelay = true;
-                    IPEndPoint endPoint = (IPEndPoint)socket.RemoteEndPoint;
-                    Session appSocket = new Session();
-                    appSocket.IPAddress = endPoint.Address.ToString();
-                    appSocket.IsValid = true;
-                    appSocket.SessionID = socket.Handle.ToInt64().ToString(); //SocketApplicationComm.GetSeqNum();
-                    appSocket.Socket = socket;
-                    
-
-                    //_connectSocketBagList.Add(appSocket);
-                    _connectSocketDic.TryAdd(appSocket.SessionID, appSocket);
-                }
-                catch (Exception e)
-                {
-                    OnError(e);
-                }
+                args.Completed += Args_Completed;
+                args.IsReadPackLen = false;
+            }
+            else
+            {
+                args = new IOCPSocketAsyncEventArgs();
+                args.Completed += Args_Completed;
             }
 
-            socketServer.Close();
-            SocketApplicationComm.Debug("关闭服务器套接字!");
+            return args;
         }
 
-        private void ReadSocketList()
+        void Args_Completed(object sender, SocketAsyncEventArgs e)
         {
-            var list= _connectSocketDic.Select(p=>p.Value).ToList();
-            var readlist=list.Select(p=>p.Socket).ToList();
-            var errlist = new List<Socket>();
+            Listening();
 
-            if (readlist.Count > 0)
+            e.Completed -= Args_Completed;
+
+            Socket socket = e.AcceptSocket;
+            socket.NoDelay = true;
+
+            IPEndPoint endPoint = (IPEndPoint)socket.RemoteEndPoint;
+            Session appSocket = new Session();
+            appSocket.IPAddress = endPoint.Address.ToString();
+            appSocket.IsValid = true;
+            appSocket.SessionID = socket.Handle.ToInt64().ToString(); //SocketApplicationComm.GetSeqNum();
+            appSocket.Socket = socket;
+
+            var socketAsyncEventArgs = e as IOCPSocketAsyncEventArgs;
+            socketAsyncEventArgs.AcceptSocket = socket;
+            socketAsyncEventArgs.DisconnectReuseSocket = true;
+            socketAsyncEventArgs.Completed += SocketAsyncEventArgs_Completed;
+            socketAsyncEventArgs.UserToken = appSocket.SessionID;
+            byte[] buffer = new byte[4];
+            socketAsyncEventArgs.SetBuffer(buffer, 0, 4);
+
+            _connectSocketDic.TryAdd(appSocket.SessionID, appSocket);
+
+            if (!socket.ReceiveAsync(socketAsyncEventArgs))
             {
-                int taskcount = (int)Math.Ceiling(readlist.Count / 1000.0);
-                taskcount = Math.Max(taskcount, 60);
-                taskcount = Math.Min(readlist.Count, taskcount);
-
-                TaskHelper.RunTask<Socket>(readlist, taskcount, (o) =>
-                    {
-                        var sublist = ((List<Socket>)o);
-
-                        Socket.Select(sublist, null, null, 1);
-
-                        Session s = null;
-                        int delcount = 0;
-                        foreach (var item in sublist)
-                        {
-                            try
-                            {
-                                _connectSocketDic.TryGetValue(item.Handle.ToInt64().ToString(), out s);
-                                if (!(s.IsValid && s.Socket.Connected))
-                                {
-                                    lock (errlist)
-                                    {
-                                        errlist.Add(item);
-                                    }
-                                    continue;
-                                }
-
-                                delcount = 0;
-                                while (item.Poll(1, SelectMode.SelectRead)&&delcount<100)
-                                {
-                                    byte[] buff4 = new byte[4];
-                                    int count = item.Receive(buff4);
-
-                                    if (count != 4)
-                                    {
-                                        throw new SessionAbortException("接收数据出错。");
-                                    }
-
-                                    int dataLen = BitConverter.ToInt32(buff4, 0);
-
-
-
-                                    if (dataLen > MaxPackageLength)
-                                    {
-                                        throw new Exception("超过了最大字节数：" + MaxPackageLength);
-                                    }
-
-                                    MemoryStream ms = new MemoryStream();
-                                    int readLen = 0;
-                                    byte[] reciveBuffer = new byte[1024];
-
-                                    while (readLen < dataLen)
-                                    {
-                                        count = item.Receive(reciveBuffer, Math.Min(dataLen - readLen, reciveBuffer.Length), SocketFlags.None);
-                                        readLen += count;
-                                        ms.Write(reciveBuffer, 0, count);
-                                    }
-                                    var buffer = ms.ToArray();
-                                    ms.Close();
-
-                                    ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
-                                    {
-                                        Message message = EntityBufCore.DeSerialize<Message>((byte[])buf,SocketApplicationComm.IsMessageCompress);
-                                        FormApp(message, _connectSocketDic[item.Handle.ToInt64().ToString()]);
-                                    }), buffer);
-
-                                    delcount += 1;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                OnError(ex);
-                            }
-                        };
-                    });
+                Session old;
+                _connectSocketDic.TryRemove(appSocket.SessionID, out old);
+                socketAsyncEventArgs.Completed -= SocketAsyncEventArgs_Completed;
+                _iocpQueue.Enqueue(socketAsyncEventArgs);
+                throw new Exception(socketAsyncEventArgs.SocketError.ToString());
             }
+        }
 
-            Session removesession = null;
-            foreach (var item in errlist)
+        private void SetAcceptAsync()
+        {
+
+        }
+
+        private void Listening()
+        {
+            socketServer.AcceptAsync(GetSocketAsyncEventArgs());
+        }
+
+        void SocketAsyncEventArgs_Completed(object sender, SocketAsyncEventArgs e)
+        {
+            e.Completed -= SocketAsyncEventArgs_Completed;
+            var args = e as IOCPSocketAsyncEventArgs;
+
+            if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
             {
-                if (_connectSocketDic.TryRemove(item.Handle.ToInt64().ToString(), out removesession))
+                Session removesession;
+                //用户断开了
+                if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                 {
-                    item.Close();
+                    args.ClearBuffer();
+                    args.AcceptSocket.Disconnect(true);
+                    _iocpQueue.Enqueue(args);
                 }
+                return;
+            }
+            else
+            {
+                if (!args.IsReadPackLen)
+                {
+                    byte[] bt4 = new byte[4];
+                    e.Buffer.CopyTo(bt4, 0);
+                    int dataLen = BitConverter.ToInt32(bt4, 0);
+                    if (dataLen > MaxPackageLength)
+                    {
+                        Session removesession;
+                        if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
+                        {
+                            args.ClearBuffer();
+                            args.AcceptSocket.Disconnect(true);
+                            _iocpQueue.Enqueue(args);
+                        }
+                        return;
+
+                    }
+                    else
+                    {
+                        args.IsReadPackLen = true;
+                        byte[] readbuffer = new byte[dataLen];
+                        args.SetBuffer(readbuffer, 0, dataLen);
+                    }
+                }
+                else
+                {
+                    byte[] bt = new byte[args.BytesTransferred];
+                    e.Buffer.CopyTo(bt, 0);
+
+                    ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
+                    {
+                        Message message = EntityBufCore.DeSerialize<Message>((byte[])buf, SocketApplicationComm.IsMessageCompress);
+
+                        if(!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
+                        {
+                            Console.WriteLine(message.MessageHeader.TransactionID);
+                        }
+
+                        FormApp(message, _connectSocketDic[args.UserToken.ToString()]);
+                    }), bt);
+
+                    byte[] bt4 = new byte[4];
+                    args.IsReadPackLen = false;
+                    args.SetBuffer(bt4, 0, 4);
+                }
+
+                e.Completed += SocketAsyncEventArgs_Completed;
+                e.AcceptSocket.ReceiveAsync(e);
             }
         }
 

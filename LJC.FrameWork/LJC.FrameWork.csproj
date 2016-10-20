@@ -277,11 +277,12 @@
     <Compile Include="SocketApplication\SessionMessageApp.cs" />
     <Compile Include="SocketApplication\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketApplicationComm.cs" />
+    <Compile Include="SocketEasy\Client\ClientHugeBase.cs" />
     <Compile Include="SocketEasy\Client\ClientBase.cs" />
     <Compile Include="SocketEasy\Client\SessionClient.cs" />
     <Compile Include="SocketEasy\IOCPSocketAsyncEventArgs.cs" />
-    <Compile Include="SocketEasy\Sever\ServerHugeBase2.cs" />
     <Compile Include="SocketEasy\Sever\ServerHugeBase.cs" />
+    <Compile Include="SocketEasy\Sever\ServerMidBase.cs" />
     <Compile Include="SocketEasy\Sever\SessionServer.cs" />
     <Compile Include="SocketEasy\Sever\SeverBase.cs" />
     <Compile Include="SocketEasy\SocketBase.cs" />

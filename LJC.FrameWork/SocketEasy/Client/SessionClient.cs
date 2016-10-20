@@ -9,7 +9,7 @@ using System.Timers;
 
 namespace LJC.FrameWork.SocketEasy.Client
 {
-    public class SessionClient:ClientBase
+    public class SessionClient:ClientHugeBase
     {
         private System.Timers.Timer timer;
         private Session SessionContext;
