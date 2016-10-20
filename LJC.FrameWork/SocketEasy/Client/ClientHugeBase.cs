@@ -125,7 +125,7 @@ namespace LJC.FrameWork.SocketEasy.Client
                     socketAsyncEvent.Completed += socketAsyncEvent_Completed;
                     socketAsyncEvent.RemoteEndPoint = new IPEndPoint(connectip, ipPort);
                     socketClient.ConnectAsync(socketAsyncEvent);
-                    _startSign.WaitOne(3 * 1000);
+                    _startSign.WaitOne(30 * 1000);
 
                     if(!socketClient.Connected)
                     {

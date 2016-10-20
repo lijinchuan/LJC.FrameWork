@@ -271,7 +271,8 @@ namespace LJC.FrameWork.SocketEasy.Client
                 watingEvents.Add(reqID, autoResetEvent);
                 BuzException = null;
 
-                ThreadPool.QueueUserWorkItem(new WaitCallback(o => { SendMessage((Message)o); }), message);
+                SendMessage(message);
+                //ThreadPool.QueueUserWorkItem(new WaitCallback(o => { SendMessage((Message)o); }), message);
                 //new Func<Message, bool>(SendMessage).BeginInvoke(message, null, null);
 
                 autoResetEvent.WaitOne(timeOut);
