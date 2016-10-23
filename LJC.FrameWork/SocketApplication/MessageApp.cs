@@ -365,7 +365,7 @@ namespace LJC.FrameWork.SocketApplication
             try
             {
                 byte[] data = (byte[])buffer;
-                Message message = EntityBufCore.DeSerialize<Message>(data,SocketApplicationComm.IsMessageCompress);
+                Message message = EntityBufCore.DeSerialize<Message>(data);
                 OnMessage(message);
             }
             catch (Exception e)
@@ -379,7 +379,7 @@ namespace LJC.FrameWork.SocketApplication
             try
             {
                 byte[] data = (byte[])buffer;
-                Message message = EntityBufCore.DeSerialize<Message>(data,SocketApplicationComm.IsMessageCompress);
+                Message message = EntityBufCore.DeSerialize<Message>(data);
 
                 if (OnBroadCast != null)
                 {
@@ -397,7 +397,7 @@ namespace LJC.FrameWork.SocketApplication
             try
             {
                 byte[] data = (byte[])buffer;
-                Message message = EntityBufCore.DeSerialize<Message>(data,SocketApplicationComm.IsMessageCompress);
+                Message message = EntityBufCore.DeSerialize<Message>(data);
 
                 if (OnMultiCast != null)
                 {
@@ -542,7 +542,7 @@ namespace LJC.FrameWork.SocketApplication
                     //搞成异步的
                     new Action<byte[], Session>((b, s) =>
                         {
-                            Message message = EntityBufCore.DeSerialize<Message>(b,SocketApplicationComm.IsMessageCompress);
+                            Message message = EntityBufCore.DeSerialize<Message>(b);
                             FormApp(message, s);
                         }).BeginInvoke(buffer, appSocket, null, null);
                 }

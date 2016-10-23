@@ -211,7 +211,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                                     ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                                     {
-                                        Message message = EntityBufCore.DeSerialize<Message>((byte[])buf,SocketApplicationComm.IsMessageCompress);
+                                        Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
                                         FormApp(message, _connectSocketDic[item.Handle.ToInt64().ToString()]);
                                     }), buffer);
 

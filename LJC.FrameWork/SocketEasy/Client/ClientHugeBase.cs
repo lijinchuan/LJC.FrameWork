@@ -220,7 +220,7 @@ namespace LJC.FrameWork.SocketEasy.Client
             try
             {
                 byte[] data = (byte[])buffer;
-                Message message = EntityBufCore.DeSerialize<Message>(data,SocketApplicationComm.IsMessageCompress);
+                Message message = EntityBufCore.DeSerialize<Message>(data);
                 OnMessage(message);
             }
             catch (Exception e)

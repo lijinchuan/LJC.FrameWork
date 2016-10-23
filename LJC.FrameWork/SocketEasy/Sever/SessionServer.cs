@@ -225,7 +225,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     }
                     else
                     {
-                        T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult,SocketApplicationComm.IsMessageCompress);
+                        T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult);
                         return result;
                     }
                 }

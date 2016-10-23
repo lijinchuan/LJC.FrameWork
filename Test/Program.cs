@@ -25,7 +25,7 @@ namespace Test
 
     class Program
     {
-        static void Main2(string[] args)
+        static void Main(string[] args)
         {
             LJC.FrameWork.SocketApplication.SessionServer server = new LJC.FrameWork.SocketApplication.SessionServer(5555);
             server.StartServer();
@@ -147,7 +147,7 @@ UDP属于运输层,下面我们由下至上一步一步来看:
             }
         }
 
-        static void Main(string[] args)
+        static void Main0(string[] args)
         {
             TestRWObj1();
 

@@ -175,7 +175,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     //搞成异步的
                     new Action<byte[], Session>((b, s) =>
                     {
-                        Message message = EntityBufCore.DeSerialize<Message>(b,SocketApplicationComm.IsMessageCompress);
+                        Message message = EntityBufCore.DeSerialize<Message>(b);
                         FormApp(message, s);
                     }).BeginInvoke(buffer, appSocket, null, null);
                 }

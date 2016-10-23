@@ -63,7 +63,7 @@ namespace LJC.FrameWork.SocketApplication
                 }
                 else
                 {
-                    T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult,SocketApplicationComm.IsMessageCompress);
+                    T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult);
                     return result;
                 }
             }

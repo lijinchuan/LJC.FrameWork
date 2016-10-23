@@ -174,6 +174,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
             e.Completed -= SocketAsyncEventArgs_Completed;
             var args = e as IOCPSocketAsyncEventArgs;
 
+            LogManager.LogHelper.Instance.Error(e.BytesTransferred);
+
             if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
             {
                 Session removesession;
@@ -191,7 +193,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 if (!args.IsReadPackLen)
                 {
                     byte[] bt4 = new byte[4];
-                    e.Buffer.CopyTo(bt4, 0);
+                    try
+                    {
+                        e.Buffer.CopyTo(bt4, 0);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogManager.LogHelper.Instance.Error("读取长度失败:"+e.BytesTransferred, ex);
+                    }
                     int dataLen = BitConverter.ToInt32(bt4, 0);
                     if (dataLen > MaxPackageLength)
                     {
@@ -215,11 +224,18 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 else
                 {
                     byte[] bt = new byte[args.BytesTransferred];
-                    e.Buffer.CopyTo(bt, 0);
+                    try
+                    {
+                        e.Buffer.CopyTo(bt, 0);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogManager.LogHelper.Instance.Error("读取内容失败:" + e.BytesTransferred,ex);
+                    }
 
                     ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                     {
-                        Message message = EntityBufCore.DeSerialize<Message>((byte[])buf, SocketApplicationComm.IsMessageCompress);
+                        Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
 
                         if(!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
                         {

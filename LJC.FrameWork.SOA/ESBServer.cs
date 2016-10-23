@@ -11,7 +11,7 @@ using LJC.FrameWork.EntityBuf;
 
 namespace LJC.FrameWork.SOA
 {
-    public class ESBServer:SessionServer
+    public class ESBServer:SocketEasy.Sever.SessionServer
     {
         private static object LockObj = new object();
         protected List<ESBServiceInfo> ServiceContainer = new List<ESBServiceInfo>();
@@ -22,23 +22,6 @@ namespace LJC.FrameWork.SOA
             : base(port)
         {
             ServerModeNeedLogin = false;
-        }
-
-        protected override byte[] DoMessage(Message message)
-        {
-            if (message.IsMessage((int)SOAMessageType.DoSOATransferResponse))
-            {
-                var resp = message.GetMessageBody<SOATransferResponse>();
-                if (!resp.IsSuccess)
-                {
-                    Logger.TextLog("DoMessage失败", string.Empty, LogCategory.Other);
-                    return null;
-                }
-
-                //这里要改进下
-                return LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(resp.Result,SocketApplicationComm.IsMessageCompress);
-            }
-            return base.DoMessage(message);
         }
 
         internal void DoTransferResponse(SOATransferResponse response)
@@ -109,7 +92,7 @@ namespace LJC.FrameWork.SOA
                 try
                 {
                     var obj = DoRequest(request.FuncId, request.Param);
-                    resp.Result = EntityBuf.EntityBufCore.Serialize(obj,SocketApplicationComm.IsMessageCompress);
+                    resp.Result = EntityBuf.EntityBufCore.Serialize(obj);
                 }
                 catch (Exception ex)
                 {
@@ -181,8 +164,6 @@ namespace LJC.FrameWork.SOA
 
                         if (serviceInfo.Session.SendMessage(msg))
                         {
-
-
                             Logger.DebugTextLog(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2}",
                                 msgTransactionID, request.ServiceNo, request.FuncId), string.Empty, LogCategory.Other);
                             return;
@@ -223,7 +204,7 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        protected sealed override void FormAppMessage(Message message, Session session)
+        protected override void FormApp(Message message, Session session)
         {
             if (message.IsMessage((int)SOAMessageType.RegisterService))
             {
@@ -238,7 +219,7 @@ namespace LJC.FrameWork.SOA
 
                     lock (LockObj)
                     {
-                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress)&&p.ServiceNo.Equals(req.ServiceNo));
+                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress) && p.ServiceNo.Equals(req.ServiceNo));
 
                         ServiceContainer.Add(new ESBServiceInfo
                         {
@@ -247,19 +228,19 @@ namespace LJC.FrameWork.SOA
                         });
                     }
 
-                    
+
                     msg.SetMessageBody(new RegisterServiceResponse
                     {
                         IsSuccess = true
                     });
-                    
+
                 }
                 catch (Exception ex)
                 {
                     msg.SetMessageBody(new RegisterServiceResponse
                     {
-                        ErrMsg=ex.Message,
-                        IsSuccess=false
+                        ErrMsg = ex.Message,
+                        IsSuccess = false
                     });
                 }
                 session.Socket.SendMessge(msg);
@@ -278,15 +259,15 @@ namespace LJC.FrameWork.SOA
                     }
                     msg.SetMessageBody(new UnRegisterServiceResponse
                     {
-                        IsSuccess=true
+                        IsSuccess = true
                     });
                 }
                 catch (Exception e)
                 {
                     msg.SetMessageBody(new UnRegisterServiceResponse
                     {
-                        IsSuccess=false,
-                        ErrMsg=e.Message,
+                        IsSuccess = false,
+                        ErrMsg = e.Message,
                     });
                 }
                 session.Socket.SendMessge(msg);
@@ -302,10 +283,10 @@ namespace LJC.FrameWork.SOA
             {
                 var resp = message.GetMessageBody<SOATransferResponse>();
                 DoTransferResponse(resp);
-                session.Close();
                 return;
             }
-            base.FormAppMessage(message, session);
+
+            base.FormApp(message, session);
         }
     }
 }

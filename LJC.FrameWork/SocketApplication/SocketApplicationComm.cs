@@ -47,7 +47,7 @@ namespace LJC.FrameWork.SocketApplication
 
         public static byte[] GetSendMessageBytes(Message message)
         {
-            byte[] data = EntityBuf.EntityBufCore.Serialize(message, SocketApplicationComm.IsMessageCompress);
+            byte[] data = EntityBuf.EntityBufCore.Serialize(message);
             byte[] dataLen = BitConverter.GetBytes(data.Length);
 
             if (data.Length == 0 || data.Length >= Int32.MaxValue)
@@ -62,11 +62,6 @@ namespace LJC.FrameWork.SocketApplication
                 return ms.ToArray();
             }
         }
-
-        /// <summary>
-        /// 消息是否压缩
-        /// </summary>
-        public const bool IsMessageCompress = false;
 
         public static bool SendMessge(this Socket s, Message message)
         {
@@ -90,7 +85,7 @@ namespace LJC.FrameWork.SocketApplication
         public static void Broadcast(this Socket udpSocket,Message message)
         {
             //var bytes=GetSendMessageBytes(message);
-            var bytes = EntityBuf.EntityBufCore.Serialize(message,SocketApplicationComm.IsMessageCompress);
+            var bytes = EntityBuf.EntityBufCore.Serialize(message);
             if (bytes.Length >= Udp_MTU)
             {
                 throw new Exception("UPD包过大，最大限制为" + Udp_MTU + "字节");
@@ -100,7 +95,7 @@ namespace LJC.FrameWork.SocketApplication
 
         public static void MulitBroadcast(this Socket udpSocket, Message message)
         {
-            var bytes = EntityBuf.EntityBufCore.Serialize(message,SocketApplicationComm.IsMessageCompress);
+            var bytes = EntityBuf.EntityBufCore.Serialize(message);
             if (bytes.Length >= Udp_MTU)
             {
                 throw new Exception("UPD包过大，最大限制为"+Udp_MTU+"字节");
