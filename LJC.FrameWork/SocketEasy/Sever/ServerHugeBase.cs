@@ -193,14 +193,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 if (!args.IsReadPackLen)
                 {
                     byte[] bt4 = new byte[4];
-                    try
-                    {
-                        e.Buffer.CopyTo(bt4, 0);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogManager.LogHelper.Instance.Error("读取长度失败:"+e.BytesTransferred, ex);
-                    }
+                    e.Buffer.CopyTo(bt4, 0);
                     int dataLen = BitConverter.ToInt32(bt4, 0);
                     if (dataLen > MaxPackageLength)
                     {
@@ -218,36 +211,41 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     {
                         args.IsReadPackLen = true;
                         byte[] readbuffer = new byte[dataLen];
+                        args.BufferLen = dataLen;
+                        args.BufferRev = 0;
                         args.SetBuffer(readbuffer, 0, dataLen);
                     }
                 }
                 else
                 {
-                    byte[] bt = new byte[args.BytesTransferred];
-                    try
+                    args.BufferRev += args.BytesTransferred;
+                    if (args.BufferRev == args.BufferLen)
                     {
+                        byte[] bt = new byte[args.BufferLen];
+
                         e.Buffer.CopyTo(bt, 0);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogManager.LogHelper.Instance.Error("读取内容失败:" + e.BytesTransferred,ex);
-                    }
 
-                    ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
-                    {
-                        Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
-
-                        if(!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
+                        ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                         {
-                            Console.WriteLine(message.MessageHeader.TransactionID);
-                        }
+                            Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
 
-                        FormApp(message, _connectSocketDic[args.UserToken.ToString()]);
-                    }), bt);
+                            if (!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
+                            {
+                                Console.WriteLine(message.MessageHeader.TransactionID);
+                            }
 
-                    byte[] bt4 = new byte[4];
-                    args.IsReadPackLen = false;
-                    args.SetBuffer(bt4, 0, 4);
+                            FormApp(message, _connectSocketDic[args.UserToken.ToString()]);
+                        }), bt);
+
+
+                        byte[] bt4 = new byte[4];
+                        args.IsReadPackLen = false;
+                        args.SetBuffer(bt4, 0, 4);
+                    }
+                    else
+                    {
+                        e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
+                    }
                 }
 
                 e.Completed += SocketAsyncEventArgs_Completed;

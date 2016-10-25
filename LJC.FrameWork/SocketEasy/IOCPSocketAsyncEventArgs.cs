@@ -21,9 +21,23 @@ namespace LJC.FrameWork.SocketEasy
             }
         }
 
+        internal int BufferLen
+        {
+            get;
+            set;
+        }
+
+        internal int BufferRev
+        {
+            get;
+            set;
+        }
+
         internal void ClearBuffer()
         {
             this.SetBuffer(null, 0, 0);
+            BufferLen = 0;
+            BufferRev = 0;
         }
     }
 }

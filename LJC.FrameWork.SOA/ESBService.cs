@@ -85,31 +85,34 @@ namespace LJC.FrameWork.SOA
                     responseMsg.SetMessageBody(responseBody);
                     //SendMessage(responseMsg);
 
-                    //这里不关闭，会有线程泄露
-                    MessageApp newClient = new MessageApp(this.ipString, this.ipPort, false);
-                    newClient.Error += (e) =>
-                        {
-                             newClient.Dispose();
-                        };
-                    if (newClient.StartClient())
-                    {
-                        if (!newClient.SendMessage(responseMsg))
-                        {
-                            newClient.Dispose();
+                    this.SendMessage(responseMsg);
+                    ////这里不关闭，会有线程泄露
+                    //MessageApp newClient = new MessageApp(this.ipString, this.ipPort, false);
+                    //newClient.Error += (e) =>
+                    //    {
+                    //         newClient.Dispose();
+                    //    };
+                    //if (newClient.StartClient())
+                    //{
+                    //    if (!newClient.SendMessage(responseMsg))
+                    //    {
+                    //        Logger.DebugTextLog(string.Format("服务转发出错,请求号:{0},服务号:{1},功能号:{2}",
+                    //        request == null ? "0" : request.ClientTransactionID,
+                    //        ServiceNo, request == null ? 0 : request.FundId), "发送消息出错",
+                    //        LogCategory.Other);
+                    //    }
 
-                            Logger.DebugTextLog(string.Format("服务转发出错,请求号:{0},服务号:{1},功能号:{2}",
-                            request == null ? "0" : request.ClientTransactionID,
-                            ServiceNo, request == null ? 0 : request.FundId), "发送消息出错",
-                            LogCategory.Other);
-                        }
-                    }
-                    else
-                    {
-                        Logger.DebugTextLog(string.Format("服务转发出错,原因是StartClient()方法失败,请求号:{0},服务号:{1},功能号:{2}",
-                            request == null ? "0" : request.ClientTransactionID,
-                            ServiceNo, request == null ? 0 : request.FundId), "发送消息出错",
-                            LogCategory.Other);
-                    }
+                        
+                    //}
+                    //else
+                    //{
+                    //    Logger.DebugTextLog(string.Format("服务转发出错,原因是StartClient()方法失败,请求号:{0},服务号:{1},功能号:{2}",
+                    //        request == null ? "0" : request.ClientTransactionID,
+                    //        ServiceNo, request == null ? 0 : request.FundId), "发送消息出错",
+                    //        LogCategory.Other);
+                    //}
+
+                    //newClient.Dispose();
 
                     return;
                 }
