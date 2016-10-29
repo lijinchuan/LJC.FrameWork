@@ -30,6 +30,16 @@ namespace LJC.FrameWork.Comm
             _canReadFromBack = CanReadFormBack;
         }
 
+        public bool SetPostion(long pos)
+        {
+            if(_sr.BaseStream.Length<pos)
+            {
+                return false;
+            }
+            _sr.BaseStream.Position = pos;
+            return true;
+        }
+
 
         public static ObjTextReader CreateReader(string textfile)
         {
