@@ -162,10 +162,17 @@ namespace LJC.FrameWork.SocketEasy.Client
 
             if (e.LastOperation == SocketAsyncOperation.Connect)
             {
-                socketClient = e.ConnectSocket;
-                _startSign.Set();
+                if (e.SocketError == SocketError.Success)
+                {
+                    socketClient = e.ConnectSocket;
+                    _startSign.Set();
 
-                e.SetBuffer(new byte[4], 0, 4);
+                    e.SetBuffer(new byte[4], 0, 4);
+                }
+                else
+                {
+                    throw new Exception("连接失败:" + e.SocketError);
+                }
             }
             else
             {
