@@ -42,7 +42,7 @@ namespace Test2
             using (LJC.FrameWork.Comm.ObjTextReader reader = LJC.FrameWork.Comm.ObjTextReader.CreateReader(filename))
             {
                 Man man = null;
-                while ((man = reader.ReadObjectFromBack<Man>()) != null)
+                //while ((man = reader.ReadObjectFromBack<Man>()) != null)
                 {
                     i++;
                     //var man = reader.ReadObject<Man>();
@@ -75,7 +75,7 @@ namespace Test2
                 //var man = reader.ReadObjectFromBack<Man>();
                 //Console.WriteLine(man.Name);
                 Man man = null;
-                while((man=reader.ReadObjectFromBack<Man>())!=null)
+                //while((man=reader.ReadObjectFromBack<Man>())!=null)
                 {
                     Console.WriteLine(man.Name);
                 }

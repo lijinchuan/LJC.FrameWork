@@ -46,12 +46,12 @@ namespace LJC.FrameWork.Comm
             return new ObjTextReader(textfile);
         }
 
-        public T ReadObjectFromBack<T>() where T : class
+        public T ReadObjectFromBack<T>(bool autoReset=true) where T : class
         {
             if (!_canReadFromBack)
                 throw new Exception("不支持从后向前读");
 
-            if (!PostionLast(_sr.BaseStream))
+            if (!PostionLast(_sr.BaseStream, autoReset))
                 return default(T);
 
             var oldpostion = _sr.BaseStream.Position;

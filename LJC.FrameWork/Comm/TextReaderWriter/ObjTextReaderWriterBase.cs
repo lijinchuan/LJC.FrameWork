@@ -57,13 +57,22 @@ namespace LJC.FrameWork.Comm
             }
         }
 
-        protected bool PostionLast(Stream s)
+        protected bool PostionLast(Stream s,bool autoSetLast=true)
         {
             if (s.Length < 7)
                 return false;
 
             if (s.Position <= 1)
-                s.Position = s.Length - 2;
+            {
+                if (autoSetLast)
+                {
+                    s.Position = s.Length - 2;
+                }
+                else
+                {
+                    return false;
+                }
+            }
             else
                 s.Position -= 2;
 
