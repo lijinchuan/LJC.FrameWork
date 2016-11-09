@@ -174,8 +174,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
             e.Completed -= SocketAsyncEventArgs_Completed;
             var args = e as IOCPSocketAsyncEventArgs;
 
-            LogManager.LogHelper.Instance.Error(e.BytesTransferred);
-
             if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
             {
                 Session removesession;

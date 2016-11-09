@@ -80,9 +80,7 @@ namespace LJC.FrameWork.SOA
 
         static void client_Error(Exception e)
         {
-            //throw e;
-
-            Logger.TextLog("SOA请求错误", e, LogCategory.Other);
+            LogHelper.Instance.Error("SOA请求错误", e);
         }
     }
 }

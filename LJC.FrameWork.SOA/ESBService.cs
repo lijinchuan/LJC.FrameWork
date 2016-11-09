@@ -56,9 +56,7 @@ namespace LJC.FrameWork.SOA
                     responseBody.ClientTransactionID = request.ClientTransactionID;
                     responseBody.ClientId = request.ClientId;
 
-                    //记录日志
-                    Logger.DebugTextLog(string.Format("接收服务请求,请求号:{0}", request.ClientTransactionID),
-                        string.Empty, LogCategory.Other);
+                    LogHelper.Instance.Debug(string.Format("接收服务请求,请求号:{0}", request.ClientTransactionID));
 
                     try
                     {
@@ -66,10 +64,8 @@ namespace LJC.FrameWork.SOA
                         responseBody.Result = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(result);
                         responseBody.IsSuccess = true;
 
-                        Logger.DebugTextLog(string.Format("处理请求：请求号:{0},服务号:{1},功能号:{2}",
-                            request.ClientTransactionID, ServiceNo, request.FundId)
-                            , LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(result),
-                            LogCategory.Other);
+                        LogHelper.Instance.Debug(string.Format("处理请求：请求号:{0},服务号:{1},功能号:{2},结果:{3}",
+                            request.ClientTransactionID, ServiceNo, request.FundId, LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(result)));
                             ;
                     }
                     catch (Exception ex)
@@ -77,9 +73,9 @@ namespace LJC.FrameWork.SOA
                         responseBody.IsSuccess = false;
                         responseBody.ErrMsg = ex.Message;
 
-                        Logger.DebugTextLog(string.Format("服务转发出错,请求号:{0},服务号:{1},功能号:{2}",
-                            request.ClientTransactionID, ServiceNo, request.FundId), ex,
-                            LogCategory.Other);
+                        LogHelper.Instance.Error(string.Format("服务转发出错,请求号:{0},服务号:{1},功能号:{2}",
+                            request.ClientTransactionID, ServiceNo, request.FundId), ex);
+
                     }
 
                     responseMsg.SetMessageBody(responseBody);
@@ -118,10 +114,10 @@ namespace LJC.FrameWork.SOA
                 }
                 catch (Exception ex)
                 {
-                    Logger.TextLog(string.Format("服务转发出错,请求号:{0},服务号:{1},功能号:{2}",
-                        request==null?"0":request.ClientTransactionID, 
-                        ServiceNo, request==null?0:request.FundId), ex,
-                            LogCategory.Other);
+                    LogHelper.Instance.Error(string.Format("服务转发出错,请求号:{0},服务号:{1},功能号:{2}",
+                        request == null ? "0" : request.ClientTransactionID,
+                        ServiceNo, request == null ? 0 : request.FundId), ex);
+
                     return;
                 }
             }

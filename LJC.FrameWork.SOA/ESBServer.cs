@@ -51,23 +51,23 @@ namespace LJC.FrameWork.SOA
                     session.Socket.SendMessge(msgRet);
 
                     var toulp = (Tuple<int, int>)session.Tag;
-                    Logger.DebugTextLog(string.Format("SOA响应耗时,请求序列号:{0},服务号:{1},功能号:{2}",
-                        response.ClientTransactionID, toulp.Item1, toulp.Item2)
-                    , DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒",
-                    LogCategory.SOA);
+
+                    LogHelper.Instance.Debug(string.Format("SOA响应耗时,请求序列号:{0},服务号:{1},功能号:{2},用时:{3}",
+                        response.ClientTransactionID, toulp.Item1, toulp.Item2, DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒"));
                 }
                 else
                 {
-                    Logger.TextLog(string.Format("DoTransferResponse(SOATransferResponse response)失败,请求序列号:{0}",
-                    response.ClientTransactionID),
-                        "找不到会话ID" + response.ClientId, LogCategory.Other);
+                    Exception ex = new Exception(string.Format("DoTransferResponse(SOATransferResponse response)失败,请求序列号:{0}",response.ClientTransactionID));
+                    ex.Data.Add("response.ClientId", response.ClientId);
+
+                    LogHelper.Instance.Error("DoTransferResponse出错", ex);
                 }
             }
             catch (Exception ex)
             {
-                Logger.TextLog(string.Format("DoTransferResponse(SOATransferResponse response)失败,请求序列号:{0}",
-                    response.ClientTransactionID),
-                        ex, LogCategory.Other);
+                ex.Data.Add("请求序列号", response.ClientTransactionID);
+
+                LogHelper.Instance.Error("DoTransferResponse出错", ex);
             }
         }
 
@@ -164,8 +164,8 @@ namespace LJC.FrameWork.SOA
 
                         if (serviceInfo.Session.SendMessage(msg))
                         {
-                            Logger.DebugTextLog(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2}",
-                                msgTransactionID, request.ServiceNo, request.FuncId), string.Empty, LogCategory.Other);
+                            LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2}",
+                                msgTransactionID, request.ServiceNo, request.FuncId));
                             return;
                         }
                         else
@@ -196,10 +196,8 @@ namespace LJC.FrameWork.SOA
                     msgRet.SetMessageBody(resp);
                     session.Socket.SendMessge(msgRet);
 
-                    Logger.TextLog(string.Format("SOA请求失败,服务可能未注册,请求序列号:{0},服务号:{1},功能号:{2}",
-                        msgTransactionID, request.ServiceNo, request.FuncId)
-                        , DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒",
-                        LogCategory.SOA);
+                    LogHelper.Instance.Error(string.Format("SOA请求失败,服务可能未注册,请求序列号:{0},服务号:{1},功能号:{2},耗时:{3}",
+                        msgTransactionID, request.ServiceNo, request.FuncId,DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒"));
                 }
             }
         }
