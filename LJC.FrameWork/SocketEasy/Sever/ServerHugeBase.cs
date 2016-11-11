@@ -136,7 +136,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             Session appSocket = new Session();
             appSocket.IPAddress = endPoint.Address.ToString();
             appSocket.IsValid = true;
-            appSocket.SessionID = socket.Handle.ToInt64().ToString(); //SocketApplicationComm.GetSeqNum();
+            appSocket.SessionID = SocketApplicationComm.GetSeqNum();
             appSocket.Socket = socket;
 
             var socketAsyncEventArgs = e as IOCPSocketAsyncEventArgs;

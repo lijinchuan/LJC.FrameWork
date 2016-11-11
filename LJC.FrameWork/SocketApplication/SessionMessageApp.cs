@@ -53,7 +53,7 @@ namespace LJC.FrameWork.SocketApplication
             SessionContext = new Session();
             SessionContext.UserName = message.LoginID;
             SessionContext.ConnectTime = DateTime.Now;
-            SessionContext.SessionID = message.SessionID;
+            SessionContext.SessionID = SocketApplicationComm.GetSeqNum();
             SessionContext.SessionTimeOut = message.SessionTimeOut;
             SessionContext.HeadBeatInterVal = message.HeadBeatInterVal;
             SessionContext.IsLogin = true;

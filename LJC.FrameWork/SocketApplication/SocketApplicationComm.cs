@@ -35,6 +35,8 @@ namespace LJC.FrameWork.SocketApplication
         private static long seqNum;
         private static object sendMessageLock = new object();
 
+        private static string _seqperfix = Guid.NewGuid().ToString().Replace("-", "");
+
         public static string GetSeqNum()
         {
             if (seqNum >= long.MaxValue)
@@ -42,7 +44,7 @@ namespace LJC.FrameWork.SocketApplication
                 seqNum = 0;
             }
             long seqNumMiro = Interlocked.Increment(ref seqNum);
-            return string.Format("{0}{1}", DateTime.Now.ToString("yyMMddHHmmss-"), seqNumMiro);
+            return string.Format("{0}_{1}", _seqperfix, seqNumMiro);
         }
 
         public static byte[] GetSendMessageBytes(Message message)
