@@ -15,6 +15,31 @@ namespace LJC.FrameWork.SOA
         {
             this.ServiceNo = sNo;
             this.BeferLogout += this.UnRegisterService;
+            this.OnClientReset += ESBService_OnClientReset;
+        }
+
+        void ESBService_OnClientReset()
+        {
+            while (true)
+            {
+                try
+                {
+                    if (RegisterService())
+                    {
+                        LogHelper.Instance.Info("连接重置后注册服务成功");
+                        break;
+                    }
+                    else
+                    {
+                        LogHelper.Instance.Info("连接重置后注册服务失败");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.Instance.Error("连接重置后注册服务失败", ex);
+                }
+                Thread.Sleep(3000);
+            }
         }
 
         /// <summary>
@@ -179,27 +204,57 @@ namespace LJC.FrameWork.SOA
         protected override void OnLoginSuccess()
         {
             base.OnLoginSuccess();
-            RegisterService();
+            while (true)
+            {
+                try
+                {
+                    if (RegisterService())
+                    {
+                        LogHelper.Instance.Info("注册服务成功");
+                        break;
+                    }
+                    else
+                    {
+                        LogHelper.Instance.Info("注册服务失败");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.Instance.Error("注册服务失败", ex);
+                }
+                Thread.Sleep(3000);
+            }
+        }
+
+        protected override void OnError(Exception e)
+        {
+            base.OnError(e);
         }
 
         protected override void OnSessionResume()
         {
             base.OnSessionResume();
 
-            try
+            while (true)
             {
-                if (RegisterService())
+                try
                 {
-                    LogHelper.Instance.Info("重新注册服务成功");
+                    if (RegisterService())
+                    {
+                        LogHelper.Instance.Info("连接恢复后注册服务成功");
+                        break;
+                    }
+                    else
+                    {
+                        LogHelper.Instance.Info("连接恢复后注册服务失败");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    LogHelper.Instance.Info("重新注册服务失败");
+                    LogHelper.Instance.Error("连接恢复后注册服务失败", ex);
                 }
-            }
-            catch (Exception ex)
-            {
-                LogHelper.Instance.Error("重新注册服务失败", ex);
+
+                Thread.Sleep(3000);
             }
         }
     }

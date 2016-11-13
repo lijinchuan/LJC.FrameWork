@@ -35,6 +35,8 @@ namespace LJC.FrameWork.SocketApplication
         /// </summary>
         private int reConnectClientTimeInterval = 5000;
 
+        public event Action OnClientReset;
+
         private bool _enbaleBCast = false;
         /// <summary>
         /// 是否接收广播
@@ -195,9 +197,11 @@ namespace LJC.FrameWork.SocketApplication
                 if (DateTime.Now.Subtract(lastReStartClientTime).TotalMilliseconds <= reConnectClientTimeInterval)
                     return false;
 
+                bool isResetClient = false;
                 if (socketClient != null)
                 {
                     socketClient.Close();
+                    isResetClient = true;
                 }
 
                 socketClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -232,6 +236,12 @@ namespace LJC.FrameWork.SocketApplication
                 }
 
                 isStartClient = true;
+
+                if (isResetClient && OnClientReset != null)
+                {
+                    OnClientReset();
+                }
+
                 return true;
             }
             catch (Exception e)
