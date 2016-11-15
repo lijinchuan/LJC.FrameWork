@@ -155,7 +155,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 _connectSocketDic.TryRemove(appSocket.SessionID, out old);
                 socketAsyncEventArgs.Completed -= SocketAsyncEventArgs_Completed;
                 _iocpQueue.Enqueue(socketAsyncEventArgs);
-                throw new Exception(socketAsyncEventArgs.SocketError.ToString());
             }
         }
 
