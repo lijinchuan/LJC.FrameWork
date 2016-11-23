@@ -229,7 +229,10 @@ namespace LJC.FrameWork.SocketEasy.Client
             }
 
             e.Completed += socketAsyncEvent_Completed;
-            socketClient.ReceiveAsync(e);
+            if(!socketClient.ReceiveAsync(e))
+            {
+                e.Completed -= socketAsyncEvent_Completed;
+            }
         }
 
         private void ProcessMessage(object buffer)

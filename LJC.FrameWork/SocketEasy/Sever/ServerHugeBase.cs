@@ -246,7 +246,13 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 }
 
                 e.Completed += SocketAsyncEventArgs_Completed;
-                e.AcceptSocket.ReceiveAsync(e);
+                if (!e.AcceptSocket.ReceiveAsync(e))
+                {
+                    Session old;
+                    _connectSocketDic.TryRemove(e.UserToken.ToString(), out old);
+                    e.Completed -= SocketAsyncEventArgs_Completed;
+                    _iocpQueue.Enqueue(args);
+                }
             }
         }
 
