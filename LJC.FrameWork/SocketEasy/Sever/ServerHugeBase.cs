@@ -112,6 +112,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             if( _iocpQueue.TryDequeue(out args))
             {
                 args.Completed += Args_Completed;
+                //args.ClearBuffer()
                 args.IsReadPackLen = false;
             }
             else
@@ -154,6 +155,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 Session old;
                 _connectSocketDic.TryRemove(appSocket.SessionID, out old);
                 socketAsyncEventArgs.Completed -= SocketAsyncEventArgs_Completed;
+                socketAsyncEventArgs.ClearBuffer();
+                socketAsyncEventArgs.AcceptSocket.Disconnect(true);
                 _iocpQueue.Enqueue(socketAsyncEventArgs);
             }
         }
