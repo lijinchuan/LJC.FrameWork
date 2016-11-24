@@ -254,6 +254,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     Session old;
                     _connectSocketDic.TryRemove(e.UserToken.ToString(), out old);
                     e.Completed -= SocketAsyncEventArgs_Completed;
+                    args.ClearBuffer();
+                    args.AcceptSocket.Disconnect(true);
                     _iocpQueue.Enqueue(args);
                 }
             }
