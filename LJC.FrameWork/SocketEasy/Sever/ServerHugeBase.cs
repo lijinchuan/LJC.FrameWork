@@ -234,7 +234,11 @@ namespace LJC.FrameWork.SocketEasy.Sever
                                 Console.WriteLine(message.MessageHeader.TransactionID);
                             }
 
-                            FormApp(message, _connectSocketDic[args.UserToken.ToString()]);
+                            Session connSession;
+                            if (_connectSocketDic.TryGetValue(args.UserToken.ToString(),out connSession))
+                            {
+                                FormApp(message, connSession);
+                            }
                         }), bt);
 
 

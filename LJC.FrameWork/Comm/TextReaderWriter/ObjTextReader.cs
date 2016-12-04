@@ -92,7 +92,7 @@ namespace LJC.FrameWork.Comm
                 _sr.BaseStream.Read(bylen, 0, 4);
                 var len = BitConverter.ToInt32(bylen, 0);
                 //239 187 191
-                if (len == 0 || len == 12565487)
+                if (len <= 0 || len == 12565487)
                     return default(T);
 
                 //检查长度
