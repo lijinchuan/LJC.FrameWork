@@ -301,8 +301,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     }
                     else
                     {
-                        //e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
-                        SetBuffer(args,args.BufferRev, args.BufferLen - args.BufferRev);
+                        e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
+                        //SetBuffer(args,args.BufferRev, args.BufferLen - args.BufferRev);
                     }
                 }
 
