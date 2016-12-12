@@ -29,7 +29,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
         /// </summary>
         public event Action BeforRelease;
 
-        private int _maxPackageLength = 1024 * 1024 * 8;
+        private int _maxPackageLength = 1024 * 1024 * 8 * 10;
         /// <summary>
         /// 每次最大接收的字节数byte
         /// </summary>
