@@ -22,6 +22,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
         protected bool isStartServer = false;
         private ConcurrentDictionary<string, Session> _connectSocketDic = new ConcurrentDictionary<string, Session>();
         private ConcurrentQueue<IOCPSocketAsyncEventArgs> _iocpQueue = new ConcurrentQueue<IOCPSocketAsyncEventArgs>();
+        private BufferPollManager _bufferpoll = null;
         
         /// <summary>
         /// 对象清理之前的事件
@@ -69,6 +70,11 @@ namespace LJC.FrameWork.SocketEasy.Sever
         {
             try
             {
+                if(_bufferpoll==null)
+                {
+                    _bufferpoll = new BufferPollManager(2000, 10240);
+                }
+
                 if (socketServer == null)
                 {
                     socketServer = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -106,6 +112,48 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         #region server
 
+        private void RealseSocketAsyncEventArgs(IOCPSocketAsyncEventArgs e)
+        {
+            e.Completed -= SocketAsyncEventArgs_Completed;
+            _bufferpoll.RealseBuffer(e.BufferIndex);
+            e.ClearBuffer();
+            e.AcceptSocket.Disconnect(true);
+            _iocpQueue.Enqueue(e);
+        }
+
+        private void SetBuffer(IOCPSocketAsyncEventArgs e,int offset,int len)
+        {
+            byte[] buf = null;
+            if (len <= _bufferpoll.BlockSize)
+            {
+                if (e.BufferIndex == -1)
+                {
+                    var newindex = _bufferpoll.GetBuffer();
+                    if (newindex == -1)
+                    {
+                        buf = new byte[len];
+                    }
+                    else
+                    {
+                        e.BufferIndex=newindex;
+                    }
+                }
+            }
+            else
+            {
+                buf = new byte[len];
+            }
+
+            if(buf!=null)
+            {
+                e.SetBuffer(buf, offset, len);
+            }
+            else
+            {
+                e.SetBuffer(_bufferpoll.Buffer, _bufferpoll.GetOffset(e.BufferIndex) + offset, len);
+            }
+        }
+
         private SocketAsyncEventArgs GetSocketAsyncEventArgs()
         {
             IOCPSocketAsyncEventArgs args;
@@ -120,6 +168,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 args = new IOCPSocketAsyncEventArgs();
                 args.Completed += Args_Completed;
             }
+
+            args.BufferIndex = _bufferpoll.GetBuffer();
 
             return args;
         }
@@ -145,8 +195,11 @@ namespace LJC.FrameWork.SocketEasy.Sever
             socketAsyncEventArgs.DisconnectReuseSocket = true;
             socketAsyncEventArgs.Completed += SocketAsyncEventArgs_Completed;
             socketAsyncEventArgs.UserToken = appSocket.SessionID;
-            byte[] buffer = new byte[4];
-            socketAsyncEventArgs.SetBuffer(buffer, 0, 4);
+
+            //byte[] buffer = new byte[4];
+            //socketAsyncEventArgs.SetBuffer(buffer, 0, 4);
+            SetBuffer(socketAsyncEventArgs, 0, 4);
+            //socketAsyncEventArgs.SetBuffer(_bufferpoll.Buffer, _bufferpoll.GetOffset(socketAsyncEventArgs.BufferIndex), 4);
 
             _connectSocketDic.TryAdd(appSocket.SessionID, appSocket);
 
@@ -154,10 +207,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 Session old;
                 _connectSocketDic.TryRemove(appSocket.SessionID, out old);
-                socketAsyncEventArgs.Completed -= SocketAsyncEventArgs_Completed;
-                socketAsyncEventArgs.ClearBuffer();
-                socketAsyncEventArgs.AcceptSocket.Disconnect(true);
-                _iocpQueue.Enqueue(socketAsyncEventArgs);
+                RealseSocketAsyncEventArgs(socketAsyncEventArgs);
             }
         }
 
@@ -182,9 +232,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 //用户断开了
                 if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                 {
-                    args.ClearBuffer();
-                    args.AcceptSocket.Disconnect(true);
-                    _iocpQueue.Enqueue(args);
+                    RealseSocketAsyncEventArgs(args);
                 }
                 return;
             }
@@ -192,17 +240,13 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 if (!args.IsReadPackLen)
                 {
-                    byte[] bt4 = new byte[4];
-                    e.Buffer.CopyTo(bt4, 0);
-                    int dataLen = BitConverter.ToInt32(bt4, 0);
+                    int dataLen = BitConverter.ToInt32(e.Buffer.Skip(_bufferpoll.GetOffset(args.BufferIndex)).Take(4).ToArray(), 0);
                     if (dataLen > MaxPackageLength)
                     {
                         Session removesession;
                         if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                         {
-                            args.ClearBuffer();
-                            args.AcceptSocket.Disconnect(true);
-                            _iocpQueue.Enqueue(args);
+                            RealseSocketAsyncEventArgs(args);
                         }
                         return;
 
@@ -213,7 +257,9 @@ namespace LJC.FrameWork.SocketEasy.Sever
                         byte[] readbuffer = new byte[dataLen];
                         args.BufferLen = dataLen;
                         args.BufferRev = 0;
-                        args.SetBuffer(readbuffer, 0, dataLen);
+                        //args.SetBuffer(readbuffer, 0, dataLen);
+
+                        SetBuffer(args,0, dataLen);
                     }
                 }
                 else
@@ -221,9 +267,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     args.BufferRev += args.BytesTransferred;
                     if (args.BufferRev == args.BufferLen)
                     {
-                        byte[] bt = new byte[args.BufferLen];
-
-                        e.Buffer.CopyTo(bt, 0);
+                        byte[] bt = args.Buffer.Skip(_bufferpoll.GetOffset(args.BufferIndex)).Take(args.BufferLen).ToArray();
 
                         ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                         {
@@ -235,20 +279,20 @@ namespace LJC.FrameWork.SocketEasy.Sever
                             }
 
                             Session connSession;
-                            if (_connectSocketDic.TryGetValue(args.UserToken.ToString(),out connSession))
+                            if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
                             {
                                 FormApp(message, connSession);
                             }
                         }), bt);
 
-
-                        byte[] bt4 = new byte[4];
                         args.IsReadPackLen = false;
-                        args.SetBuffer(bt4, 0, 4);
+                        //args.SetBuffer(_bufferpoll.Buffer, _bufferpoll.GetOffset(args.BufferIndex), 4);
+                        SetBuffer(args,0, 4);
                     }
                     else
                     {
-                        e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
+                        //e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
+                        SetBuffer(args,args.BufferRev, args.BufferLen - args.BufferRev);
                     }
                 }
 
@@ -257,10 +301,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 {
                     Session old;
                     _connectSocketDic.TryRemove(e.UserToken.ToString(), out old);
-                    e.Completed -= SocketAsyncEventArgs_Completed;
-                    args.ClearBuffer();
-                    args.AcceptSocket.Disconnect(true);
-                    _iocpQueue.Enqueue(args);
+                    RealseSocketAsyncEventArgs(args);
                 }
             }
         }

@@ -33,8 +33,22 @@ namespace LJC.FrameWork.SocketEasy
             set;
         }
 
+        private int _bufferIndex = -1;
+        internal int BufferIndex
+        {
+            get
+            {
+                return _bufferIndex;
+            }
+            set
+            {
+                _bufferIndex = value;
+            }
+        }
+
         internal void ClearBuffer()
         {
+            _bufferIndex = -1;
             this.SetBuffer(null, 0, 0);
             BufferLen = 0;
             BufferRev = 0;
