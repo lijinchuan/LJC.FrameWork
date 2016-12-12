@@ -117,7 +117,19 @@ namespace LJC.FrameWork.SocketEasy.Sever
             e.Completed -= SocketAsyncEventArgs_Completed;
             _bufferpoll.RealseBuffer(e.BufferIndex);
             e.ClearBuffer();
-            e.AcceptSocket.Disconnect(true);
+            //e.AcceptSocket.Disconnect(true);
+            if (e.SocketError == SocketError.Success)
+            {
+                try
+                {
+                    e.AcceptSocket.Shutdown(SocketShutdown.Both);
+                }
+                catch
+                {
+
+                }
+            }
+            e.AcceptSocket = null;
             _iocpQueue.Enqueue(e);
         }
 
