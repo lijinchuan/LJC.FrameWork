@@ -169,8 +169,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 args.Completed += Args_Completed;
             }
 
-            args.BufferIndex = _bufferpoll.GetBuffer();
-
             return args;
         }
 
