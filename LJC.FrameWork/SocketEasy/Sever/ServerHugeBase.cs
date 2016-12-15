@@ -277,8 +277,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     args.BufferRev += args.BytesTransferred;
                     if (args.BufferRev == args.BufferLen)
                     {
-                        byte[] bt = args.Buffer.Skip(_bufferpoll.GetOffset(args.BufferIndex)).Take(args.BufferLen).ToArray();
-
+                        byte[] bt =new byte[args.BufferLen];
+                        var offset=_bufferpoll.GetOffset(args.BufferIndex);
+                        for (int i = 0; i < args.BufferLen;i++ )
+                        {
+                            bt[i] = args.Buffer[offset + i];
+                        }
+                        //args.Buffer.Skip().Take(args.BufferLen).ToArray();
+                        
                         ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                         {
                             Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
