@@ -59,6 +59,18 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\DLL\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
     </Reference>
+    <Reference Include="ServiceStack.Common">
+      <HintPath>..\DLL\Redis\ServiceStack.Common.3.9.71\lib\net35\ServiceStack.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Interfaces">
+      <HintPath>..\DLL\Redis\ServiceStack.Common.3.9.71\lib\net35\ServiceStack.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Redis">
+      <HintPath>..\DLL\Redis\ServiceStack.Redis.3.9.71\lib\net35\ServiceStack.Redis.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Text">
+      <HintPath>..\DLL\Redis\ServiceStack.Text.3.9.71\lib\net35\ServiceStack.Text.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -78,6 +90,10 @@
     <Compile Include="UserPrestigeBand_CompareEntity.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LJC.FrameWork.Redis\LJC.FrameWork.Redis.csproj">
+      <Project>{2b856845-66a6-4f1b-9853-200a494741a2}</Project>
+      <Name>LJC.FrameWork.Redis</Name>
+    </ProjectReference>
     <ProjectReference Include="..\LJC.FrameWork\LJC.FrameWork.csproj">
       <Project>{77c9b3f8-7ec5-4ab4-ad65-3b0cc9e1a914}</Project>
       <Name>LJC.FrameWork</Name>

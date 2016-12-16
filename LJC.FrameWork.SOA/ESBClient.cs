@@ -10,6 +10,8 @@ namespace LJC.FrameWork.SOA
 {
     public class ESBClient:SessionClient
     {
+        private static ESBClientPoolManager _clientmanager = new ESBClientPoolManager();
+
         internal ESBClient(string serverIP, int serverPort,bool startSession=true)
             : base(serverIP, serverPort,startSession)
         {
@@ -68,14 +70,18 @@ namespace LJC.FrameWork.SOA
 
         public static T DoSOARequest<T>(int serviceId,int functionId,object param)
         {
-            using (var client = new ESBClient())
-            {
-                client.StartClient();
-                client.Error += client_Error;
-                var result = client.DoRequest<T>(serviceId, functionId, param);
+            //using (var client = new ESBClient())
+            //{
+            //    client.StartClient();
+            //    client.Error += client_Error;
+            //    var result = client.DoRequest<T>(serviceId, functionId, param);
 
-                return result;
-            }
+            //    return result;
+            //}
+
+            var result =_clientmanager.RandClient().DoRequest<T>(serviceId, functionId, param);
+
+            return result;
         }
 
         static void client_Error(Exception e)

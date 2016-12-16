@@ -264,7 +264,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     else
                     {
                         args.IsReadPackLen = true;
-                        byte[] readbuffer = new byte[dataLen];
+                        //byte[] readbuffer = new byte[dataLen];
                         args.BufferLen = dataLen;
                         args.BufferRev = 0;
                         //args.SetBuffer(readbuffer, 0, dataLen);
@@ -278,12 +278,11 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     if (args.BufferRev == args.BufferLen)
                     {
                         byte[] bt =new byte[args.BufferLen];
-                        var offset=_bufferpoll.GetOffset(args.BufferIndex);
+                        var offset = (args.BufferLen == args.Buffer.Length) ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
                         for (int i = 0; i < args.BufferLen;i++ )
                         {
                             bt[i] = args.Buffer[offset + i];
                         }
-                        //args.Buffer.Skip().Take(args.BufferLen).ToArray();
                         
                         ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                         {

@@ -45,6 +45,7 @@
     <Compile Include="Contract\UnRegisterServiceResponse.cs" />
     <Compile Include="ESBClientInfo.cs" />
     <Compile Include="ESBClient.cs" />
+    <Compile Include="ESBClientPoolManager.cs" />
     <Compile Include="ESBConfig.cs" />
     <Compile Include="ESBService.cs" />
     <Compile Include="ESBServiceInfo.cs" />

@@ -27,8 +27,28 @@ namespace Test
     {
         static void Main(string[] args)
         {
-            LJC.FrameWork.SocketApplication.SessionServer server = new LJC.FrameWork.SocketApplication.SessionServer(5555);
-            server.StartServer();
+            //LJC.FrameWork.SocketApplication.SessionServer server = new LJC.FrameWork.SocketApplication.SessionServer(5555);
+            //server.StartServer();
+
+            //Console.Read();
+
+            var client = LJC.FrameWork.Redis.RedisManager.GetClient("Host_Redis");
+            client.Set("name", "ljc123456asdfasdfdsaf");
+
+            int i = 0;
+
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Restart();
+            while (i++ < 1000)
+            {
+                
+                var s = client.Get<string>("name");
+                
+            }
+
+            sw.Stop();
+
+            Console.WriteLine("取到数据,用时ms:" + sw.ElapsedMilliseconds);
 
             Console.Read();
         }
