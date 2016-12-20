@@ -135,6 +135,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         private void SetBuffer(IOCPSocketAsyncEventArgs e,int offset,int len)
         {
+            if(offset>0)
+            {
+                e.SetBuffer(offset, len);
+                return;
+            }
+
             byte[] buf = null;
             if (len <= _bufferpoll.BlockSize)
             {

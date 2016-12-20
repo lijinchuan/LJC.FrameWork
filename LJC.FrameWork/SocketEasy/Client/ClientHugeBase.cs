@@ -37,6 +37,10 @@ namespace LJC.FrameWork.SocketEasy.Client
 
         public event Action OnClientReset;
 
+        private byte[] _lenbyte = new byte[4];
+
+        private byte[] _readbytes = new byte[4096];
+
         /// <summary>
         /// 每次最大接收的字节数byte
         /// </summary>
@@ -55,8 +59,6 @@ namespace LJC.FrameWork.SocketEasy.Client
                 _maxPackageLength = value;
             }
         }
-
-        private byte[] _reciveBuffer = new byte[1024];
 
         protected Stopwatch _stopwatch = new Stopwatch();
 
@@ -166,10 +168,31 @@ namespace LJC.FrameWork.SocketEasy.Client
             }
         }
 
+        private void SetBuffer(IOCPSocketAsyncEventArgs e, int offset, int len)
+        {
+            if(offset>0)
+            {
+                e.SetBuffer(offset, len);
+                return;
+            }
+
+            byte[] buf = null;
+            if (len > _readbytes.Length)
+            {
+                buf = new byte[len];
+                e.SetBuffer(buf, offset, len);
+            }
+            else
+            {
+                e.SetBuffer(_readbytes, offset, len);
+            }
+        }
+
         void socketAsyncEvent_Completed(object sender, SocketAsyncEventArgs e)
         {
             e.Completed -= socketAsyncEvent_Completed;
 
+            var args = e as IOCPSocketAsyncEventArgs;
             if (e.LastOperation == SocketAsyncOperation.Connect)
             {
                 if (e.SocketError == SocketError.Success)
@@ -177,7 +200,8 @@ namespace LJC.FrameWork.SocketEasy.Client
                     socketClient = e.ConnectSocket;
                     _startSign.Set();
 
-                    e.SetBuffer(new byte[4], 0, 4);
+                    //e.SetBuffer(_lenbyte, 0, 4);
+                    SetBuffer(args, 0, 4);
                 }
                 else
                 {
@@ -186,9 +210,6 @@ namespace LJC.FrameWork.SocketEasy.Client
             }
             else
             {
-
-                var args = e as IOCPSocketAsyncEventArgs;
-
                 if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
                 {
                     Dispose();
@@ -198,32 +219,44 @@ namespace LJC.FrameWork.SocketEasy.Client
                 {
                     if (!args.IsReadPackLen)
                     {
-                        byte[] bt4 = new byte[4];
-                        e.Buffer.CopyTo(bt4, 0);
-                        int dataLen = BitConverter.ToInt32(bt4, 0);
+                        for(int i=0;i<_lenbyte.Length;i++)
+                        {
+                            _lenbyte[i] = e.Buffer[i];
+                        }
+                        int dataLen = BitConverter.ToInt32(_lenbyte, 0);
                         if (dataLen > MaxPackageLength)
                         {
                             Dispose();
                             return;
-
                         }
                         else
                         {
                             args.IsReadPackLen = true;
-                            byte[] readbuffer = new byte[dataLen];
-                            args.SetBuffer(readbuffer, 0, dataLen);
+                            //byte[] readbuffer = new byte[dataLen];
+                            args.BufferLen = dataLen;
+                            args.BufferRev = 0;
+                            //args.SetBuffer(readbuffer, 0, dataLen);
+                            SetBuffer(args, 0, dataLen);
                         }
                     }
                     else
                     {
-                        byte[] bt = new byte[args.BytesTransferred];
-                        e.Buffer.CopyTo(bt, 0);
+                        args.BufferRev += args.BytesTransferred;
+                        if (args.BufferRev == args.BufferLen)
+                        {
+                            byte[] bt = new byte[args.BufferLen];
+                            e.Buffer.CopyTo(bt, 0);
 
-                        ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), bt);
+                            ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), bt);
 
-                        byte[] bt4 = new byte[4];
-                        args.IsReadPackLen = false;
-                        args.SetBuffer(bt4, 0, 4);
+                            args.IsReadPackLen = false;
+                            //args.SetBuffer(_lenbyte, 0, 4);
+                            SetBuffer(args, 0, 4);
+                        }
+                        else
+                        {
+                            e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
+                        }
                     }
                 }
             }
