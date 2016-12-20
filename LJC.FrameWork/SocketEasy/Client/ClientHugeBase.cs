@@ -25,6 +25,7 @@ namespace LJC.FrameWork.SocketEasy.Client
         /// 断线重连时间间隔
         /// </summary>
         private int reConnectClientTimeInterval = 5000;
+        private IOCPSocketAsyncEventArgs socketAsyncEvent;
 
         /// <summary>
         /// 对象清理之前的事件
@@ -73,6 +74,16 @@ namespace LJC.FrameWork.SocketEasy.Client
             this.serverIp = serverip;
             this.ipPort = serverport;
             this.errorResume = errorResume;
+
+            IPAddress connectip;
+            if (!string.IsNullOrEmpty(serverIp))
+                connectip = IPAddress.Parse(serverIp);
+            else
+                connectip = IPAddress.Any;
+
+            socketAsyncEvent = new IOCPSocketAsyncEventArgs();
+            socketAsyncEvent.Completed += socketAsyncEvent_Completed;
+            socketAsyncEvent.RemoteEndPoint = new IPEndPoint(connectip, ipPort);
         }
 
         public ClientHugeBase()
@@ -120,16 +131,7 @@ namespace LJC.FrameWork.SocketEasy.Client
 
                 try
                 {
-                    IPAddress connectip;
-                    if (!string.IsNullOrEmpty(serverIp))
-                        connectip=IPAddress.Parse(serverIp);
-                    else
-                        connectip=IPAddress.Any;
-
                     _startSign.Reset();
-                    SocketAsyncEventArgs socketAsyncEvent = new IOCPSocketAsyncEventArgs();
-                    socketAsyncEvent.Completed += socketAsyncEvent_Completed;
-                    socketAsyncEvent.RemoteEndPoint = new IPEndPoint(connectip, ipPort);
                     socketClient.ConnectAsync(socketAsyncEvent);
                     _startSign.WaitOne(30 * 1000);
 
@@ -205,7 +207,7 @@ namespace LJC.FrameWork.SocketEasy.Client
                 }
                 else
                 {
-                    throw new Exception("连接失败:" + e.SocketError);
+                    //throw new Exception("连接失败:" + e.SocketError);
                 }
             }
             else
@@ -265,9 +267,14 @@ namespace LJC.FrameWork.SocketEasy.Client
             }
 
             e.Completed += socketAsyncEvent_Completed;
-            if(!socketClient.ReceiveAsync(e))
+
+            if (e.SocketError == SocketError.Success)
             {
-                e.Completed -= socketAsyncEvent_Completed;
+                socketClient.ReceiveAsync(e);
+                //if (!socketClient.ReceiveAsync(e))
+                //{
+                //    e.Completed -= socketAsyncEvent_Completed;
+                //}
             }
         }
 
