@@ -245,7 +245,10 @@ namespace LJC.FrameWork.SocketEasy.Client
                         if (args.BufferRev == args.BufferLen)
                         {
                             byte[] bt = new byte[args.BufferLen];
-                            e.Buffer.CopyTo(bt, 0);
+                            for (int i = 0; i < bt.Length;i++ )
+                            {
+                                bt[i] = e.Buffer[i];
+                            }
 
                             ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), bt);
 
