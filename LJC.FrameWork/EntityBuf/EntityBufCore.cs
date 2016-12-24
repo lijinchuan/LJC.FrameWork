@@ -484,15 +484,17 @@ namespace LJC.FrameWork.EntityBuf
             Serialize(o, writer);
             var bytes = writer.GetBytes();
 
-            if (compress&&bytes.Length>minGZIPCompressLenth)
-            {
-                var compressBytes = GZip.Compress(bytes);
-                return compressBytes;
-            }
-            else
-            {
-                return bytes;
-            }
+            //if (compress&&bytes.Length>minGZIPCompressLenth)
+            //{
+            //    var compressBytes = GZip.Compress(bytes);
+            //    return compressBytes;
+            //}
+            //else
+            //{
+            //    return bytes;
+            //}
+
+            return bytes;
         }
 
         public static void Serialize(object o, string file, bool compress = true)
@@ -852,12 +854,14 @@ namespace LJC.FrameWork.EntityBuf
 
         public static object DeSerialize(Type DestType, byte[] bytes, bool compress = true)
         {
-            var decompressBytes=bytes;
-            if (compress && bytes != null && bytes.Length > minGZIPCompressLenth)
-            {
-                decompressBytes = GZip.Decompress(bytes);
-            }
-            var ms = new MemoryStream(decompressBytes);
+            //var decompressBytes=bytes;
+            //if (compress && bytes != null && bytes.Length > minGZIPCompressLenth)
+            //{
+            //    decompressBytes = GZip.Decompress(bytes);
+            //}
+            //var ms = new MemoryStream(decompressBytes);
+
+            var ms = new MemoryStream(bytes);
             BinaryReader reader = new BinaryReader(ms);
             MemoryStreamReader rd = new MemoryStreamReader(reader);
             var obj = DeSerialize(DestType, rd);
