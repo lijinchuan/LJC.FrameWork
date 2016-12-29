@@ -491,20 +491,22 @@ namespace LJC.FrameWork.EntityBuf
             //    return compressBytes;
             //}
             //else
-            {
-                return bytes;
-            }
+            //{
+            //    return bytes;
+            //}
+
+            return bytes;
         }
 
-        public static void Serialize(object o,BufferPollManager poolmanager, ref int bufferindex,ref long size,ref byte[] serbyte)
+        public static void Serialize(object o, BufferPollManager poolmanager, ref int bufferindex, ref long size, ref byte[] serbyte)
         {
-            MemoryStreamWriter writer =  new MemoryStreamWriter(poolmanager);
+            MemoryStreamWriter writer = new MemoryStreamWriter(poolmanager);
 
             Serialize(o, writer);
             bufferindex = writer.Bufferindex;
             size = writer.GetDataLen();
 
-            if(bufferindex==-1)
+            if (bufferindex == -1)
             {
                 serbyte = writer.GetBytes();
             }
