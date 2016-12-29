@@ -35,6 +35,8 @@ namespace LJC.FrameWork.SocketApplication
         private static long seqNum;
         private static object sendMessageLock = new object();
 
+        private static LJC.FrameWork.Comm.BufferPollManager _SendBufferManger = new BufferPollManager(100, 1024 * 100);
+
         private static string _seqperfix = Guid.NewGuid().ToString().Replace("-", "");
 
         public static string GetSeqNum()
@@ -47,6 +49,7 @@ namespace LJC.FrameWork.SocketApplication
             return string.Format("{0}_{1}", _seqperfix, seqNumMiro);
         }
 
+        [Obsolete]
         public static byte[] GetSendMessageBytes(Message message)
         {
             byte[] data = EntityBuf.EntityBufCore.Serialize(message);
@@ -74,9 +77,34 @@ namespace LJC.FrameWork.SocketApplication
                     return false;
                 }
 
-                var it = s.Send(GetSendMessageBytes(message), SocketFlags.None);
+                byte[] data = null;
+                int bufferindex=-1;
+                long size=0;
+                EntityBuf.EntityBufCore.Serialize(message, _SendBufferManger, ref bufferindex,ref size, ref data);
+                if (bufferindex == -1)
+                {
+                    byte[] dataLen = BitConverter.GetBytes(data.Length);
 
-                return it > 0;
+                    if (data.Length == 0 || data.Length >= Int32.MaxValue)
+                    {
+                        throw new Exception("发送长度过长或过小");
+                    }
+
+                    using (MemoryStream ms = new System.IO.MemoryStream())
+                    {
+                        ms.Write(dataLen, 0, dataLen.Length);
+                        ms.Write(data, 0, data.Length);
+                    }
+
+                    var it = s.Send(data, SocketFlags.None);
+                    return it > 0;
+                }
+                else
+                {
+                    var it = s.Send(_SendBufferManger.Buffer, _SendBufferManger.GetOffset(bufferindex), (int)size, SocketFlags.None);
+
+                    return it > 0;
+                }
             }
             catch (Exception ex)
             {

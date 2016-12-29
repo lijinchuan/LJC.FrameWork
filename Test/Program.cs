@@ -23,14 +23,120 @@ namespace Test
         tree=16
     }
 
+
+
     class Program
     {
+        public static void TestGZIP()
+        {
+            BufferPollManager poll=new BufferPollManager(100,1024*1000);
+
+            string str = "我是中国人的，我常常爱着我的祖asfdgefaserfaTimeout 时间已到。在操作完成之前超时时间已过或服务器未响应。在 System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction) 在 System.Data.SqlClient.SqlInternalConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction) 在 System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose) 在 System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady) 在 System.Data.SqlClient.SqlDataReader.TrySetMetaData(_SqlMetaDataSet metaData, Boolean moreInfo) 在 System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady) 在 System.Data.SqlClient.SqlDataReader.TryConsumeMetaData() 在 System.Data.SqlClient.SqlDataReader.get_MetaData() 在 System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString) 在 System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, SqlDataReader ds) 在 System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean asyncWrite) 在 System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method) 在 System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method) 在 System.Data.SqlClient.SqlCommand.ExecuteDbDataReader(CommandBehavior behavior) 在 System.Data.Common.DbCommand.System.Data.IDbCommand.ExecuteReader(CommandBehavior behavior) 在 System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior) 在 System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior) 在 System.Data.Common.DbDataAdapter.Fill(DataSet dataSet) 在 Microsoft.Practices.EnterpriseLibrary.Data.Database.DoLoadDataSet(IDbCommand command, DataSet dataSet, String[] tableNames) 在 Microsoft.Practices.EnterpriseLibrary.Data.Database.LoadDataSet(DbCommand command, DataSet dataSet, String[] tableNames) 在 Microsoft.Practices.EnterpriseLibrary.Data.Database.LoadDataSet(DbCommand command, DataSet dataSet, String tableName) 在 Microsoft.Practices.EnterpriseLibrary.Data.Database.ExecuteDataSet(DbCommand command) 在 LJC.FrameWork.Data.QuickDataBase.DataContextMoudle`1.ExecuteSQL(String sql, DbParameter[] parameters) 在 makeStaticFile.MakeMarketWind()e4twetarestrewrtaw34t4gtrar4wtg4国和人民。asdffffffffffsdrfawefawefw4artw34rw3aaaaaaawa3rqA这是一个sdfffffffffffffffffffffffffffa不错的选择，出去吧，去吧sadfffffffffffffffffffffffffffffffffffffffffffffffffTimeout 时间已到。在操作完成之前超时时间已过或服务器未响应。在 System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction) 在 System.Data.SqlClient.SqlInternalConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction) 在 System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose) 在 System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady) 在 System.Data.SqlClient.SqlDataReader.TrySetMetaData(_SqlMetaDataSet metaData, Boolean moreInfo) 在 System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady) 在 System.Data.SqlClient.SqlDataReader.TryConsumeMetaData() 在 System.Data.SqlClient.SqlDataReader.get_MetaData() 在 System.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString) 在 System.Data.SqlClient.SqlCommand.RunExecuteReaderTds(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, Boolean async, Int32 timeout, Task& task, Boolean asyncWrite, SqlDataReader ds) 在 System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method, TaskCompletionSource`1 completion, Int32 timeout, Task& task, Boolean asyncWrite) 在 System.Data.SqlClient.SqlCommand.RunExecuteReader(CommandBehavior cmdBehavior, RunBehavior runBehavior, Boolean returnStream, String method) 在 System.Data.SqlClient.SqlCommand.ExecuteReader(CommandBehavior behavior, String method) 在 System.Data.SqlClient.SqlCommand.ExecuteDbDataReader(CommandBehavior behavior) 在 System.Data.Common.DbCommand.System.Data.IDbCommand.ExecuteReader(CommandBehavior behavior) 在 System.Data.Common.DbDataAdapter.FillInternal(DataSet dataset, DataTable[] datatables, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior) 在 System.Data.Common.DbDataAdapter.Fill(DataSet dataSet, Int32 startRecord, Int32 maxRecords, String srcTable, IDbCommand command, CommandBehavior behavior) 在 System.Data.Common.DbDataAdapter.Fill(DataSet dataSet) 在 Microsoft.Practices.EnterpriseLibrary.Data.Database.DoLoadDataSet(IDbCommand command, DataSet dataSet, String[] tableNames) 在 Microsoft.Practices.EnterpriseLibrary.Data.Database.LoadDataSet(DbCommand command, DataSet dataSet, String[] tableNames) 在 Microsoft.Practices.EnterpriseLibrary.Data.Database.LoadDataSet(DbCommand command, DataSet dataSet, String tableName) 在 Microsoft.Practices.EnterpriseLibrary.Data.Database.ExecuteDataSet(DbCommand command) 在 LJC.FrameWork.Data.QuickDataBase.DataContextMoudle`1.ExecuteSQL(String sql, DbParameter[] parameters) 在 makeStaticFile.MakeMarketWind()fffff去吧,不是一家人，不进一家门，不是一空人，一个，花花";
+
+            RunConfig rc = new RunConfig();
+            rc.CmdPhoneNumber = str;
+            rc.DefaultEmailAccount = str;
+            rc.DefaultEmailPwd = str;
+            rc.DefaultReciveEmailAccount = str;
+            rc.ID = 12456;
+            rc.StopEarn = 12.0;
+            rc.CmdPhoneNumber = str;
+            byte[] bytes = null;
+
+            var utf8bytes = Encoding.UTF8.GetBytes(str);
+            var cputf8bytes = GZip.Compress(utf8bytes);
+
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(rc);
+            sw.Restart();
+
+            int bufferindex=-1;
+            long size = 0;
+            for (int i = 0; i < 10000; i++)
+            {
+                LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(rc,poll,ref bufferindex,ref size,ref bytes);// Encoding.UTF8.GetBytes(str);
+                if (bytes == null)
+                {
+
+                }
+                else
+                {
+                    poll.RealseBuffer(bufferindex);
+                }
+            }
+            sw.Stop();
+            Console.WriteLine("序列化用时" + sw.ElapsedMilliseconds);
+
+            Console.WriteLine("原始长度:" + bytes.Length);
+
+            return;
+
+            byte[] commpressbytes = null, decompressbytes = null;
+            sw.Restart();
+
+            for (int i = 0; i < 10000; i++)
+            {
+                commpressbytes = GZip.Compress(bytes);
+            }
+
+            sw.Stop();
+
+            Console.WriteLine("压缩用时" + sw.ElapsedMilliseconds + "，压缩后长度:" + commpressbytes.Length);
+
+
+            sw.Restart();
+
+            for (int i = 0; i < 10000; i++)
+            {
+                decompressbytes = GZip.Decompress(commpressbytes);
+            }
+
+            sw.Stop();
+
+            Console.WriteLine("解压缩用时" + sw.ElapsedMilliseconds + ",解压缩后长度" + decompressbytes.Length);
+
+            Console.Read();
+        }
+
+        static void TestMs()
+        {
+            byte[] buffer = new byte[512];
+
+            string s = "你好啊，今天怎么样啊";
+            int x = 256;
+
+            using (System.IO.MemoryStream ms = new System.IO.MemoryStream(buffer, x, 256))
+            {
+                var bts = System.Text.Encoding.UTF8.GetBytes(s);
+
+                ms.Write(bts, 0, bts.Length);
+
+                string r = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            }
+
+            s = "今天天气不太好";
+            using (System.IO.MemoryStream ms = new System.IO.MemoryStream(buffer, x, 256))
+            {
+                var bts = System.Text.Encoding.UTF8.GetBytes(s);
+
+                ms.Write(bts, 0, bts.Length);
+
+                string r = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            }
+        }
+
         static void Main(string[] args)
         {
             //LJC.FrameWork.SocketApplication.SessionServer server = new LJC.FrameWork.SocketApplication.SessionServer(5555);
             //server.StartServer();
 
             //Console.Read();
+
+            TestGZIP();
+            //TestMs();
+
+            Console.Read();
+            return;
 
             var client = LJC.FrameWork.Redis.RedisManager.GetClient("Host_Redis");
             client.Set("name", "ljc123456asdfasdfdsaf");

@@ -277,7 +277,7 @@
     <Compile Include="SocketApplication\SessionMessageApp.cs" />
     <Compile Include="SocketApplication\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketApplicationComm.cs" />
-    <Compile Include="SocketEasy\BufferPollManager.cs" />
+    <Compile Include="Comm\BufferPollManager.cs" />
     <Compile Include="SocketEasy\Client\ClientHugeBase.cs" />
     <Compile Include="SocketEasy\Client\ClientBase.cs" />
     <Compile Include="SocketEasy\Client\SessionClient.cs" />

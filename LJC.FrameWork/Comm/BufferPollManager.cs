@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace LJC.FrameWork.SocketEasy
+namespace LJC.FrameWork.Comm
 {
     public class BufferPollManager
     {

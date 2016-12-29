@@ -15,28 +15,88 @@ namespace LJC.FrameWork.EntityBuf
         private static byte[] bytesZero = BitConverter.GetBytes(0);
         private static float maxFloat = 9999999f;
 
+        private  BufferPollManager _bufferPollManager;
+        public  int Bufferindex = -1;
+        private long _bufferoffset = -1;
+
         public MemoryStreamWriter(MemoryStream ms)
         {
             _ms = ms;
         }
 
+        public MemoryStreamWriter(BufferPollManager bufferpollmanger)
+        {
+            var bufferindex = bufferpollmanger.GetBuffer();
+            if (bufferindex == -1)
+            {
+                _ms = new MemoryStream();
+            }
+            else
+            {
+                _bufferPollManager = bufferpollmanger;
+                Bufferindex = bufferindex;
+                _bufferoffset = bufferpollmanger.GetOffset(bufferindex);
+                _ms = new MemoryStream(bufferpollmanger.Buffer, (int)_bufferoffset, bufferpollmanger.BlockSize);
+            }
+        }
+
+        private void CheckBufferPoll(int willwritecount)
+        {
+            if (_bufferPollManager == null || Bufferindex == -1 || willwritecount <= 0)
+            {
+                return;
+            }
+
+            if (_ms.Position + willwritecount > _bufferPollManager.BlockSize)
+            {
+                var pos = _ms.Position;
+                var newms = new System.IO.MemoryStream();
+                
+                newms.Write(_bufferPollManager.Buffer, (int)_bufferoffset, (int)pos);
+
+                _ms.Close();
+                _ms.Dispose();
+                _bufferPollManager.RealseBuffer(Bufferindex);
+                Bufferindex = -1;
+                _bufferPollManager = null;
+
+                _ms = newms;
+            }
+        }
+
         public byte[] GetBytes()
         {
-            //byte[] bytes = new byte[_ms.Length];
-            //_ms.Seek(0, SeekOrigin.Begin);
-            //_ms.Read(bytes, 0, (int)_ms.Length);
-            //return bytes;
-            return _ms.ToArray();
+            if (_bufferPollManager == null || Bufferindex == -1)
+            {
+                return _ms.ToArray();
+            }
+            else
+            {
+                using (var newms = new System.IO.MemoryStream())
+                {
+                    newms.Write(_bufferPollManager.Buffer, (int)_bufferoffset, (int)_ms.Position);
+                    return newms.ToArray();
+                }
+            }
+        }
+
+        internal long GetDataLen()
+        {
+            return _ms.Position;
         }
 
         public void WriteBool(bool boo)
         {
+            CheckBufferPoll(1);
+
             byte[] bts = BitConverter.GetBytes(boo);
             _ms.Write(bts, 0, bts.Length);
         }
 
         public void WriteBoolArray(bool[] booArray)
         {
+            CheckBufferPoll(booArray == null ? 1 : booArray.Length + 5);
+
             if (booArray == null)
             {
                 _ms.WriteByte((byte)ArrayTypeFlag.NULL);
@@ -64,7 +124,8 @@ namespace LJC.FrameWork.EntityBuf
             _ms.Write(bytelen, 0, bytelen.Length);
             BitArray ba = new BitArray(booArray);
 
-            foreach (byte b in BitHelper.ConvertToByteArray(ba))
+            var btarray=BitHelper.ConvertToByteArray(ba);
+            foreach (byte b in btarray)
             {
                 _ms.WriteByte(b);
             }
@@ -72,6 +133,8 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteInt16(Int16 num)
         {
+            CheckBufferPoll(3);
+
             if (num == 0)
             {
                 _ms.WriteByte((byte)ShortTypeEnum.Zero);
@@ -96,18 +159,20 @@ namespace LJC.FrameWork.EntityBuf
             {
                 bytes = BitConverter.GetBytes(num);
             }
-
             _ms.WriteByte((byte)flag);
             _ms.Write(bytes, 0, bytes.Length);
         }
 
         public void WriteInt16Array(Int16[] numArray)
         {
+            CheckBufferPoll(numArray == null ? 1 : 4);
+
             if (numArray == null)
             {
                 _ms.Write(bytesNull, 0, 4);
                 return;
             }
+
             int len = numArray.Length;
             WriteInt32(len);
             foreach (Int16 i in numArray)
@@ -118,6 +183,8 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteInt32(Int32 num)
         {
+            CheckBufferPoll(5);
+
             if (num == 0)
             {
                 _ms.WriteByte((byte)IntTypeFlag.Zero);
@@ -154,11 +221,14 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteInt32Array(Int32[] numArray)
         {
+            CheckBufferPoll(numArray == null ? 1 : 5);
+
             if (numArray == null)
             {
                 _ms.WriteByte((byte)ArrayTypeFlag.NULL);
                 return;
             }
+
             bool isCompress = numArray.Where(p => p <= ushort.MaxValue).Count() > (numArray.Length * 2 / 3);
             ArrayTypeFlag flag = isCompress ? ArrayTypeFlag.Compress : ArrayTypeFlag.DEFAULT;
             byte[] bytelen= CompressInt32(numArray.Length);
@@ -190,6 +260,8 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteInt64(Int64 num)
         {
+            CheckBufferPoll(9);
+
             if (num == default(Int64))
             {
                 _ms.WriteByte((byte)LongTypeEnum.Zero);
@@ -228,6 +300,8 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteInt64Array(Int64[] intArray)
         {
+            CheckBufferPoll(intArray == null ? 1 : 5);
+
             if (intArray == null)
             {
                 _ms.WriteByte((byte)ArrayTypeFlag.NULL);
@@ -263,11 +337,16 @@ namespace LJC.FrameWork.EntityBuf
             if (str != null)
             {
                 byte[] byts = Encoding.ASCII.GetBytes(str);
+
+                CheckBufferPoll(4 + byts.Length);
+
                 _ms.Write(BitConverter.GetBytes(byts.Length), 0, 4);
                 _ms.Write(byts, 0, byts.Length);
             }
             else
             {
+                CheckBufferPoll(4);
+
                 _ms.Write(bytesNull, 0, 4);
             }
         }
@@ -275,6 +354,8 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteString(string str)
         {
+            CheckBufferPoll(1);
+
             if (str == null)
             {
                 _ms.WriteByte((byte)StringTypeFlag.NULL);
@@ -327,6 +408,8 @@ namespace LJC.FrameWork.EntityBuf
                 throw new OverflowException("字符串太长。");
             }
 
+            CheckBufferPoll(5 + byts.Length);
+
             _ms.WriteByte((byte)flag);
             _ms.Write(lenbytes, 0, lenbytes.Length);
             
@@ -356,6 +439,8 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteStringArray(string[] strArray)
         {
+            CheckBufferPoll(1);
+
             if (strArray == null)
             {
                 _ms.WriteByte((byte)StringTypeFlag.NULL);
@@ -363,6 +448,7 @@ namespace LJC.FrameWork.EntityBuf
             }
 
             byte[] lenbytes = CompressInt32(strArray.Length);
+            CheckBufferPoll(lenbytes.Length + 1);
             if (lenbytes.Length == 1)
             {
                 _ms.WriteByte((byte)StringTypeFlag.ByteLen);
@@ -386,11 +472,16 @@ namespace LJC.FrameWork.EntityBuf
         public void WriteDateTime(DateTime dateTime)
         {
             byte[] byts = BitConverter.GetBytes(dateTime.ToOADate());
+
+            CheckBufferPoll(byts.Length);
+
             _ms.Write(byts, 0, byts.Length);
         }
 
         public void WriteDateTimeArray(DateTime[] dateTimes)
         {
+            CheckBufferPoll(1);
+
             if (dateTimes == null)
             {
                 _ms.WriteByte((byte)ArrayTypeFlag.NULL);
@@ -414,11 +505,13 @@ namespace LJC.FrameWork.EntityBuf
                 flag = ArrayTypeFlag.ShortLen;
             }
 
+            CheckBufferPoll(bytslen.Length + 1);
             _ms.WriteByte((byte)flag);
             _ms.Write(bytslen, 0, bytslen.Length);
             foreach (DateTime dt in dateTimes)
             {
                 var byts = BitConverter.GetBytes(dt.ToOADate());
+                CheckBufferPoll(byts.Length);
                 _ms.Write(byts, 0, byts.Length);
             }
         }
@@ -438,16 +531,22 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteByte(byte data)
         {
+            CheckBufferPoll(1);
+
             _ms.WriteByte(data);
         }
 
         public void WriteBytes(byte[] data)
         {
+            CheckBufferPoll(data.Length);
+
             _ms.Write(data, 0, data.Length);
         }
 
         public void WriteDecimal(decimal data)
         {
+            CheckBufferPoll(1);
+
             if (data == 0m)
             {
                 _ms.WriteByte((byte)DecimalTypeFlag.Zero);
@@ -501,17 +600,21 @@ namespace LJC.FrameWork.EntityBuf
                 byts = BitConverter.GetBytes((double)data);
             }
 
+            CheckBufferPoll(1 + byts.Length);
             _ms.WriteByte((byte)flag);
             _ms.Write(byts, 0, byts.Length);
         }
 
         public void WriteDeciamlArray(decimal[] data)
         {
+            CheckBufferPoll(4);
+
             if (data == null)
             {
                 _ms.Write(bytesNull, 0, 4);
                 return;
             }
+            
             _ms.Write(BitConverter.GetBytes(data.Length), 0, 4);
             foreach (decimal d in data)
             {
@@ -537,6 +640,9 @@ namespace LJC.FrameWork.EntityBuf
         public void WriteDouble(double data)
         {
             var bytes= BitConverter.GetBytes(data);
+
+            CheckBufferPoll(bytes.Length);
+
             _ms.Write(bytes, 0, bytes.Length);
 
             //DoubleTypeFlag flag = DoubleTypeFlag.DEFAULT;
