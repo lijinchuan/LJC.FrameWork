@@ -35,7 +35,7 @@ namespace LJC.FrameWork.SocketApplication
         private static long seqNum;
         private static object sendMessageLock = new object();
 
-        private static LJC.FrameWork.Comm.BufferPollManager _SendBufferManger = new BufferPollManager(100, 1024 * 100);
+        private static LJC.FrameWork.Comm.BufferPollManager _sendBufferManger = new BufferPollManager(100, 1024 * 100);
 
         private static string _seqperfix = Guid.NewGuid().ToString().Replace("-", "");
 
@@ -80,30 +80,35 @@ namespace LJC.FrameWork.SocketApplication
                 byte[] data = null;
                 int bufferindex=-1;
                 long size=0;
-                EntityBuf.EntityBufCore.Serialize(message, _SendBufferManger, ref bufferindex,ref size, ref data);
+                EntityBuf.EntityBufCore.Serialize(message, _sendBufferManger, ref bufferindex,ref size, ref data);
                 if (bufferindex == -1)
                 {
                     byte[] dataLen = BitConverter.GetBytes(data.Length);
 
-                    if (data.Length == 0 || data.Length >= Int32.MaxValue)
+                    lock(sendMessageLock)
                     {
-                        throw new Exception("发送长度过长或过小");
+                        return s.Send(dataLen, SocketFlags.None) > 0 &&
+                        s.Send(data, SocketFlags.None) > 0;
                     }
-
-                    using (MemoryStream ms = new System.IO.MemoryStream())
-                    {
-                        ms.Write(dataLen, 0, dataLen.Length);
-                        ms.Write(data, 0, data.Length);
-                    }
-
-                    var it = s.Send(data, SocketFlags.None);
-                    return it > 0;
                 }
                 else
                 {
-                    var it = s.Send(_SendBufferManger.Buffer, _SendBufferManger.GetOffset(bufferindex), (int)size, SocketFlags.None);
+                    try
+                    {
+                        LogManager.LogHelper.Instance.Error("发送数据bufferindex:" + bufferindex + ",size:" + size);
 
-                    return it > 0;
+                        byte[] dataLen = BitConverter.GetBytes((int)size);
+
+                        lock (sendMessageLock)
+                        {
+                            return (s.Send(dataLen, SocketFlags.None) > 0 
+                                && s.Send(_sendBufferManger.Buffer, _sendBufferManger.GetOffset(bufferindex), (int)size, SocketFlags.None) > 0);
+                        }
+                    }
+                    finally
+                    {
+                        _sendBufferManger.RealseBuffer(bufferindex);
+                    }
                 }
             }
             catch (Exception ex)
