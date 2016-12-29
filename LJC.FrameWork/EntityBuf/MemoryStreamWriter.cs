@@ -38,6 +38,7 @@ namespace LJC.FrameWork.EntityBuf
                 _bufferoffset = bufferpollmanger.GetOffset(bufferindex);
                 _ms = new MemoryStream(bufferpollmanger.Buffer, (int)_bufferoffset, bufferpollmanger.BlockSize);
             }
+            _ms.Position = 4;
         }
 
         private void CheckBufferPoll(int willwritecount)
