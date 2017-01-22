@@ -51,7 +51,7 @@ namespace LJC.FrameWork.Comm
             _blockSize = blocksize;
             _buffer = new byte[_blockNum * _blockSize];
 
-            _poll = new Stack<int>(_blockNum);
+            _poll = new Stack<int>();
         }
 
         public int GetBuffer()

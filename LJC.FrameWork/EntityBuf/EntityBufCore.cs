@@ -549,11 +549,14 @@ namespace LJC.FrameWork.EntityBuf
             bool isArray;
             //PropertyInfo[] props = o.GetType().GetProperties();
             var entitybuftypelist = GetTypeEntityBufType(o.GetType());
-            foreach (var tp in entitybuftypelist)
+            //foreach (var tp in entitybuftypelist)
+            Tuple<EntityBufType, bool> tp = null;
+            for (int i = 0; i < entitybuftypelist.Count;i++ )
             {
+                tp = entitybuftypelist[i];
                 //EntityBufType buftype = MapBufType(prop.PropertyType, out isArray);
                 isArray = tp.Item2;
-                
+
                 object val = o.Eval(tp.Item1.Property);
 
                 if (tp.Item1.EntityType == EntityType.COMPLEX)

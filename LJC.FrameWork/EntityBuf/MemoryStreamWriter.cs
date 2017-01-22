@@ -15,6 +15,9 @@ namespace LJC.FrameWork.EntityBuf
         private static byte[] bytesZero = BitConverter.GetBytes(0);
         private static float maxFloat = 9999999f;
 
+        private static byte[] bytesTrue = BitConverter.GetBytes(true);
+        private static byte[] bytesFalse = BitConverter.GetBytes(false);
+
         private  BufferPollManager _bufferPollManager;
         public  int Bufferindex = -1;
         private long _bufferoffset = -1;
@@ -90,8 +93,17 @@ namespace LJC.FrameWork.EntityBuf
         {
             CheckBufferPoll(1);
 
-            byte[] bts = BitConverter.GetBytes(boo);
-            _ms.Write(bts, 0, bts.Length);
+            if (boo)
+            {
+                _ms.Write(bytesTrue, 0, bytesTrue.Length);
+            }
+            else
+            {
+                _ms.Write(bytesFalse, 0, bytesFalse.Length);
+            }
+
+            //byte[] bts = BitConverter.GetBytes(boo);
+            //_ms.Write(bts, 0, bts.Length);
         }
 
         public void WriteBoolArray(bool[] booArray)

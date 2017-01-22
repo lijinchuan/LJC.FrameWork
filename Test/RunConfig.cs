@@ -13,11 +13,6 @@ namespace Test
     [ReportAttr(TableName = "tb_RunConfig")]
     public class RunConfig : IDBCachAble
     {
-        public object ParentControl
-        {
-            get;
-            set;
-        }
 
         [NonSerialized]
         public Action UIRefrash;
