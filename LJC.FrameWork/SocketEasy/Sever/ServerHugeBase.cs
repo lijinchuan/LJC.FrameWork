@@ -256,7 +256,10 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 if (!args.IsReadPackLen)
                 {
-                    int dataLen = BitConverter.ToInt32(e.Buffer.Skip(_bufferpoll.GetOffset(args.BufferIndex)).Take(4).ToArray(), 0);
+                    var offset = _bufferpoll.GetOffset(args.BufferIndex);
+
+                    var dataLen = BitConverter.ToInt32(new byte[] { e.Buffer[offset], e.Buffer[offset + 1], e.Buffer[offset + 2], e.Buffer[offset + 3] }, 0);
+
                     if (dataLen > MaxPackageLength)
                     {
                         Session removesession;
