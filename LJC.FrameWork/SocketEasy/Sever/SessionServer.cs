@@ -188,10 +188,10 @@ namespace LJC.FrameWork.SocketEasy.Sever
             }
             else
             {
-                if(!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
-                {
-                    Console.WriteLine("收到消息:" + message.MessageHeader.TransactionID);
-                }
+                //if(!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
+                //{
+                //    Console.WriteLine("收到消息:" + message.MessageHeader.TransactionID);
+                //}
 
                 FormAppMessage(message, session);
             }

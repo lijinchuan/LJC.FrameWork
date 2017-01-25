@@ -73,7 +73,29 @@ namespace LJC.FrameWork.SOA
 
         public virtual object DoRequest(int funcId,byte[] param)
         {
-            throw new NotImplementedException();
+            switch(funcId)
+            {
+                case 1:
+                    {
+                        return new SOAServerEchoResponse
+                        {
+                            Ok=true
+                        };
+                    }
+                case 2:
+                    {
+                        return new SOAServerEnvironmentResponse
+                        {
+                            MachineName=Environment.MachineName,
+                            OSVersion=Environment.OSVersion.VersionString,
+                            ProcessorCount=Environment.ProcessorCount,
+                        };
+                    }
+                default:
+                    {
+                        throw new NotImplementedException(string.Format("未实现的功能:{0}", funcId));
+                    }
+            }
         }
 
         internal void DoTransferRequest(Session session, string msgTransactionID, SOARequest request)

@@ -84,12 +84,12 @@ namespace Test2
 
         static void Main(string[] args)
         {
-            TryRead1();
+            //TryRead1();
 
-            //LJC.FrameWork.SocketApplication.SessionClient client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
-            //client.LoginSuccess += client_LoginSuccess;
-            //client.Error += client_Error;
-            //client.Login("", "");
+            LJC.FrameWork.SocketApplication.SessionClient client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
+            client.LoginSuccess += client_LoginSuccess;
+            client.Error += client_Error;
+            client.Login("", "");
             Console.Read();
         }
 
@@ -101,6 +101,16 @@ namespace Test2
         static void client_LoginSuccess()
         {
             Console.WriteLine("登录成功");
+            var resp = LJC.FrameWork.SOA.ESBClient.DoSOARequest<LJC.FrameWork.SOA.SOAServerEchoResponse>(0, 1, null);
+
+            var ms = Environment.TickCount;
+
+            for(int i=0;i<100000;i++)
+            {
+                resp = LJC.FrameWork.SOA.ESBClient.DoSOARequest<LJC.FrameWork.SOA.SOAServerEchoResponse>(0, 1, null);
+            }
+
+            Console.WriteLine("用时ms:" + (Environment.TickCount - ms));
         }
 
         static void Main1(string[] args)

@@ -294,10 +294,10 @@ namespace LJC.FrameWork.SocketEasy.Sever
                         {
                             Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
 
-                            if (!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
-                            {
-                                Console.WriteLine(message.MessageHeader.TransactionID);
-                            }
+                            //if (!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
+                            //{
+                            //    Console.WriteLine(message.MessageHeader.TransactionID);
+                            //}
 
                             Session connSession;
                             if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))

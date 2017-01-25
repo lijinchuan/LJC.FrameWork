@@ -261,10 +261,10 @@ namespace LJC.FrameWork.EntityBuf
 
         private static void SerializeSimple(object val, bool isArray, EntityBufType bufType, MemoryStreamWriter msWriter)
         {
-            if (bufType.EntityType == EntityType.COMPLEX)
-            {
-                throw new Exception("无法序列化复杂类型");
-            }
+            //if (bufType.EntityType == EntityType.COMPLEX)
+            //{
+            //    throw new Exception("无法序列化复杂类型");
+            //}
 
             switch (bufType.EntityType)
             {

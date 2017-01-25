@@ -420,17 +420,17 @@ namespace LJC.FrameWork.SocketApplication
             }
         }
 
-        private int sendMessageTryCountLimit = 3;
+        //private int sendMessageTryCountLimit = 3;
         public bool SendMessage(Message message)
         {
             try
             {
-                int tryCount = 0;
-                while (!socketClient.Connected && tryCount < sendMessageTryCountLimit)
-                {
-                    tryCount++;
-                    StartClient();
-                }
+                //int tryCount = 0;
+                //while (!socketClient.Connected && tryCount < sendMessageTryCountLimit)
+                //{
+                //    tryCount++;
+                //    StartClient();
+                //}
 
                 if (!socketClient.Connected)
                 {

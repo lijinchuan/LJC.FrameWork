@@ -57,6 +57,8 @@
     <Compile Include="Contract\SOAResponse.cs" />
     <Compile Include="Contract\SOATransferRequest.cs" />
     <Compile Include="Contract\SOATransferResponse.cs" />
+    <Compile Include="SOAServerEchoResponse.cs" />
+    <Compile Include="SOAServerResponse.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LJC.FrameWork\LJC.FrameWork.csproj">

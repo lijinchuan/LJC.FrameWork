@@ -50,10 +50,19 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LJC.FrameWork.SOA\LJC.FrameWork.SOA.csproj">
+      <Project>{b3d600b2-7e0e-44d6-84dd-1528dcfc7554}</Project>
+      <Name>LJC.FrameWork.SOA</Name>
+    </ProjectReference>
     <ProjectReference Include="..\LJC.FrameWork\LJC.FrameWork.csproj">
       <Project>{77c9b3f8-7ec5-4ab4-ad65-3b0cc9e1a914}</Project>
       <Name>LJC.FrameWork</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="ESBConfig.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

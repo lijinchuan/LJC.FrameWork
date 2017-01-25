@@ -48,7 +48,8 @@ namespace LJC.FrameWork.SocketApplication
             {
                 watingEvents.Add(reqID, autoResetEvent);
                 BuzException = null;
-                new Func<Message, bool>(SendMessage).BeginInvoke(message, null, null);
+                SendMessage(message);
+                //new Func<Message, bool>(SendMessage).BeginInvoke(message, null, null);
                 WaitHandle.WaitAny(new WaitHandle[] { autoResetEvent }, timeOut);
                 watingEvents.Remove(reqID);
 
