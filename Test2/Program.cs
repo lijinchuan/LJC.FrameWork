@@ -86,10 +86,71 @@ namespace Test2
         {
             //TryRead1();
 
-            LJC.FrameWork.SocketApplication.SessionClient client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
-            client.LoginSuccess += client_LoginSuccess;
-            client.Error += client_Error;
-            client.Login("", "");
+            //LJC.FrameWork.SocketApplication.SessionClient client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
+            //client.LoginSuccess += client_LoginSuccess;
+            //client.Error += client_Error;
+            //client.Login("", "");
+            //Console.Read();
+
+
+            //LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient(".\\private$\\ljctest111",false,false);
+            //mc.CreateIfNotExis();
+            //int i = 0;
+            //try
+            //{
+            //    while (true)
+            //    {
+            //        i++;
+
+            //        mc.SendQueue("你好:" + i, false);
+            //        Console.WriteLine("发送第" + i + "条消息");
+            //        if (i > 1000)
+            //        {
+            //            break;
+            //        }
+
+            //        Thread.Sleep(600000);
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine("出错" + i, ex.Message);
+            //}
+
+            LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient(".\\private$\\ljctest111", false, true);
+            mc.CreateIfNotExis();
+            int nowticks = Environment.TickCount;
+            int i = 0;
+            try
+            {
+                while (true)
+                {
+                    if (i == 10000)
+                    {
+                        break;
+                    }
+                    i++;
+
+                    mc.SendQueue("你好:" + i, false);
+                    Console.WriteLine("发送第" + i + "条消息");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("出错" + i, ex.Message);
+            }
+            Console.WriteLine("完成ms:" + (Environment.TickCount - nowticks));
+
+            //var nowticks = Environment.TickCount;
+            //int cnt = 0;
+            //LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient(".\\private$\\ljctest111", false, true);
+            //foreach (var msg in mc.ReadQueue(1))
+            //{
+            //    cnt++;
+            //    //Console.WriteLine(msg.Body.ToString());
+            //}
+            //Console.WriteLine("完成ms:" + cnt + "条,用时" + (Environment.TickCount - nowticks));
+
             Console.Read();
         }
 
