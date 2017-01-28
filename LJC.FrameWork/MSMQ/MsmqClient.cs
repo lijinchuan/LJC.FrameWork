@@ -14,16 +14,14 @@ namespace LJC.FrameWork.MSMQ
         public const string MsmqPathFormatIP = "FormatName:Direct=TCP:{0}\\private$\\{1}";
         public const string MsmqPathFormatHostname = "FormatName:Direct=OS:{0}\\private$\\{1}";
 
-        private static Regex Rg_CheckMsmqPath_Remoting = new Regex(@"^FormatName:Direct\=((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256}(?:\s{0}|(\,Direct\=((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256}){1,})$");
+        //private static Regex Rg_CheckMsmqPath_Remoting = new Regex(@"^FormatName:Direct\=((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256}(?:\s{0}|(\,Direct\=((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256}){1,})$");
+        private static Regex Rg_CheckMsmqPath_Remoting = new Regex(@"^FormatName:Direct\=((((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256}(?:\s{0})|(http\:\/\/\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}\/msmq\/private\$\/[A-z_]{1}[A-z0-9_]{0,256}))|(\,(Direct\=((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256})|(http\:\/\/\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}\/msmq\/Private\$\/[A-z_]{1}[A-z0-9_]{0,256})){1,})$");
         private static Regex Rg_CheckMsmqPath_Local = new Regex(@"^\.\\private\$\\[A-z_]{1}[A-z0-9_]{0,256}$");
+
+        //private static Regex Rg_CheckMsmqPath_Http = new Regex(@"^http\:\/\/\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}\/msmq\/Private\$\/[A-z_]{1}[A-z0-9_]{0,256}");
 
         private static IMessageFormatter XMLMessageFormatter = new XmlMessageFormatter(new Type[] { typeof(string) });
         private int _lastActivityMills = 0;
-
-        /// <summary>
-        /// 是否可以重复使用
-        /// </summary>
-        private bool _canbeReused = true;
 
         private Lazy<MessageQueue> _mq = null;
 
@@ -31,7 +29,7 @@ namespace LJC.FrameWork.MSMQ
         {
             AssertMqpath(mqpath);
 
-            var mq = new MessageQueue(mqpath, false, _canbeReused, QueueAccessMode.SendAndReceive);
+            var mq = new MessageQueue(mqpath, false, true, QueueAccessMode.SendAndReceive);
             mq.Formatter = XMLMessageFormatter;
             return mq;
         }
@@ -43,13 +41,13 @@ namespace LJC.FrameWork.MSMQ
 
         private static void AssertMqpath(string path)
         {
-            if (!(Rg_CheckMsmqPath_Remoting.IsMatch(path) | Rg_CheckMsmqPath_Local.IsMatch(path)))
+            if (!(Rg_CheckMsmqPath_Remoting.IsMatch(path) || Rg_CheckMsmqPath_Local.IsMatch(path)))
             {
                 throw new Exception("格式错误:" + path);
             }
         }
 
-        public MsmqClient(string path,bool fromconfig=false,bool reused=true)
+        public MsmqClient(string path,bool fromconfig=false)
         {
             if(fromconfig)
             {
@@ -58,24 +56,19 @@ namespace LJC.FrameWork.MSMQ
 
             AssertMqpath(path);
             mqpath = path;
-            _canbeReused = reused;
-
             Init();
         }
 
-        public MsmqClient(string hostname, string queuename, bool reused = true)
+        public MsmqClient(string hostname, string queuename)
         {
             mqpath = string.Format(MsmqPathFormatHostname, hostname, queuename);
-            _canbeReused = reused;
 
             Init();
         }
 
-        public MsmqClient(IPEndPoint endpoint, string queuename, bool reused = true)
+        public MsmqClient(IPEndPoint endpoint, string queuename)
         {
             mqpath = string.Format(MsmqPathFormatIP, endpoint.Address.ToString(), queuename);
-            _canbeReused = reused;
-
             Init();
         }
 
@@ -94,26 +87,16 @@ namespace LJC.FrameWork.MSMQ
             Message msg = new Message(content);
             msg.Recoverable = recoverable;
 
-            if (_canbeReused)
+            try
             {
-                try
-                {
-                    _mq.Value.Send(msg);
-                }
-                catch (MessageQueueException)
-                {
-                    _mq.Value.Dispose();
-                    _mq = new Lazy<MessageQueue>(() => new MessageQueue(mqpath, false, _canbeReused, QueueAccessMode.SendAndReceive));
-
-                    _mq.Value.Send(msg);
-                }
+                _mq.Value.Send(msg);
             }
-            else
+            catch (MessageQueueException)
             {
-                using (var mq = GetMessageQueue())
-                {
-                    _mq.Value.Send(msg);
-                }
+                _mq.Value.Dispose();
+                _mq = new Lazy<MessageQueue>(() => GetMessageQueue());
+
+                _mq.Value.Send(msg);
             }
 
             _lastActivityMills = Environment.TickCount;
@@ -131,17 +114,9 @@ namespace LJC.FrameWork.MSMQ
 
         public IEnumerable<Message> ReadQueue(int sec_timeout=5)
         {
-            MessageQueue mq = null;
+            MessageQueue mq = _mq.Value;
             TimeSpan timeoutspan = new TimeSpan(0, 0, sec_timeout);
 
-            if (_canbeReused)
-            {
-                mq = _mq.Value;
-            }
-            else
-            {
-                mq = GetMessageQueue();
-            }
             Message msg = null;
 
             while (true)
@@ -157,31 +132,24 @@ namespace LJC.FrameWork.MSMQ
                         break;
                     }
 
-                    if (_canbeReused)
-                    {
-                        _mq.Value.Dispose();
-                        _mq = new Lazy<MessageQueue>(() => GetMessageQueue());
-                        mq = _mq.Value;
+                    _mq.Value.Dispose();
+                    _mq = new Lazy<MessageQueue>(() => GetMessageQueue());
+                    mq = _mq.Value;
 
-                        try
-                        {
-                            msg = mq.Receive(timeoutspan);
-                        }
-                        catch (MessageQueueException ex)
-                        {
-                            if(IsTimeOutEx(ex))
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                throw ex;
-                            }
-                        }
-                    }
-                    else
+                    try
                     {
-                        throw e;
+                        msg = mq.Receive(timeoutspan);
+                    }
+                    catch (MessageQueueException ex)
+                    {
+                        if (IsTimeOutEx(ex))
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            throw ex;
+                        }
                     }
                 }
 
@@ -191,12 +159,23 @@ namespace LJC.FrameWork.MSMQ
             _lastActivityMills = Environment.TickCount;
         }
 
+        private bool _isDisposed = false;
+        public void Dispose(bool disposing)
+        {
+            if(disposing)
+            {
+                if(_mq.IsValueCreated)
+                {
+                    _mq.Value.Dispose();
+                }
+                _isDisposed = true;
+            }
+        }
+
         public void Dispose()
         {
-            if(_mq.IsValueCreated)
-            {
-                _mq.Value.Dispose();
-            }
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }
