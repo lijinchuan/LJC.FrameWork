@@ -213,12 +213,9 @@ namespace LJC.FrameWork.MSMQ
         private bool _isDisposed = false;
         public void Dispose(bool disposing)
         {
-            if(disposing)
+            if (_mq.IsValueCreated)
             {
-                if(_mq.IsValueCreated)
-                {
-                    _mq.Value.Dispose();
-                }
+                _mq.Value.Dispose();
             }
             _isDisposed = true;
         }
@@ -227,6 +224,11 @@ namespace LJC.FrameWork.MSMQ
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        ~MsmqClient()
+        {
+            Dispose(false);
         }
     }
 }
