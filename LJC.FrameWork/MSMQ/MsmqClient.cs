@@ -8,17 +8,32 @@ using System.Text.RegularExpressions;
 
 namespace LJC.FrameWork.MSMQ
 {
+    /// <summary>
+    /// msmq客户端类，当前只适用私有队列和非事务队列，采用TCP通信
+    /// 使用方法：
+    /// 1、配置<![CDATA[ 
+    ///  <add key="msmq_path" value="127.0.0.1/queuename,127.0.0.1/queuename2" />
+    ///  或者
+    ///  <add key="msmq_path" value="./queuename2" />
+    ///  或者使用标准的msmq路径写法
+    /// ]]>
+    /// 2、构造
+    /// var client= MsmqClient("127.0.0.1","queuename")
+    /// </summary>
     public sealed class MsmqClient:IDisposable
     {
-        private string mqpath = null;
+        private string _mqpath = null;
+        private bool _isPathValid = false;
+
+
         public const string MsmqPathFormatIP = "FormatName:Direct=TCP:{0}\\private$\\{1}";
         public const string MsmqPathFormatHostname = "FormatName:Direct=OS:{0}\\private$\\{1}";
 
-        //private static Regex Rg_CheckMsmqPath_Remoting = new Regex(@"^FormatName:Direct\=((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256}(?:\s{0}|(\,Direct\=((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256}){1,})$");
         private static Regex Rg_CheckMsmqPath_Remoting = new Regex(@"^FormatName:Direct\=((((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256}(?:\s{0})|(http\:\/\/\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}\/msmq\/private\$\/[A-z_]{1}[A-z0-9_]{0,256}))|(\,(Direct\=((TCP:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3})|(OS:[A-z0-9\-]{1,256}))\\\\private\$\\\\[A-z_]{1}[A-z0-9_]{0,256})|(http\:\/\/\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}\/msmq\/Private\$\/[A-z_]{1}[A-z0-9_]{0,256})){1,})$");
         private static Regex Rg_CheckMsmqPath_Local = new Regex(@"^\.\\private\$\\[A-z_]{1}[A-z0-9_]{0,256}$");
 
-        //private static Regex Rg_CheckMsmqPath_Http = new Regex(@"^http\:\/\/\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}\/msmq\/Private\$\/[A-z_]{1}[A-z0-9_]{0,256}");
+        private static Regex Rg_IpConfig = new Regex(@"^\.(?:\:\d{1,5})?/[A-z_]{1}[A-z0-9_]{0,256}$|\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}(?:\:\d{1,5})?/[A-z_]{1}[A-z0-9_]{0,256}(?:$|(\,(?:\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}(?:\:\d{1,5})?/[A-z_]{1}[A-z0-9_]{0,256})){1,}$)");
+        private static Regex Rg_IpConfigPair = new Regex(@"(\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}|\.)(:\d{1,5})?/([A-z_]{1}[A-z0-9_]{0,256})");
 
         private static IMessageFormatter XMLMessageFormatter = new XmlMessageFormatter(new Type[] { typeof(string) });
         private int _lastActivityMills = 0;
@@ -27,9 +42,10 @@ namespace LJC.FrameWork.MSMQ
 
         private MessageQueue GetMessageQueue()
         {
-            AssertMqpath(mqpath);
+            bool needparse = false;
+            AssertMqpath(_mqpath,ref needparse);
 
-            var mq = new MessageQueue(mqpath, false, true, QueueAccessMode.SendAndReceive);
+            var mq = new MessageQueue(_mqpath, false, true, QueueAccessMode.SendAndReceive);
             mq.Formatter = XMLMessageFormatter;
             return mq;
         }
@@ -39,12 +55,26 @@ namespace LJC.FrameWork.MSMQ
             _mq = new Lazy<MessageQueue>(() => GetMessageQueue());
         }
 
-        private static void AssertMqpath(string path)
+        private void AssertMqpath(string path,ref bool needparse)
         {
+            if(_isPathValid)
+            {
+                return;
+            }
+
             if (!(Rg_CheckMsmqPath_Remoting.IsMatch(path) || Rg_CheckMsmqPath_Local.IsMatch(path)))
             {
-                throw new Exception("格式错误:" + path);
+                if (!Rg_IpConfig.IsMatch(path))
+                {
+                    needparse = true;
+                }
+                else
+                {
+                    throw new Exception("格式错误:" + path); 
+                }
             }
+
+            _isPathValid = true;
         }
 
         public MsmqClient(string path,bool fromconfig=false)
@@ -54,29 +84,50 @@ namespace LJC.FrameWork.MSMQ
                 path = System.Configuration.ConfigurationManager.AppSettings[path];
             }
 
-            AssertMqpath(path);
-            mqpath = path;
+            bool needparse = false;
+            AssertMqpath(path,ref needparse);
+            if (needparse)
+            {
+                StringBuilder sb = new StringBuilder();
+                foreach(Match m in Rg_IpConfigPair.Matches(path))
+                {
+                    if (m.Groups[1].Value.Equals("."))
+                    {
+                        sb.AppendFormat(@"\.\\private\$\\{0}", m.Groups[3].Value);
+                    }
+                    else
+                    {
+                        if(sb.Length==0)
+                        {
+                            sb.Append("FormatName:");
+                        }
+                        sb.AppendFormat("Direct=TCP:{0}\\private$\\{1},", m.Groups[1].Value, m.Groups[3].Value);
+                    }
+                }
+                if (sb[sb.Length - 1].Equals(','))
+                {
+                    sb.Remove(sb.Length - 1, 1);
+                }
+                _mqpath = sb.ToString();
+            }
+            else
+            {
+                _mqpath = path;
+            }
             Init();
         }
 
         public MsmqClient(string hostname, string queuename)
         {
-            mqpath = string.Format(MsmqPathFormatHostname, hostname, queuename);
-
-            Init();
-        }
-
-        public MsmqClient(IPEndPoint endpoint, string queuename)
-        {
-            mqpath = string.Format(MsmqPathFormatIP, endpoint.Address.ToString(), queuename);
+            _mqpath = string.Format(MsmqPathFormatHostname, hostname, queuename);
             Init();
         }
 
         public void CreateIfNotExis()
         {
-            if (!MessageQueue.Exists(mqpath))
+            if (!MessageQueue.Exists(_mqpath))
             {
-                var mq = MessageQueue.Create(mqpath, false);
+                var mq = MessageQueue.Create(_mqpath, false);
                 _mq.Value.SetPermissions("ANONYMOUS LOGON", MessageQueueAccessRights.FullControl, AccessControlEntryType.Allow);
                 _mq.Value.SetPermissions("Everyone", MessageQueueAccessRights.FullControl, AccessControlEntryType.Allow);
             }
@@ -168,8 +219,8 @@ namespace LJC.FrameWork.MSMQ
                 {
                     _mq.Value.Dispose();
                 }
-                _isDisposed = true;
             }
+            _isDisposed = true;
         }
 
         public void Dispose()
