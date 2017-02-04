@@ -11,12 +11,12 @@ namespace LJC.FrameWork.MSMQ
     /// <summary>
     /// msmq客户端类，当前只适用私有队列和非事务队列，采用TCP通信
     /// 使用方法：
-    /// 1、配置<![CDATA[ 
+    /// 1、配置
     ///  <add key="msmq_path" value="127.0.0.1/queuename,127.0.0.1/queuename2" />
     ///  或者
     ///  <add key="msmq_path" value="./queuename2" />
     ///  或者使用标准的msmq路径写法
-    /// ]]>
+    ///
     /// 2、构造
     /// var client= MsmqClient("127.0.0.1","queuename")
     /// </summary>
@@ -64,7 +64,7 @@ namespace LJC.FrameWork.MSMQ
 
             if (!(Rg_CheckMsmqPath_Remoting.IsMatch(path) || Rg_CheckMsmqPath_Local.IsMatch(path)))
             {
-                if (!Rg_IpConfig.IsMatch(path))
+                if (Rg_IpConfig.IsMatch(path))
                 {
                     needparse = true;
                 }
@@ -93,7 +93,7 @@ namespace LJC.FrameWork.MSMQ
                 {
                     if (m.Groups[1].Value.Equals("."))
                     {
-                        sb.AppendFormat(@"\.\\private\$\\{0}", m.Groups[3].Value);
+                        sb.AppendFormat(".\\private$\\{0}", m.Groups[3].Value);
                     }
                     else
                     {

@@ -93,7 +93,7 @@ namespace Test2
             //Console.Read();
 
 
-            //LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient(".\\private$\\ljctest111",false,false);
+            //LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient(".\\private$\\ljctest111", false);
             //mc.CreateIfNotExis();
             //int i = 0;
             //try
@@ -117,8 +117,8 @@ namespace Test2
             //    Console.WriteLine("出错" + i, ex.Message);
             //}
 
-            //LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient("FormatName:Direct=http://127.0.0.1/msmq/private$/ljctest111", false, true);
-            //mc.CreateIfNotExis();
+            //LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient("FormatName:Direct=http://127.0.0.1/msmq/private$/ljctest111", false);
+            ////mc.CreateIfNotExis();
             //int nowticks = Environment.TickCount;
             //int i = 0;
             //try
@@ -132,7 +132,31 @@ namespace Test2
             //        i++;
 
             //        mc.SendQueue("你好:" + i, false);
-            //        Console.WriteLine("发送第" + i + "条消息");
+            //        //Console.WriteLine("发送第" + i + "条消息");
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine("出错" + i, ex.Message);
+            //}
+            //Console.WriteLine("完成ms:" + (Environment.TickCount - nowticks));
+
+            //LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient("172.31.56.129/ljctest111", false);
+            ////mc.CreateIfNotExis();
+            //int nowticks = Environment.TickCount;
+            //int i = 0;
+            //try
+            //{
+            //    while (true)
+            //    {
+            //        if (i == 10000)
+            //        {
+            //            break;
+            //        }
+            //        i++;
+
+            //        mc.SendQueue("你好:" + i, false);
+            //        //Console.WriteLine("发送第" + i + "条消息");
             //    }
             //}
             //catch (Exception ex)
@@ -143,7 +167,9 @@ namespace Test2
 
             var nowticks = Environment.TickCount;
             int cnt = 0;
-            LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient("FormatName:Direct=http://127.0.0.1/msmq/private$/ljctest111", false);
+            LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient("./ljctest111", false);
+
+            //LJC.FrameWork.MSMQ.MsmqClient
             foreach (var msg in mc.ReadQueue(1))
             {
                 cnt++;
