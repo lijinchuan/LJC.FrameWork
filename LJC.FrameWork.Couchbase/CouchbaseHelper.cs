@@ -11,7 +11,7 @@ namespace LJC.FrameWork.Couchbase
     {
         static ConcurrentDictionary<string, CB.CouchbaseClient> ClientDic = new ConcurrentDictionary<string, CB.CouchbaseClient>();
 
-        internal static CB.CouchbaseClient GetClient(string sectionname)
+        public static CB.CouchbaseClient GetClient(string sectionname)
         {
             CB.CouchbaseClient client = null;
             if (!ClientDic.TryGetValue(sectionname, out client))
@@ -23,6 +23,33 @@ namespace LJC.FrameWork.Couchbase
 
                 client = new CB.CouchbaseClient(sectionname);
                 ClientDic.TryAdd(sectionname, client);
+            }
+
+            return client;
+        }
+
+        public static CB.CouchbaseClient GetClient(string serverip, string bucket)
+        {
+            CB.CouchbaseClient client = null;
+            string key = serverip + bucket;
+            if (!ClientDic.TryGetValue(key, out client))
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    throw new ArgumentNullException("serverip&bucket");
+                }
+
+                CB.Configuration.CouchbaseClientConfiguration config = new CB.Configuration.CouchbaseClientConfiguration();
+                if (!string.IsNullOrWhiteSpace(bucket))
+                {
+                    config.Bucket = bucket;
+                }
+                config.SocketPool.MaxPoolSize = 10;
+                config.SocketPool.MinPoolSize = 5;
+                config.Urls.Add(new Uri(string.Format("http://{0}:8091/pools", serverip)));
+                client = new CB.CouchbaseClient(config);
+
+                ClientDic.TryAdd(key, client);
             }
 
             return client;
