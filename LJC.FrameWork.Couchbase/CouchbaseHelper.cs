@@ -11,7 +11,7 @@ namespace LJC.FrameWork.Couchbase
     {
         static ConcurrentDictionary<string, CB.CouchbaseClient> ClientDic = new ConcurrentDictionary<string, CB.CouchbaseClient>();
 
-        public static CB.CouchbaseClient GetClient(string sectionname)
+        internal static CB.CouchbaseClient GetClient(string sectionname)
         {
             CB.CouchbaseClient client = null;
             if (!ClientDic.TryGetValue(sectionname, out client))
