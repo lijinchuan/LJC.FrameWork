@@ -35,6 +35,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Couchbase">
+      <HintPath>..\DLL\Couchbase\Couchbase.dll</HintPath>
+    </Reference>
+    <Reference Include="Enyim.Caching">
+      <HintPath>..\DLL\Couchbase\Enyim.Caching.dll</HintPath>
+    </Reference>
     <Reference Include="ServiceStack.Common">
       <HintPath>..\DLL\Redis\ServiceStack.Common.3.9.71\lib\net35\ServiceStack.Common.dll</HintPath>
     </Reference>
@@ -62,10 +68,15 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="CouchbaseHelperTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RedisManagerTests.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LJC.FrameWork.Couchbase\LJC.FrameWork.Couchbase.csproj">
+      <Project>{5A3D8DF8-AD9C-43D2-B5F7-D4D457EC4FDE}</Project>
+      <Name>LJC.FrameWork.Couchbase</Name>
+    </ProjectReference>
     <ProjectReference Include="..\LJC.FrameWork.Redis\LJC.FrameWork.Redis.csproj">
       <Project>{2B856845-66A6-4F1B-9853-200A494741A2}</Project>
       <Name>LJC.FrameWork.Redis</Name>
