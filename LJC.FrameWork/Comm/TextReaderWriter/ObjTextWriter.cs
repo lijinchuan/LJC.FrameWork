@@ -71,6 +71,18 @@ namespace LJC.FrameWork.Comm
                     Append(ms.ToArray(),true);
                 }
             }
+            else if (ObjTextReaderWriterEncodeType.jsonbuf == this._encodeType
+               || ObjTextReaderWriterEncodeType.jsonbufex == this._encodeType)
+            {
+                //using (MemoryStream ms = new MemoryStream())
+                //{
+                //    ProtoBuf.Serializer.Serialize<T>(ms, obj);
+                //    Append(ms.ToArray(), true);
+                //}
+
+                var json = JsonUtil<T>.Serialize(obj);
+                Append(Encoding.UTF8.GetBytes(json), true);
+            }
             else
             {
                 string str = JsonUtil<T>.Serialize(obj);

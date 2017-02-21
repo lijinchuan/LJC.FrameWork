@@ -118,6 +118,41 @@ namespace LJC.FrameWork.Comm
                     return ProtoBuf.Serializer.Deserialize<T>(ms);
                 }
             }
+            else if (_encodeType == ObjTextReaderWriterEncodeType.jsonbuf
+               || _encodeType == ObjTextReaderWriterEncodeType.jsonbufex)
+            {
+                byte[] bylen = new byte[4];
+                _sr.BaseStream.Read(bylen, 0, 4);
+                var len = BitConverter.ToInt32(bylen, 0);
+                //239 187 191
+                if (len <= 0 || len == 12565487)
+                    return default(T);
+
+                //检查长度
+                if (_sr.BaseStream.Length - _sr.BaseStream.Position < len)
+                {
+                    _sr.BaseStream.Position -= 4;
+                    return default(T);
+                }
+
+                var contentbyte = new Byte[len];
+                _sr.BaseStream.Read(contentbyte, 0, len);
+
+                if (_canReadFromBack)
+                {
+                    _sr.BaseStream.Position += 4;
+                }
+
+                //扫过分隔符
+                _sr.BaseStream.Position += 2;
+
+                using (MemoryStream ms = new MemoryStream(contentbyte))
+                {
+                    //return ProtoBuf.Serializer.Deserialize<T>(ms);
+                    return JsonUtil<T>.Deserialize(Encoding.UTF8.GetString(ms.ToArray()));
+                }
+
+            }
             else if (_encodeType == ObjTextReaderWriterEncodeType.jsongzip)
             {
                 byte[] bylen = new byte[4];

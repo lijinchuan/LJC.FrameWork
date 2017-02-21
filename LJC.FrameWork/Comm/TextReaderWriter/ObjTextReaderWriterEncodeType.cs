@@ -12,5 +12,8 @@ namespace LJC.FrameWork.Comm
         protobuf,
         //扩展的功能，支持回读
         protobufex,
+        jsonbuf,
+        //扩展的功能，支持回读
+        jsonbufex,
     }
 }
