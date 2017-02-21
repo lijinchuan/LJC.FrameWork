@@ -13,7 +13,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
         private ObjTextReader _queueReader = null;
         private LocalFileQueueCfg _logger = null;
         private Timer _backtimer = null;
-        private long _lastCfgChageTime = Environment.TickCount;
+        private long _lastCfgChageTime = 0;
         private object _lock = new object();
         private bool IsRuning = false;
         /// <summary>
@@ -114,7 +114,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             _queueReader = ObjTextReader.CreateReader(queuefilepath);
 
             FileInfo finfo = new FileInfo(queuefilepath);
-            QueueCfgFile = finfo.Directory.FullName + queuename + ".cfg";
+            QueueCfgFile = finfo.Directory.FullName +"\\"+ queuename + ".cfg";
             if (File.Exists(QueueCfgFile))
             {
                 _logger = LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<LocalFileQueueCfg>(QueueCfgFile, true);
@@ -126,6 +126,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             else
             {
                 _logger = new LocalFileQueueCfg();
+                _logger.LastChageTime = Environment.TickCount;
                 _logger.QueueFile = queuefilepath;
                 SaveConfig();
             }
@@ -161,9 +162,8 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
         {
             if (obj.Equals(default(T)))
             {
-                return;
+                throw new Exception("null值不能写入队列");
             }
-
             _queueWriter.AppendObject(obj);
         }
 
@@ -208,7 +208,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
                         Thread.Sleep(1000 * errortimes);
                     }
 
-                    if (errortimes > 10)
+                    if (errortimes > 5)
                     {
                         throw new Exception("尝试次数过多");
                     }
