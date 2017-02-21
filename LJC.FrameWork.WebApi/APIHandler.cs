@@ -190,16 +190,33 @@ namespace LJC.FrameWork.WebApi
             switch (sertype)
             {
                 case SerType.protobuf:
-                    using(System.IO.MemoryStream ms=new MemoryStream())
                     {
-                        ProtoBuf.Serializer.Serialize(ms, result);
-                        return ms.ToArray();
+                        using (System.IO.MemoryStream ms = new MemoryStream())
+                        {
+                            ProtoBuf.Serializer.Serialize(ms, result);
+                            return ms.ToArray();
+                        }
                     }
                 default:
-                    context.Response.Charset = "utf8";
-                    context.Response.ContentType = "application/json";
-                    var str= JsonConvert.SerializeObject(result);
-                    return Encoding.UTF8.GetBytes(str);
+                    {
+                        context.Response.Charset = "utf8";
+                        context.Response.ContentType = "application/json";
+                        using (StringWriter sw = new StringWriter())
+                        {
+                            using (JsonTextWriter writer = new JsonTextWriter(sw)
+                            {
+                                Formatting = Formatting.Indented,
+                                Indentation = 4,
+                                IndentChar = ' '
+                            })
+                            {
+                                new Newtonsoft.Json.JsonSerializer().Serialize(writer, result);
+                                //var str = JsonConvert.SerializeObject(result);
+                                var str = sw.ToString();
+                                return Encoding.UTF8.GetBytes(str);
+                            }
+                        }
+                    }
             }
         }
     }

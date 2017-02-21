@@ -24,7 +24,6 @@ namespace LJC.FrameWork.Couchbase
                 client = new CB.CouchbaseClient(sectionname);
                 ClientDic.TryAdd(sectionname, client);
             }
-
             return client;
         }
 
