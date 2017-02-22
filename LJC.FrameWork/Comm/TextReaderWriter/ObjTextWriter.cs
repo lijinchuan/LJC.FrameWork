@@ -135,21 +135,33 @@ namespace LJC.FrameWork.Comm
             }
         }
 
+        private bool _isdispose = false;
+        public void Dispose(bool disposing)
+        {
+            if (!_isdispose)
+            {
+                if (_sw != null)
+                {
+                    lock (this)
+                    {
+                        _sw.Dispose();
+                        _sw = null;
+                    }
+                }
+                GC.SuppressFinalize(this);
+            }
+
+            _isdispose = true;
+        }
+
         public void Dispose()
         {
-            if (_sw != null)
-            {
-                lock (this)
-                {
-                    _sw.Close();
-                    _sw = null;
-                }
-            }
+            Dispose(true);
         }
 
         ~ObjTextWriter()
         {
-            Dispose();
+            Dispose(false);
         }
     }
 }
