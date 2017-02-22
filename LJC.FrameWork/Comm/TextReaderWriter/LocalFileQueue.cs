@@ -140,7 +140,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             try
             {
                 _backtimer.Change(Timeout.Infinite, Timeout.Infinite);
-                if (_queueWriter != null)
+                if (_queueWriter != null&&!this._isdispose)
                 {
                     _queueWriter.Flush();
                 }
@@ -232,22 +232,19 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
         {
             if (_isdispose)
             {
+                _backtimer.Dispose();
                 if (_queueWriter != null)
                 {
                     _queueWriter.Flush();
                     _queueWriter.Dispose();
-                    _queueWriter = null;
                 }
 
                 if (_queueReader != null)
                 {
                     _queueReader.Dispose();
-                    _queueReader = null;
                 }
 
                 SaveConfig();
-
-                _backtimer.Dispose();
 
                 _isdispose = true;
             }

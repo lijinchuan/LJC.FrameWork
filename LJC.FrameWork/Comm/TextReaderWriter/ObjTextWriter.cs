@@ -57,7 +57,8 @@ namespace LJC.FrameWork.Comm
 
         public void Flush()
         {
-            _sw.Flush();
+            if (!_isdispose)
+                _sw.Flush();
         }
 
         public void AppendObject<T>(T obj) where T : class
@@ -144,8 +145,7 @@ namespace LJC.FrameWork.Comm
                 {
                     lock (this)
                     {
-                        _sw.Dispose();
-                        _sw = null;
+                        _sw.Close();
                     }
                 }
                 GC.SuppressFinalize(this);
