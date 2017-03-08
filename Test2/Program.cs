@@ -82,15 +82,16 @@ namespace Test2
             }
         }
 
+        static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
             //TryRead1();
 
-            //LJC.FrameWork.SocketApplication.SessionClient client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
-            //client.LoginSuccess += client_LoginSuccess;
-            //client.Error += client_Error;
-            //client.Login("", "");
-            //Console.Read();
+            client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
+            client.LoginSuccess += client_LoginSuccess;
+            client.Error += client_Error;
+            client.Login("", "");
+            Console.Read();
 
 
             //LJC.FrameWork.MSMQ.MsmqClient mc = new LJC.FrameWork.MSMQ.MsmqClient(".\\private$\\ljctest111", false);
@@ -182,22 +183,42 @@ namespace Test2
 
         static void client_Error(Exception obj)
         {
-            Console.WriteLine(obj.Message);
+            Console.WriteLine(obj.ToString());
         }
 
         static void client_LoginSuccess()
         {
             Console.WriteLine("登录成功");
-            var resp = LJC.FrameWork.SOA.ESBClient.DoSOARequest<LJC.FrameWork.SOA.SOAServerEchoResponse>(0, 1, null);
 
-            var ms = Environment.TickCount;
+            System.Threading.Tasks.Parallel.For(0, 10, (no) =>
+                {
+                    var msg = new LJC.FrameWork.SocketApplication.Message
+                    {
+                        MessageHeader = new LJC.FrameWork.SocketApplication.MessageHeader
+                        {
+                            TransactionID = LJC.FrameWork.SocketApplication.SocketApplicationComm.GetSeqNum(),
+                            MessageTime = DateTime.Now,
+                            MessageType = 10240
+                        }
+                    };
+                    msg.SetMessageBody("hello");
+                    Console.WriteLine(no+"发送消息:" + msg.MessageHeader.TransactionID);
+                    var str = client.SendMessageAnsy<string>(msg, 1000);
+                    Console.WriteLine(no+"收到消息:" + str);
+                });
 
-            for(int i=0;i<100000;i++)
-            {
-                resp = LJC.FrameWork.SOA.ESBClient.DoSOARequest<LJC.FrameWork.SOA.SOAServerEchoResponse>(0, 1, null);
-            }
+            
 
-            Console.WriteLine("用时ms:" + (Environment.TickCount - ms));
+            //var resp = LJC.FrameWork.SOA.ESBClient.DoSOARequest<LJC.FrameWork.SOA.SOAServerEchoResponse>(0, 1, null);
+
+            //var ms = Environment.TickCount;
+
+            //for(int i=0;i<100000;i++)
+            //{
+            //    resp = LJC.FrameWork.SOA.ESBClient.DoSOARequest<LJC.FrameWork.SOA.SOAServerEchoResponse>(0, 1, null);
+            //}
+
+            //Console.WriteLine("用时ms:" + (Environment.TickCount - ms));
         }
 
         static void Main1(string[] args)

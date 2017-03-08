@@ -130,10 +130,10 @@ namespace Test
 
         static void Main(string[] args)
         {
-            LJC.FrameWork.SocketApplication.SessionServer server = new LJC.FrameWork.SocketApplication.SessionServer(5555);
+            MySession server = new MySession();
             server.StartServer();
 
-            //Console.Read();
+            Console.Read();
 
             //TestGZIP();
             //TestMs();
@@ -160,6 +160,11 @@ namespace Test
             Console.WriteLine("取到数据,用时ms:" + sw.ElapsedMilliseconds);
 
             Console.Read();
+        }
+
+        static void server_OnAppMessage(LJC.FrameWork.SocketApplication.Session arg1, LJC.FrameWork.SocketApplication.Message arg2)
+        {
+            Console.WriteLine(arg2.MessageHeader.TransactionID);
         }
 
         static void Main1(string[] args)

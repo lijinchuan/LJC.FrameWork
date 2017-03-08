@@ -71,6 +71,7 @@
     <Compile Include="CouchbaseHelperTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RedisManagerTests.cs" />
+    <Compile Include="SocketApplication\SocketApplicationCommTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LJC.FrameWork.Couchbase\LJC.FrameWork.Couchbase.csproj">
@@ -80,6 +81,10 @@
     <ProjectReference Include="..\LJC.FrameWork.Redis\LJC.FrameWork.Redis.csproj">
       <Project>{2B856845-66A6-4F1B-9853-200A494741A2}</Project>
       <Name>LJC.FrameWork.Redis</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LJC.FrameWork\LJC.FrameWork.csproj">
+      <Project>{77C9B3F8-7EC5-4AB4-AD65-3B0CC9E1A914}</Project>
+      <Name>LJC.FrameWork</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

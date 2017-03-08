@@ -18,7 +18,7 @@ namespace LJC.FrameWork.Comm
             {
                 var traceid = Thread.CurrentThread.ManagedThreadId;
                 Stack stack = null;
-                if (!ErrorTraceDic.ContainsKey(traceid))
+                if (!ErrorTraceDic.TryGetValue(traceid,out stack))
                 {
                     stack = new Stack();
                     stack.Push("(");
@@ -26,19 +26,9 @@ namespace LJC.FrameWork.Comm
                 }
                 else
                 {
-                    ErrorTraceDic[traceid].Push("(");
+                    stack.Clear();
+                    stack.Push("(");
                 }
-            }
-            catch { }
-        }
-
-        public static void ClearError()
-        {
-            try
-            {
-                Stack stack;
-                var traceid = Thread.CurrentThread.ManagedThreadId;
-                ErrorTraceDic.TryRemove(traceid, out stack);
             }
             catch { }
         }

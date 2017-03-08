@@ -11,6 +11,7 @@ namespace LJC.FrameWork.SocketApplication
     public class SessionServer:SessionMessageApp
     {
         private Dictionary<string, AutoReSetEventResult> watingEvents;
+        public event Action<Session, Message> OnAppMessage;
 
         //private static readonly object LockObj = new object();
         private ReaderWriterLockSlim lockObj = new ReaderWriterLockSlim();
@@ -111,6 +112,12 @@ namespace LJC.FrameWork.SocketApplication
                     autoEvent.WaitResult = result;
                     autoEvent.IsTimeOut = false;
                     autoEvent.Set();
+
+                    if(OnAppMessage!=null)
+                    {
+                        OnAppMessage(session, message);
+                    }
+
                     return;
                 }
             }

@@ -46,7 +46,11 @@ namespace LJC.FrameWork.SocketApplication
 
             using (AutoReSetEventResult autoResetEvent = new AutoReSetEventResult(reqID))
             {
-                watingEvents.Add(reqID, autoResetEvent);
+                lock(watingEvents)
+                {
+                    watingEvents.Add(reqID, autoResetEvent);
+                }
+
                 BuzException = null;
                 SendMessage(message);
                 //new Func<Message, bool>(SendMessage).BeginInvoke(message, null, null);
@@ -77,7 +81,7 @@ namespace LJC.FrameWork.SocketApplication
         /// <returns></returns>
         protected virtual byte[] DoMessage(Message message)
         {
-            return null;
+            return message.MessageBuffer;
         }
 
         protected sealed override void FormAppMessage(Message message, Session session)
@@ -101,8 +105,8 @@ namespace LJC.FrameWork.SocketApplication
 
                 byte[] result = DoMessage(message);
 
-                AutoReSetEventResult autoEvent = watingEvents.First(p => p.Key == message.MessageHeader.TransactionID).Value;
-                if (autoEvent != null)
+                AutoReSetEventResult autoEvent=null;
+                if (watingEvents.TryGetValue(message.MessageHeader.TransactionID, out autoEvent))
                 {
                     autoEvent.WaitResult = result;
                     autoEvent.IsTimeOut = false;

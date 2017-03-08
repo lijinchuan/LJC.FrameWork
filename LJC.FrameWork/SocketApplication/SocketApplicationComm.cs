@@ -90,7 +90,10 @@ namespace LJC.FrameWork.SocketApplication
                         data[i] = dataLen[i];
                     }
 
-                    return s.Send(data, SocketFlags.None) > 0;
+                    lock (s)
+                    {
+                        return s.Send(data, SocketFlags.None) > 0;
+                    }
                 }
                 else
                 {
@@ -105,7 +108,10 @@ namespace LJC.FrameWork.SocketApplication
                             _sendBufferManger.Buffer[i + offset] = dataLen[i];
                         }
 
-                        return s.Send(_sendBufferManger.Buffer, _sendBufferManger.GetOffset(bufferindex), (int)size, SocketFlags.None) > 0;
+                        lock (s)
+                        {
+                            return s.Send(_sendBufferManger.Buffer, offset, (int)size, SocketFlags.None) > 0;
+                        }
                     }
                     finally
                     {
