@@ -26,9 +26,19 @@ namespace LJC.FrameWork.Comm
                 }
                 else
                 {
-                    stack.Clear();
                     stack.Push("(");
                 }
+            }
+            catch { }
+        }
+
+        public static void ClearError()
+        {
+            try
+            {
+                Stack stack;
+                var traceid = Thread.CurrentThread.ManagedThreadId;
+                ErrorTraceDic.TryRemove(traceid, out stack);
             }
             catch { }
         }
