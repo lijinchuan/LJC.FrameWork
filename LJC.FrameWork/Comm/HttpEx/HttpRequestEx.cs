@@ -532,7 +532,10 @@ namespace LJC.FrameWork.Comm
         public HttpResponseEx DoRequest(string url, byte[] buff, WebRequestMethodEnum method = WebRequestMethodEnum.GET, bool saveCookie = true, bool getContent = true,
             string contentType = "application/x-www-form-urlencoded;charset=UTF-8;")
         {
+            
             var ret = new HttpResponseEx();
+            ret.RequestMills = Environment.TickCount;
+            
             try
             {
                 if (!CheckIsInDomain(url))
@@ -664,6 +667,8 @@ namespace LJC.FrameWork.Comm
                 ret.Successed = false;
                 ret.ErrorMsg = ex;
             }
+
+            ret.RequestMills = Environment.TickCount - ret.RequestMills;
             return ret;
         }
         #endregion
