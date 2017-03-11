@@ -1,5 +1,6 @@
 ﻿using LJC.FrameWork.EntityBuf;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ namespace LJC.FrameWork.SocketApplication
     public class SessionClient : SessionMessageApp
     {
         protected Exception BuzException = null;
-        private Dictionary<string, AutoReSetEventResult> watingEvents;
+        private ConcurrentDictionary<string, AutoReSetEventResult> watingEvents;
 
         //private static readonly object LockObj = new object();
         private ReaderWriterLockSlim lockObj = new ReaderWriterLockSlim();
@@ -23,7 +24,7 @@ namespace LJC.FrameWork.SocketApplication
         public SessionClient(string serverIP, int serverPort,bool startSession=true)
             : base(serverIP, serverPort)
         {
-            watingEvents = new Dictionary<string, AutoReSetEventResult>();
+            watingEvents = new ConcurrentDictionary<string, AutoReSetEventResult>();
             if (startSession)
             {
                 StartSession();
@@ -46,16 +47,13 @@ namespace LJC.FrameWork.SocketApplication
 
             using (AutoReSetEventResult autoResetEvent = new AutoReSetEventResult(reqID))
             {
-                lock(watingEvents)
-                {
-                    watingEvents.Add(reqID, autoResetEvent);
-                }
-
+                watingEvents.TryAdd(reqID, autoResetEvent);
                 BuzException = null;
                 SendMessage(message);
                 //new Func<Message, bool>(SendMessage).BeginInvoke(message, null, null);
                 WaitHandle.WaitAny(new WaitHandle[] { autoResetEvent }, timeOut);
-                watingEvents.Remove(reqID);
+                AutoReSetEventResult removedicitem = null;
+                watingEvents.TryRemove(reqID,out removedicitem);
 
                 if (BuzException != null)
                 {
