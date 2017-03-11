@@ -254,6 +254,12 @@ namespace LJC.FrameWork.Comm
             set;
         }
 
+        public long RequestMills
+        {
+            get;
+            set;
+        }
+
         public HttpResponseEx PraseHeader(HttpWebResponse httpWebResponse)
         {
             if (httpWebResponse != null)
