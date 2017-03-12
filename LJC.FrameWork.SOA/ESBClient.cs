@@ -61,7 +61,7 @@ namespace LJC.FrameWork.SOA
                 {
                     BuzException = new Exception(resp.ErrMsg);
                     //这里最好抛出错误来
-                    return null;
+                    throw BuzException;
                 }
                 return resp.Result;
             }
