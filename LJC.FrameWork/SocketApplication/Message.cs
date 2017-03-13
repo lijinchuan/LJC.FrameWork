@@ -98,7 +98,17 @@ namespace LJC.FrameWork.SocketApplication
 
         public T GetMessageBody<T>()
         {
-            return EntityBuf.EntityBufCore.DeSerialize<T>(_messageBuffer);
+            try
+            {
+                return EntityBuf.EntityBufCore.DeSerialize<T>(_messageBuffer);
+            }
+            catch (Exception ex)
+            {
+                var e = new Exception("消息解析失败", ex);
+                e.Data.Add("this.MessageHeader.TransactionID", this.MessageHeader.TransactionID);
+                e.Data.Add("this.MessageHeader.MessageType", this.MessageHeader.MessageType);
+                throw e;
+            }
         }
 
         internal bool IsMessage(MessageType msgType)

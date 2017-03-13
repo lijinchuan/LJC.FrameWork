@@ -66,8 +66,17 @@ namespace LJC.FrameWork.SocketApplication
                 }
                 else
                 {
-                    T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult);
-                    return result;
+                    try
+                    {
+                        T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult);
+                        return result;
+                    }
+                    catch (Exception ex)
+                    {
+                        Exception e = new Exception("解析消息体失败", ex);
+                        e.Data.Add("messageid", reqID);
+                        throw e;
+                    }
                 }
             }
         }

@@ -879,11 +879,21 @@ namespace LJC.FrameWork.EntityBuf
             //}
             //var ms = new MemoryStream(decompressBytes);
 
-            var ms = new MemoryStream(bytes);
-            BinaryReader reader = new BinaryReader(ms);
-            MemoryStreamReader rd = new MemoryStreamReader(reader);
-            var obj = DeSerialize(DestType, rd);
-            return obj;
+            try
+            {
+                var ms = new MemoryStream(bytes);
+                BinaryReader reader = new BinaryReader(ms);
+                MemoryStreamReader rd = new MemoryStreamReader(reader);
+                var obj = DeSerialize(DestType, rd);
+                return obj;
+            }
+            catch (Exception ex)
+            {
+                var e= new Exception(string.Format("无法把二进制反序列化成{0}对象",DestType.FullName), ex);
+                e.Data.Add("bytes", bytes == null ? "" : Convert.ToBase64String(bytes));
+                e.Data.Add("compress", compress);
+                throw e;
+            }
         }
 
         public static T DeSerialize<T>(byte[] bytes, bool compress = true)
