@@ -1,4 +1,5 @@
-﻿using LJC.FrameWork.EntityBuf;
+﻿using LJC.FrameWork.ConfigurationSectionHandler;
+using LJC.FrameWork.EntityBuf;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,7 +19,17 @@ namespace LJC.FrameWork.SocketApplication
 
         static SessionClient()
         {
-
+            var threadpoolset = (ThreadPoolConfig)System.Configuration.ConfigurationManager.GetSection("ThreadPoolConfig");
+            if (threadpoolset == null)
+            {
+                ThreadPool.SetMinThreads(10, 10);
+                ThreadPool.SetMaxThreads(1000, 1000);
+            }
+            else
+            {
+                ThreadPool.SetMinThreads(threadpoolset.MinWorkerThreads, threadpoolset.MinCompletionPortThreads);
+                ThreadPool.SetMaxThreads(threadpoolset.MaxWorkerThreads, threadpoolset.MaxCompletionPortThreads);
+            }
         }
 
         public SessionClient(string serverIP, int serverPort,bool startSession=true)

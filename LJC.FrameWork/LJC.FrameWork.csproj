@@ -226,6 +226,7 @@
     <Compile Include="Comm\WindowsAPI.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ConfigurationSectionHandler\ThreadPoolConfig.cs" />
     <Compile Include="Data\QuickDataBase\CachDataContextMoudel.cs" />
     <Compile Include="Data\QuickDataBase\DatabaseHelper.cs" />
     <Compile Include="Data\QuickDataBase\DataBaseMapperAttr.cs" />

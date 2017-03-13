@@ -85,7 +85,7 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
-            TestEntityBuf();
+            //TestEntityBuf();
 
             var content1 = @"[
                                 {name:'cjt',age:10},
@@ -97,7 +97,7 @@ namespace Test2
             var ss = JsonHelper.ToJson(res1);
             //TryRead1();
 
-            ThreadPool.SetMinThreads(100, 100);
+            //ThreadPool.SetMinThreads(100, 100);
             client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
             client.LoginSuccess += client_LoginSuccess;
             client.Error += client_Error;

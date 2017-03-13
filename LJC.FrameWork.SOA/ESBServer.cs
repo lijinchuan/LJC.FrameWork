@@ -52,8 +52,9 @@ namespace LJC.FrameWork.SOA
 
                     var toulp = (Tuple<int, int>)session.Tag;
 
-                    LogHelper.Instance.Debug(string.Format("SOA响应耗时,请求序列号:{0},服务号:{1},功能号:{2},用时:{3}",
-                        response.ClientTransactionID, toulp.Item1, toulp.Item2, DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒"));
+                    LogHelper.Instance.Debug(string.Format("SOA响应耗时,请求序列号:{0},服务号:{1},功能号:{2},用时:{3},结果:{4}",
+                        response.ClientTransactionID, toulp.Item1, toulp.Item2, DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒",
+                        Convert.ToBase64String(response.Result)));
                 }
                 else
                 {

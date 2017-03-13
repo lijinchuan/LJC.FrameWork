@@ -1,4 +1,5 @@
 ﻿using LJC.FrameWork.Comm;
+using LJC.FrameWork.ConfigurationSectionHandler;
 using LJC.FrameWork.EntityBuf;
 using LJC.FrameWork.SocketApplication;
 using System;
@@ -46,6 +47,21 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     return;
                 }
                 _maxPackageLength = value;
+            }
+        }
+
+        static ServerHugeBase()
+        {
+            var threadpoolset=(ThreadPoolConfig)System.Configuration.ConfigurationManager.GetSection("ThreadPoolConfig");
+            if (threadpoolset == null)
+            {
+                ThreadPool.SetMinThreads(10, 10);
+                ThreadPool.SetMaxThreads(1000, 1000);
+            }
+            else
+            {
+                ThreadPool.SetMinThreads(threadpoolset.MinWorkerThreads, threadpoolset.MinCompletionPortThreads);
+                ThreadPool.SetMaxThreads(threadpoolset.MaxWorkerThreads, threadpoolset.MaxCompletionPortThreads);
             }
         }
 
