@@ -85,8 +85,17 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            var content1 = @"[
+                                {name:'cjt',age:10},
+                                {name:'cjt2',age:21},
+                                {name:'cjtc',age:16}
+                            ]";
+
+            var res1 = JsonHelper.JsonToEntity<dynamic>(content1);
+            var ss = JsonHelper.ToJson(res1);
             //TryRead1();
 
+            ThreadPool.SetMinThreads(100, 100);
             client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
             client.LoginSuccess += client_LoginSuccess;
             client.Error += client_Error;
@@ -190,21 +199,24 @@ namespace Test2
         {
             Console.WriteLine("登录成功");
 
-            System.Threading.Tasks.Parallel.For(0, 10, (no) =>
+            System.Threading.Tasks.Parallel.For(0, 20, (no) =>
                 {
-                    var msg = new LJC.FrameWork.SocketApplication.Message
+                    for (int i = 0; i < 100; i++)
                     {
-                        MessageHeader = new LJC.FrameWork.SocketApplication.MessageHeader
+                        var msg = new LJC.FrameWork.SocketApplication.Message
                         {
-                            TransactionID = LJC.FrameWork.SocketApplication.SocketApplicationComm.GetSeqNum(),
-                            MessageTime = DateTime.Now,
-                            MessageType = 10240
-                        }
-                    };
-                    msg.SetMessageBody("hello");
-                    Console.WriteLine(no+"发送消息:" + msg.MessageHeader.TransactionID);
-                    var str = client.SendMessageAnsy<string>(msg, 1000);
-                    Console.WriteLine(no+"收到消息:" + str);
+                            MessageHeader = new LJC.FrameWork.SocketApplication.MessageHeader
+                            {
+                                TransactionID = LJC.FrameWork.SocketApplication.SocketApplicationComm.GetSeqNum(),
+                                MessageTime = DateTime.Now,
+                                MessageType = 10240
+                            }
+                        };
+                        msg.SetMessageBody("hello");
+                        Console.WriteLine(no + "发送消息:" + msg.MessageHeader.TransactionID);
+                        var str = client.SendMessageAnsy<string>(msg, 5000);
+                        Console.WriteLine(no + "收到消息:" + str);
+                    }
                 });
 
             

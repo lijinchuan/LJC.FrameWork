@@ -130,6 +130,8 @@ namespace Test
 
         static void Main(string[] args)
         {
+            ThreadPool.SetMinThreads(100, 100);
+
             MySession server = new MySession();
             server.StartServer();
 

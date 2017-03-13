@@ -25,7 +25,7 @@ namespace Test
                 msg.SetMessageBody(message.MessageHeader.TransactionID);
                 session.SendMessage(msg);
 
-                Console.WriteLine("收到消息:" + msg.MessageHeader.TransactionID);
+                //Console.WriteLine("收到消息:" + msg.MessageHeader.TransactionID);
 
                 return;
             }
