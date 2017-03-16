@@ -77,8 +77,12 @@ namespace LJC.FrameWork.SocketApplication
                 }
                 else
                 {
-                    try
+                    if (autoResetEvent.DataException != null)
                     {
+                        throw autoResetEvent.DataException;
+                    }
+                    try
+                    {  
                         T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult);
                         return result;
                     }
@@ -121,13 +125,26 @@ namespace LJC.FrameWork.SocketApplication
                 if (watingEvents.Count == 0)
                     return;
 
-                byte[] result = DoMessage(message);
+
+                byte[] result = null;
+                Exception innerex = null;
+
+                try
+                {
+
+                    result = DoMessage(message);
+                }
+                catch (Exception ex)
+                {
+                    innerex = ex;
+                }
 
                 AutoReSetEventResult autoEvent=null;
                 if (watingEvents.TryGetValue(message.MessageHeader.TransactionID, out autoEvent))
                 {
                     autoEvent.WaitResult = result;
                     autoEvent.IsTimeOut = false;
+                    autoEvent.DataException = innerex;
                     autoEvent.Set();
                     return;
                 }

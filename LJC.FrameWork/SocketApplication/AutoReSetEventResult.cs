@@ -42,6 +42,12 @@ namespace LJC.FrameWork.SocketApplication
             }
         }
 
+        public Exception DataException
+        {
+            get;
+            set;
+        }
+
         //new public void Set()
         //{
         //    base.Set();
