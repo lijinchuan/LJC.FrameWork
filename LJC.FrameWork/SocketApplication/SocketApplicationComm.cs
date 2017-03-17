@@ -90,7 +90,10 @@ namespace LJC.FrameWork.SocketApplication
                         data[i] = dataLen[i];
                     }
 
-                    return s.Send(data, SocketFlags.None) > 0;
+                    lock (s)
+                    {
+                        return s.Send(data, SocketFlags.None) > 0;
+                    }
                 }
                 else
                 {
@@ -105,7 +108,25 @@ namespace LJC.FrameWork.SocketApplication
                             _sendBufferManger.Buffer[i + offset] = dataLen[i];
                         }
 
-                        return s.Send(_sendBufferManger.Buffer, offset, (int)size, SocketFlags.None) > 0;
+                        int sendcount = 0;
+                        lock (s)
+                        {
+                            SocketError senderror=SocketError.Success;
+
+                            sendcount = s.Send(_sendBufferManger.Buffer, offset, (int)size, SocketFlags.None, out senderror);
+
+                            if (SocketApplicationEnvironment.TraceSocketDataBag && !string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
+                            {
+                                var sendbytes = _sendBufferManger.Buffer.Skip(offset).Take((int)size).ToArray();
+                                LogManager.LogHelper.Instance.Debug("发送数据:" + message.MessageHeader.TransactionID + "长度:" + size + ", " + Convert.ToBase64String(sendbytes));
+                            }
+
+                            if(senderror!=SocketError.Success)
+                            {
+                                throw new Exception(senderror.ToString());
+                            }
+                        }
+                        return sendcount > 0;
                     }
                     finally
                     {
@@ -115,6 +136,7 @@ namespace LJC.FrameWork.SocketApplication
             }
             catch (Exception ex)
             {
+                LogManager.LogHelper.Instance.Error("发送消息失败:" + message.MessageHeader.TransactionID, ex);
                 return false;
             }
         }
@@ -139,8 +161,6 @@ namespace LJC.FrameWork.SocketApplication
             }
             udpSocket.SendTo(bytes, new IPEndPoint(MCAST_ADDR, MCAST_PORT));
         }
-
-
 
         internal static void Debug(string info)
         {

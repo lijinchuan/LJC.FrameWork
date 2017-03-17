@@ -81,7 +81,10 @@ namespace LJC.FrameWork.SOA
                     responseBody.ClientTransactionID = request.ClientTransactionID;
                     responseBody.ClientId = request.ClientId;
 
-                    LogHelper.Instance.Debug(string.Format("接收服务请求,请求号:{0}", request.ClientTransactionID));
+                    if (SocketApplicationEnvironment.TraceMessage)
+                    {
+                        LogHelper.Instance.Debug(string.Format("接收服务请求,请求号:{0}", request.ClientTransactionID));
+                    }
 
                     try
                     {
@@ -89,9 +92,12 @@ namespace LJC.FrameWork.SOA
                         responseBody.Result = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(result);
                         responseBody.IsSuccess = true;
 
-                        LogHelper.Instance.Debug(string.Format("处理请求：请求号:{0},服务号:{1},功能号:{2},结果:{3}",
-                            request.ClientTransactionID, ServiceNo, request.FundId, LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(result)));
-                            ;
+                        if (SocketApplicationEnvironment.TraceMessage)
+                        {
+                            LogHelper.Instance.Debug(string.Format("处理请求：请求号:{0},客户端请求号:{1},服务号:{2},功能号:{3},结果:{4},序列化结果:{5}",
+                                responseMsg.MessageHeader.TransactionID, request.ClientTransactionID, ServiceNo, request.FundId, Comm.JsonUtil<object>.Serialize(result), Convert.ToBase64String(responseBody.Result)));
+
+                        }
                     }
                     catch (Exception ex)
                     {

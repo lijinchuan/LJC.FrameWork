@@ -260,6 +260,11 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
             if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
             {
+                if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                {
+                    LogManager.LogHelper.Instance.Debug("异常断开:" + args.SocketError);
+                }
+
                 Session removesession;
                 //用户断开了
                 if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
@@ -276,8 +281,18 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                     var dataLen = BitConverter.ToInt32(new byte[] { e.Buffer[offset], e.Buffer[offset + 1], e.Buffer[offset + 2], e.Buffer[offset + 3] }, 0);
 
+                    if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                    {
+                        LogManager.LogHelper.Instance.Debug("准备接收数据:长度" + dataLen, null);
+                    }
+
                     if (dataLen > MaxPackageLength)
                     {
+                        if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                        {
+                            LogManager.LogHelper.Instance.Debug("异常断开,长度太长");
+                        }
+
                         Session removesession;
                         if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
                         {
@@ -299,7 +314,15 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 }
                 else
                 {
+                    var offset1 = (args.BufferLen == args.Buffer.Length) ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
+                    var bytes = args.Buffer.Skip(offset1 + args.BufferRev).Take(args.BytesTransferred).ToArray();
                     args.BufferRev += args.BytesTransferred;
+
+                    if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                    {
+                        LogManager.LogHelper.Instance.Debug(string.Format("接收数据{0}/{1},{2}", args.BufferLen, args.BufferRev, Convert.ToBase64String(bytes)), null);
+                    }
+
                     if (args.BufferRev == args.BufferLen)
                     {
                         byte[] bt =new byte[args.BufferLen];
@@ -339,6 +362,10 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 e.Completed += SocketAsyncEventArgs_Completed;
                 if (!e.AcceptSocket.ReceiveAsync(e))
                 {
+                    if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                    {
+                        LogManager.LogHelper.Instance.Debug("异常断开:!e.AcceptSocket.ReceiveAsync");
+                    }
                     Session old;
                     _connectSocketDic.TryRemove(e.UserToken.ToString(), out old);
                     RealseSocketAsyncEventArgs(args);

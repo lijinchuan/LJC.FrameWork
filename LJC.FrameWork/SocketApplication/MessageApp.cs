@@ -325,14 +325,19 @@ namespace LJC.FrameWork.SocketApplication
 
                     int dataLen = BitConverter.ToInt32(buff4, 0);
 
-                    MemoryStream ms = new MemoryStream();
+                    //MemoryStream ms = new MemoryStream();
                     int readLen = 0,timeout=0;
 
                     byte[] buffer = new byte[dataLen];
 
+                    if (SocketApplicationEnvironment.TraceSocketDataBag)
+                    {
+                        LogManager.LogHelper.Instance.Debug("准备接收数据：" + dataLen);
+                    }
+
                     while (readLen < dataLen)
                     {
-                        count = socketClient.Receive(buffer);
+                        count = socketClient.Receive(buffer, readLen, dataLen - readLen, SocketFlags.None);
                         
                         if (count == 0)
                         {
@@ -343,10 +348,15 @@ namespace LJC.FrameWork.SocketApplication
                             continue;
                         }
                         readLen += count;
-                        ms.Write(buffer, 0, count);
+                        //ms.Write(buffer, 0, count);
                     }
-                    buffer = ms.ToArray();
-                    ms.Close();
+                    //buffer = ms.ToArray();
+                    //ms.Close();
+
+                    if (SocketApplicationEnvironment.TraceSocketDataBag)
+                    {
+                        LogManager.LogHelper.Instance.Debug("接收数据," + readLen + "," + Convert.ToBase64String(buffer));
+                    }
 
                     //Thread newThread = new Thread(new ParameterizedThreadStart(ProcessMessage));
                     //newThread.Start(buffer);
@@ -425,23 +435,6 @@ namespace LJC.FrameWork.SocketApplication
         {
             try
             {
-                //int tryCount = 0;
-                //while (!socketClient.Connected && tryCount < sendMessageTryCountLimit)
-                //{
-                //    tryCount++;
-                //    StartClient();
-                //}
-
-                if (!socketClient.Connected)
-                {
-                    throw new Exception("发送失败，套接字连接失败。");
-                }
-                
-                //byte[] data = EntityBufCore.Serialize(message);
-                //byte[] len = BitConverter.GetBytes(data.Length);
-                //socketClient.Send(len);
-                //socketClient.Send(data);
-
                 return socketClient.SendMessge(message);
             }
             catch (Exception e)
@@ -522,15 +515,19 @@ namespace LJC.FrameWork.SocketApplication
 
                     int dataLen = BitConverter.ToInt32(buff4, 0);
 
+                    if (SocketApplicationEnvironment.TraceSocketDataBag)
+                    {
+                        LogManager.LogHelper.Instance.Debug("准备接收数据：" + dataLen);
+                    }
 
-                    MemoryStream ms = new MemoryStream();
+                    //MemoryStream ms = new MemoryStream();
                     int readLen = 0, timeout = 0;
 
                     byte[] buffer = new byte[dataLen];
 
                     while (readLen < dataLen)
                     {
-                        count = socket.Receive(buffer);
+                        count = socket.Receive(buffer,readLen,dataLen-readLen,SocketFlags.None);
 
                         if (count == 0)
                         {
@@ -541,10 +538,15 @@ namespace LJC.FrameWork.SocketApplication
                             continue;
                         }
                         readLen += count;
-                        ms.Write(buffer, 0, count);
+                        //ms.Write(buffer, 0, count);
                     }
-                    buffer = ms.ToArray();
-                    ms.Close();
+                    //buffer = ms.ToArray();
+                    //ms.Close();
+
+                    if (SocketApplicationEnvironment.TraceSocketDataBag)
+                    {
+                        LogManager.LogHelper.Instance.Debug("接收数据:" + readLen + " " + Convert.ToBase64String(buffer));
+                    }
 
                     //Message message = EntityBufCore.DeSerialize<Message>(buffer);
                     //FormApp(message, appSocket);
