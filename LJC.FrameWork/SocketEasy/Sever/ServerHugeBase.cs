@@ -237,9 +237,13 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
             if (!socket.ReceiveAsync(socketAsyncEventArgs))
             {
-                Session old;
-                _connectSocketDic.TryRemove(appSocket.SessionID, out old);
-                RealseSocketAsyncEventArgs(socketAsyncEventArgs);
+                //Session old;
+                //_connectSocketDic.TryRemove(appSocket.SessionID, out old);
+                //RealseSocketAsyncEventArgs(socketAsyncEventArgs);
+
+                LogManager.LogHelper.Instance.Debug(socket.Handle + "同步完成，手动处理");
+
+                SocketAsyncEventArgs_Completed(null, e);
             }
         }
 
@@ -262,7 +266,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
                 {
-                    LogManager.LogHelper.Instance.Debug("异常断开:" + args.SocketError);
+                    LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开:" + args.SocketError);
                 }
 
                 Session removesession;
@@ -283,14 +287,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                     if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
                     {
-                        LogManager.LogHelper.Instance.Debug("准备接收数据:长度" + dataLen, null);
+                        LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "准备接收数据:长度" + dataLen, null);
                     }
 
                     if (dataLen > MaxPackageLength)
                     {
                         if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
                         {
-                            LogManager.LogHelper.Instance.Debug("异常断开,长度太长");
+                            LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开,长度太长");
                         }
 
                         Session removesession;
@@ -320,7 +324,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                     if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
                     {
-                        LogManager.LogHelper.Instance.Debug(string.Format("接收数据{0}/{1},{2}", args.BufferLen, args.BufferRev, Convert.ToBase64String(bytes)), null);
+                        LogManager.LogHelper.Instance.Debug(string.Format(e.AcceptSocket.Handle + "接收数据{0}/{1},{2}", args.BufferLen, args.BufferRev, Convert.ToBase64String(bytes)), null);
                     }
 
                     if (args.BufferRev == args.BufferLen)
@@ -362,13 +366,15 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 e.Completed += SocketAsyncEventArgs_Completed;
                 if (!e.AcceptSocket.ReceiveAsync(e))
                 {
-                    if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
-                    {
-                        LogManager.LogHelper.Instance.Debug("异常断开:!e.AcceptSocket.ReceiveAsync");
-                    }
-                    Session old;
-                    _connectSocketDic.TryRemove(e.UserToken.ToString(), out old);
-                    RealseSocketAsyncEventArgs(args);
+                    LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "同步完成，手动处理", null);
+                    SocketAsyncEventArgs_Completed(null, e);
+                    //if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                    //{
+                    //    LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开:!e.AcceptSocket.ReceiveAsync");
+                    //}
+                    //Session old;
+                    //_connectSocketDic.TryRemove(e.UserToken.ToString(), out old);
+                    //RealseSocketAsyncEventArgs(args);
                 }
             }
         }

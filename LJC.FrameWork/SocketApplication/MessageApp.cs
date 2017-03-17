@@ -312,54 +312,72 @@ namespace LJC.FrameWork.SocketApplication
             }
         }
 
+        private static byte[] ReceivingNext(Socket s)
+        {
+            int readLen = 0, timeout = 0, count = 0;
+            byte[] buff4 = new byte[4];
+            while (readLen < 4)
+            {
+                count = s.Receive(buff4, readLen, 4 - readLen, SocketFlags.None);
+
+                if (count == 0)
+                {
+                    Thread.Sleep(1);
+                    timeout += 1;
+                    if (timeout > 10000)
+                        break;
+                    continue;
+                }
+                readLen += count;
+                //ms.Write(buffer, 0, count);
+            }
+
+            int dataLen = BitConverter.ToInt32(buff4, 0);
+
+            //MemoryStream ms = new MemoryStream();
+            readLen = 0;
+            timeout = 0;
+
+            byte[] buffer = new byte[dataLen];
+
+            if (SocketApplicationEnvironment.TraceSocketDataBag)
+            {
+                LogManager.LogHelper.Instance.Debug(s.Handle + "准备接收数据：" + dataLen);
+            }
+
+            while (readLen < dataLen)
+            {
+                count = s.Receive(buffer, readLen, dataLen - readLen, SocketFlags.None);
+
+                if (count == 0)
+                {
+                    Thread.Sleep(1);
+                    timeout += 1;
+                    if (timeout > 10000)
+                        break;
+                    continue;
+                }
+                readLen += count;
+                //ms.Write(buffer, 0, count);
+            }
+            //buffer = ms.ToArray();
+            //ms.Close();
+
+            if (SocketApplicationEnvironment.TraceSocketDataBag)
+            {
+                LogManager.LogHelper.Instance.Debug(s.Handle + "接收数据," + readLen + "," + Convert.ToBase64String(buffer));
+            }
+
+            return buffer;
+        }
+
         private void Receiving()
         {
             while (!stop/* && socketClient.Connected*/)
             {
                 try
                 {
-                    byte[] buff4 = new byte[4];
-                    int count = socketClient.Receive(buff4);
-                    if (count == 0)
-                        break;
-
-                    int dataLen = BitConverter.ToInt32(buff4, 0);
-
-                    //MemoryStream ms = new MemoryStream();
-                    int readLen = 0,timeout=0;
-
-                    byte[] buffer = new byte[dataLen];
-
-                    if (SocketApplicationEnvironment.TraceSocketDataBag)
-                    {
-                        LogManager.LogHelper.Instance.Debug("准备接收数据：" + dataLen);
-                    }
-
-                    while (readLen < dataLen)
-                    {
-                        count = socketClient.Receive(buffer, readLen, dataLen - readLen, SocketFlags.None);
-                        
-                        if (count == 0)
-                        {
-                            Thread.Sleep(1);
-                            timeout += 1;
-                            if (timeout > 10000)
-                                break;
-                            continue;
-                        }
-                        readLen += count;
-                        //ms.Write(buffer, 0, count);
-                    }
-                    //buffer = ms.ToArray();
-                    //ms.Close();
-
-                    if (SocketApplicationEnvironment.TraceSocketDataBag)
-                    {
-                        LogManager.LogHelper.Instance.Debug("接收数据," + readLen + "," + Convert.ToBase64String(buffer));
-                    }
-
-                    //Thread newThread = new Thread(new ParameterizedThreadStart(ProcessMessage));
-                    //newThread.Start(buffer);
+                    var buffer = ReceivingNext(socketClient);
                     ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), buffer);
                 }
                 catch (SocketException e)
@@ -505,51 +523,7 @@ namespace LJC.FrameWork.SocketApplication
             {
                 try
                 {
-                    byte[] buff4 = new byte[4];
-                    int count = socket.Receive(buff4);
-                    
-                    if (count == 0)
-                    {
-                        throw new SessionAbortException("接收数据出错。");
-                    }
-
-                    int dataLen = BitConverter.ToInt32(buff4, 0);
-
-                    if (SocketApplicationEnvironment.TraceSocketDataBag)
-                    {
-                        LogManager.LogHelper.Instance.Debug("准备接收数据：" + dataLen);
-                    }
-
-                    //MemoryStream ms = new MemoryStream();
-                    int readLen = 0, timeout = 0;
-
-                    byte[] buffer = new byte[dataLen];
-
-                    while (readLen < dataLen)
-                    {
-                        count = socket.Receive(buffer,readLen,dataLen-readLen,SocketFlags.None);
-
-                        if (count == 0)
-                        {
-                            Thread.Sleep(1);
-                            timeout += 1;
-                            if (timeout > 10000)
-                                break;
-                            continue;
-                        }
-                        readLen += count;
-                        //ms.Write(buffer, 0, count);
-                    }
-                    //buffer = ms.ToArray();
-                    //ms.Close();
-
-                    if (SocketApplicationEnvironment.TraceSocketDataBag)
-                    {
-                        LogManager.LogHelper.Instance.Debug("接收数据:" + readLen + " " + Convert.ToBase64String(buffer));
-                    }
-
-                    //Message message = EntityBufCore.DeSerialize<Message>(buffer);
-                    //FormApp(message, appSocket);
+                    var buffer = ReceivingNext(socket);
 
                     //搞成异步的
                     new Action<byte[], Session>((b, s) =>

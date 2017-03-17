@@ -92,7 +92,14 @@ namespace LJC.FrameWork.SocketApplication
 
                     lock (s)
                     {
-                        return s.Send(data, SocketFlags.None) > 0;
+                        var sendcount = s.Send(data, SocketFlags.None);
+
+                        if (SocketApplicationEnvironment.TraceSocketDataBag && !string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
+                        {
+                            LogManager.LogHelper.Instance.Debug(s.Handle + "发送数据:" + message.MessageHeader.TransactionID + "长度:" + data.Length + ", " + Convert.ToBase64String(data));
+                        }
+
+                        return sendcount > 0;
                     }
                 }
                 else
@@ -118,7 +125,7 @@ namespace LJC.FrameWork.SocketApplication
                             if (SocketApplicationEnvironment.TraceSocketDataBag && !string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
                             {
                                 var sendbytes = _sendBufferManger.Buffer.Skip(offset).Take((int)size).ToArray();
-                                LogManager.LogHelper.Instance.Debug("发送数据:" + message.MessageHeader.TransactionID + "长度:" + size + ", " + Convert.ToBase64String(sendbytes));
+                                LogManager.LogHelper.Instance.Debug(s.Handle + "发送数据:" + message.MessageHeader.TransactionID + "长度:" + size + ", " + Convert.ToBase64String(sendbytes));
                             }
 
                             if(senderror!=SocketError.Success)

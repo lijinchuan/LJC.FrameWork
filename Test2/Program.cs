@@ -222,10 +222,12 @@ namespace Test2
                             }
                         }
                     });
-            }
-            catch
-            {
 
+                Console.WriteLine("完成");
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
             }
         }
 
