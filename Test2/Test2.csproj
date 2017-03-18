@@ -32,6 +32,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Ljc.Com.NewsService.Entity">
+      <HintPath>..\DLL\Ljc.Com.NewsService.Entity.dll</HintPath>
+    </Reference>
     <Reference Include="LJC.Com.StockService.Contract">
       <HintPath>..\DLL\LJC.Com.StockService.Contract.dll</HintPath>
     </Reference>

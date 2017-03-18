@@ -82,9 +82,33 @@ namespace Test2
             }
         }
 
+        static void TestNews()
+        {
+            var localqueue = new LJC.FrameWork.Comm.TextReaderWriter.LocalFileQueue<Ljc.Com.NewsService.Entity.NewsEntity>("test", @"C:\Users\Administrator\Desktop\queuefile\news1 - 副本.queue");
+            localqueue.OnProcessQueue += localqueue_OnProcessQueue;
+            localqueue.OnProcessError += localqueue_OnProcessError;
+
+        }
+
+        static void localqueue_OnProcessError(Ljc.Com.NewsService.Entity.NewsEntity arg1, Exception arg2)
+        {
+            Console.WriteLine(arg2.ToString());
+        }
+
+        static bool localqueue_OnProcessQueue(Ljc.Com.NewsService.Entity.NewsEntity arg)
+        {
+            Console.WriteLine(arg.Title);
+
+            return true;
+        }
+
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            TestNews();
+
+            Console.Read();
+
             TestEntityBuf();
 
             var content1 = @"[

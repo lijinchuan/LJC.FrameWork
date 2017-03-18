@@ -167,6 +167,31 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             _queueWriter.AppendObject(obj);
         }
 
+        private void ProcessBadQueue(T last)
+        {
+            var oldpostion = _queueReader.ReadedPostion();
+
+            while (true)
+            {
+                if (_queueReader.PostionNextSplitChar())
+                {
+                    var newpostion = _queueReader.ReadedPostion();
+
+                    if (_queueReader.ReadObject<T>() != default(T))
+                    {
+                        _queueReader.SetPostion(newpostion);
+                        OnProcessError(last, new Exception(string.Format("队列损环，将尝试读取下一个队列。损坏位置{0}，恢复位置{1}。", oldpostion, newpostion)));
+
+                        break;
+                    }
+                }
+                else
+                {
+                    throw new Exception("队列已损坏，无法恢复。");
+                }
+            }
+        }
+
         private void ProcessQueue()
         {
             if (OnProcessQueue == null)
@@ -213,6 +238,14 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
                         throw new Exception("尝试次数过多");
                     }
                 }
+            }
+            catch (Newtonsoft.Json.JsonReaderException)
+            {
+                ProcessBadQueue(last);
+            }
+            catch (Newtonsoft.Json.JsonSerializationException)
+            {
+                ProcessBadQueue(last);
             }
             catch (Exception ex)
             {

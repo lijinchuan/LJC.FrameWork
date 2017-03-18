@@ -225,6 +225,30 @@ namespace LJC.FrameWork.Comm
             return _sr.BaseStream.Position;
         }
 
+        internal bool PostionNextSplitChar()
+        {
+            byte[] bytes=new byte[2];
+            var len=_sr.BaseStream.Length;
+            if (len >= 2)
+            {
+                while (_sr.BaseStream.Position <= len - 2)
+                {
+                    _sr.BaseStream.Read(bytes, 0, 2);
+                    if (bytes[0] == splitBytes[0] && bytes[1] == splitBytes[1])
+                    {
+                        return true;
+                    }
+
+                    if (bytes[1] == splitBytes[0])
+                    {
+                        _sr.BaseStream.Position -= 1;
+                    }
+                }
+            }
+            _sr.BaseStream.Position = len;
+            return false;
+        }
+
         public void Dispose()
         {
             if (_sr != null)
