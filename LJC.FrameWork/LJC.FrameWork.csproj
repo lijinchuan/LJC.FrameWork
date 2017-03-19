@@ -294,11 +294,14 @@
     <Compile Include="SocketEasy\Sever\SessionServer.cs" />
     <Compile Include="SocketEasy\Sever\SeverBase.cs" />
     <Compile Include="SocketEasy\SocketBase.cs" />
+    <Compile Include="Web\PerformanceMonitor.cs" />
+    <Compile Include="Web\PerformanceMonitorModule.cs" />
     <Compile Include="WindowsService\WinSrvInstaller.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Comm\ReadMe.txt" />
     <Content Include="readme.txt" />
+    <Content Include="Web\PerformanceMonitorModule.txt" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Ext\" />

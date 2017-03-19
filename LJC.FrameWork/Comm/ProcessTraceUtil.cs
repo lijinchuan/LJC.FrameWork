@@ -26,6 +26,8 @@ namespace LJC.FrameWork.Comm
                 {
                     queue.Clear();
                 }
+
+                Trace("start");
             }
             catch { }
         }
@@ -37,6 +39,18 @@ namespace LJC.FrameWork.Comm
                 TraceDic[Thread.CurrentThread.ManagedThreadId].Enqueue(new Tuple<string, long>(message, Environment.TickCount));
             }
             catch { }
+        }
+
+        public static long GetTraceTickes()
+        {
+            try
+            {
+                return Environment.TickCount - TraceDic[Thread.CurrentThread.ManagedThreadId].First().Item2;
+            }
+            catch
+            {
+                return 0;
+            }
         }
 
         public static string PrintTrace()

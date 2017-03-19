@@ -1,0 +1,12 @@
+﻿ <system.web>
+ <httpModules>
+      <add name="PerformanceMonitorModule" type="LJC.FrameWork.Web.PerformanceMonitorModule"/>
+    </httpModules>
+  </system.web>
+ 
+<system.webServer>
+    <modules runAllManagedModulesForAllRequests="true">
+        <remove name="PerformanceMonitorModule" />
+        <add name="PerformanceMonitorModule" type="LJC.FrameWork.Web.PerformanceMonitorModule" />
+    </modules>
+</system.webServer>
