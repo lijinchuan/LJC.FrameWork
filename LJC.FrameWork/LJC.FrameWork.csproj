@@ -294,6 +294,7 @@
     <Compile Include="SocketEasy\Sever\SessionServer.cs" />
     <Compile Include="SocketEasy\Sever\SeverBase.cs" />
     <Compile Include="SocketEasy\SocketBase.cs" />
+    <Compile Include="Web\PageTraceUtil.cs" />
     <Compile Include="Web\PerformanceMonitor.cs" />
     <Compile Include="Web\PerformanceMonitorModule.cs" />
     <Compile Include="WindowsService\WinSrvInstaller.cs" />

@@ -30,6 +30,7 @@ namespace LJC.FrameWork.Web
         private void Context_BeginRequest(object sender, EventArgs e)
         {
             starttime = DateTime.Now;
+            Web.PageTraceUtil.StartTrace();
         }
 
         private void Context_EndRequest(object sender, EventArgs e)
@@ -42,7 +43,7 @@ namespace LJC.FrameWork.Web
             {
                 Url= httpContext.Request.Url.ToString(),
                 Mills=ticks,
-                TraceDetail=string.Empty
+                TraceDetail=Web.PageTraceUtil.PrintTrace()
             };
             
             LogMonitor(monitor);
