@@ -71,7 +71,7 @@ namespace LJC.FrameWork.Comm
                     {
                         timeline = tp.Item2;
                     }
-                    sb.AppendLine(string.Format("{0}:  {1}ms", tp.Item1, tp.Item2 - timeline));
+                    sb.AppendLine(string.Format("{0}ms:  {1}", tp.Item2 - timeline, tp.Item1));
                 }
 
                 return sb.ToString();

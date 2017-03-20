@@ -3,18 +3,21 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Web;
 
 namespace LJC.FrameWork.Web
 {
-    public class PageTraceUtil
+    public static class PageTraceUtil
     {
         private static ConcurrentDictionary<string, Queue<Tuple<string, long>>> TraceDic = new ConcurrentDictionary<string, Queue<Tuple<string, long>>>();
+        private const string TraceIDName = "_traceid";
 
-        public static void StartTrace()
+        public static void StartTrace(this HttpContext httpcontext)
         {
             try
             {
-                var traceid = System.Web.HttpContext.Current.Session.SessionID;
+                string traceid = Guid.NewGuid().ToString();
+                httpcontext.Items.Add(TraceIDName, traceid);
                 Queue<Tuple<string, long>> queue = null;
                 if (!TraceDic.ContainsKey(traceid))
                 {
@@ -35,7 +38,7 @@ namespace LJC.FrameWork.Web
         {
             try
             {
-                TraceDic[System.Web.HttpContext.Current.Session.SessionID].Enqueue(new Tuple<string, long>(message, Environment.TickCount));
+                TraceDic[System.Web.HttpContext.Current.Items[TraceIDName].ToString()].Enqueue(new Tuple<string, long>(message, Environment.TickCount));
             }
             catch { }
         }
@@ -44,7 +47,7 @@ namespace LJC.FrameWork.Web
         {
             try
             {
-                return Environment.TickCount - TraceDic[System.Web.HttpContext.Current.Session.SessionID].First().Item2;
+                return Environment.TickCount - TraceDic[System.Web.HttpContext.Current.Items[TraceIDName].ToString()].First().Item2;
             }
             catch
             {
@@ -52,13 +55,14 @@ namespace LJC.FrameWork.Web
             }
         }
 
-        public static string PrintTrace()
+        public static string PrintTrace(this HttpContext httpcontext)
         {
+            string traceid = null;
             try
             {
                 StringBuilder sb = new StringBuilder();
 
-                var traceid = System.Web.HttpContext.Current.Session.SessionID;
+                traceid = httpcontext.Items[TraceIDName].ToString();
 
                 var queue = TraceDic[traceid];
 
@@ -70,7 +74,7 @@ namespace LJC.FrameWork.Web
                     {
                         timeline = tp.Item2;
                     }
-                    sb.AppendLine(string.Format("{0}:  {1}ms", tp.Item1, tp.Item2 - timeline));
+                    sb.AppendLine(string.Format("{0}ms:  {1}", tp.Item2 - timeline, tp.Item1));
                 }
 
                 return sb.ToString();
@@ -78,6 +82,14 @@ namespace LJC.FrameWork.Web
             catch
             {
                 return string.Empty;
+            }
+            finally
+            {
+                if(traceid!=null)
+                {
+                    Queue<Tuple<string, long>> oldqueue = null;
+                    TraceDic.TryRemove(traceid, out oldqueue);
+                }
             }
         }
     }

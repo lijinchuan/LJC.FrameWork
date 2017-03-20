@@ -30,7 +30,8 @@ namespace LJC.FrameWork.Web
         private void Context_BeginRequest(object sender, EventArgs e)
         {
             starttime = DateTime.Now;
-            Web.PageTraceUtil.StartTrace();
+            HttpContext httpContext = ((HttpApplication)sender).Context;
+            httpContext.StartTrace();
         }
 
         private void Context_EndRequest(object sender, EventArgs e)
@@ -38,12 +39,12 @@ namespace LJC.FrameWork.Web
             var ticks = DateTime.Now.Subtract(starttime).TotalMilliseconds;
             //var trace = LJC.FrameWork.Comm.ProcessTraceUtil.PrintTrace();
             HttpContext httpContext = ((HttpApplication)sender).Context;
-
+            
             PerformanceMonitor monitor = new PerformanceMonitor
             {
                 Url= httpContext.Request.Url.ToString(),
                 Mills=ticks,
-                TraceDetail=Web.PageTraceUtil.PrintTrace()
+                TraceDetail= httpContext.PrintTrace()
             };
             
             LogMonitor(monitor);
