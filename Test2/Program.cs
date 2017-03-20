@@ -105,7 +105,7 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
-            TestNews();
+            Test10021();
 
             Console.Read();
 
@@ -225,7 +225,7 @@ namespace Test2
         {
             try
             {
-                System.Threading.Tasks.Parallel.For(0, 10, (n) =>
+                System.Threading.Tasks.Parallel.For(0, 15, (n) =>
                     {
                         long start = Environment.TickCount;
                         for (int i = 0; i < 100; i++)
@@ -258,10 +258,6 @@ namespace Test2
 
         static void TestEntityBuf()
         {
-            Test10021();
-
-            Console.Read();
-
             byte[] bt4 = new byte[100];
             using(System.IO.MemoryStream ms=new System.IO.MemoryStream(bt4))
             {

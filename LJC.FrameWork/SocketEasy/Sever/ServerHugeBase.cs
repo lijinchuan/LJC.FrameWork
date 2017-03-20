@@ -281,7 +281,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 if (!args.IsReadPackLen)
                 {
-                    var offset = _bufferpoll.GetOffset(args.BufferIndex);
+                    var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
 
                     var dataLen = BitConverter.ToInt32(new byte[] { e.Buffer[offset], e.Buffer[offset + 1], e.Buffer[offset + 2], e.Buffer[offset + 3] }, 0);
 
@@ -330,8 +330,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     if (args.BufferRev == args.BufferLen)
                     {
                         byte[] bt =new byte[args.BufferLen];
-                        var offset = (args.BufferLen == args.Buffer.Length) ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
-                        for (int i = 0; i < args.BufferLen;i++ )
+                        var offset = args.BufferIndex==-1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
+                        for (int i = 0; i < args.BufferLen; i++)
                         {
                             bt[i] = args.Buffer[offset + i];
                         }
