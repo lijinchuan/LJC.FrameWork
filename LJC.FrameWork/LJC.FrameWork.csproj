@@ -284,6 +284,7 @@
     <Compile Include="SocketApplication\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketApplicationComm.cs" />
     <Compile Include="Comm\BufferPollManager.cs" />
+    <Compile Include="SocketApplication\SocketApplicationException.cs" />
     <Compile Include="SocketApplication\SocketEnvironment.cs" />
     <Compile Include="SocketEasy\Client\ClientHugeBase.cs" />
     <Compile Include="SocketEasy\Client\ClientBase.cs" />

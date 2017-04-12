@@ -1,4 +1,6 @@
-﻿using LJC.FrameWork.Comm;
+﻿using LJC.Com.StockService.Contract;
+using LJC.FrameWork.Comm;
+using LJC.FrameWork.SOA;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -105,6 +107,18 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            for (int i = 0; i < 100; i++)
+            {
+                System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                sw.Start();
+                var list = ESBClient.DoSOARequest<List<CategoryLevel2Entity>>(Consts.ServiceNo, Consts.FunID_GetCategoryLevel2List, null)
+                    .ToDictionary(p => p.CategoryCode);
+                sw.Stop();
+                Console.WriteLine(i + "用时:" + sw.Elapsed.TotalMilliseconds);
+            }
+            
+            Console.Read();
+
             Test10021();
 
             Console.Read();

@@ -52,6 +52,7 @@
     <Compile Include="ESBServer.cs" />
     <Compile Include="IService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SOAException.cs" />
     <Compile Include="SOAMessageType.cs" />
     <Compile Include="Contract\SOARequest.cs" />
     <Compile Include="Contract\SOAResponse.cs" />

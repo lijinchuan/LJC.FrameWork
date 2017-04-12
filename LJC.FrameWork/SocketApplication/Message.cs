@@ -104,7 +104,7 @@ namespace LJC.FrameWork.SocketApplication
             }
             catch (Exception ex)
             {
-                var e = new Exception("消息解析失败", ex);
+                var e = new SocketApplicationException("消息解析失败", ex);
                 e.Data.Add("this.MessageHeader.TransactionID", this.MessageHeader.TransactionID);
                 e.Data.Add("this.MessageHeader.MessageType", this.MessageHeader.MessageType);
                 e.Data.Add("messagebuffer", _messageBuffer == null ? "" : Convert.ToBase64String(_messageBuffer));
