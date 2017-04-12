@@ -55,8 +55,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
             var threadpoolset=(ThreadPoolConfig)System.Configuration.ConfigurationManager.GetSection("ThreadPoolConfig");
             if (threadpoolset == null)
             {
-                ThreadPool.SetMinThreads(10, 10);
-                ThreadPool.SetMaxThreads(1000, 1000);
+                ThreadPool.SetMinThreads(1000, 1000);
+                ThreadPool.SetMaxThreads(3000, 3000);
             }
             else
             {
