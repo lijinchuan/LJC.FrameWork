@@ -529,6 +529,55 @@ namespace LJC.FrameWork.Data.QuickDataBase
 
         #endregion
 
+        private List<T> LoadAll()
+        {
+            List<T> listall = new List<T>();
+            int oldtopnum = topNum;
+            if (topNum > 10000)
+            {
+                topNum = 10000;
+            }
+
+            _selSql = string.Empty;
+            var oldorderbyList = orderByList;
+            var oldselPara = selPara;
+            orderByList = new List<DBOrderby>();
+
+            try
+            {
+                orderByList.Add(new DBOrderby
+                {
+                    OrderbyColumnName = this.keyName,
+                    OrderbyDirection = DBOrderbyDirection.asc
+                });
+
+
+                long minkeyvalue = 0;
+
+                List<T> sublist = null;
+                while (true)
+                {
+                    this.selPara = new List<Mess_Three<string, string, object>>();
+                    sublist = this.WhereBiger(keyName, minkeyvalue).ExecuteList();
+                    if (sublist == null || sublist.Count == 0)
+                    {
+                        break;
+                    }
+                    minkeyvalue = Convert.ToInt64(sublist.Last().Eval(this.keyName));
+                    listall.AddRange(sublist);
+                }
+            }
+            finally
+            {
+                orderByList = oldorderbyList;
+                topNum = oldtopnum;
+                selPara = oldselPara;
+                _selSql = string.Empty;
+            }
+
+            return listall;
+        }
+
         public List<T> ExecuteList()
         {
             string cachKey;
@@ -539,6 +588,23 @@ namespace LJC.FrameWork.Data.QuickDataBase
                 if (o != null)
                 {
                     return (List<T>)o;
+                }
+                else
+                {
+                    var obj = LockHerper.GetLocker("loadall_" + this.tabName);
+                    lock (obj)
+                    {
+                        o = MemCach.GetCach(cachKey);
+                        if (o != null)
+                        {
+                            return (List<T>)o;
+                        }
+
+                        var alllist = LoadAll();
+                        MemCach.AddCach(cachKey, alllist, 1000);
+
+                        return alllist;
+                    }
                 }
             }
 
@@ -603,11 +669,6 @@ namespace LJC.FrameWork.Data.QuickDataBase
             //        result.Add(t);
             //    }
             //}
-
-            if (cach)
-            {
-                MemCach.AddCach(cachKey, result, 1000);
-            }
 
             return result;
         }
