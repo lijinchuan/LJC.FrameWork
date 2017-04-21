@@ -679,7 +679,7 @@ namespace LJC.FrameWork.Data.QuickDataBase
 
             if (result>0)
             {
-                TryClearCach("add",result);
+                TryClearCach("add");
             }
 
             if (Instance != null)
@@ -690,8 +690,15 @@ namespace LJC.FrameWork.Data.QuickDataBase
             return result;
         }
 
-        private void TryClearCach(string exe,long id)
+        protected void TryClearCach(string exe)
         {
+            if (Instance == null)
+            {
+                return;
+            }
+
+            long id = Convert.ToInt64(Instance.Eval(keyName));
+
             string cachKey;
             if (CachResult(out cachKey))
             {
@@ -772,7 +779,7 @@ namespace LJC.FrameWork.Data.QuickDataBase
 
             if (result > 0 && Instance != null)
             {
-                TryClearCach("del", Convert.ToInt64(Instance.Eval(keyName)));
+                TryClearCach("del");
             }
 
             return result > 0;
@@ -784,7 +791,7 @@ namespace LJC.FrameWork.Data.QuickDataBase
 
             if (result > 0 && Instance != null)
             {
-                TryClearCach("update", Convert.ToInt64(Instance.Eval(keyName)));
+                TryClearCach("update");
             }
 
             return result > 0;

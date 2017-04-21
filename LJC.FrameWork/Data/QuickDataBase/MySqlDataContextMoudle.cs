@@ -91,7 +91,14 @@ namespace LJC.FrameWork.Data.QuickDataBase
 
             string sqlPartUpdate = string.Format("update {0} set {1} where {2}", tabName, string.Join(",", columns), "[" + keyName + "]=@" + keyName);
 
-            return ExecuteNonQuery(sqlPartUpdate) > 0;
+            var boo = ExecuteNonQuery(sqlPartUpdate) > 0;
+
+            if (boo)
+            {
+                TryClearCach("update");
+            }
+
+            return boo;
         }
 
         public override bool NotUpdate(params string[] colArray)
@@ -106,7 +113,14 @@ namespace LJC.FrameWork.Data.QuickDataBase
 
             string sqlPartUpdate = string.Format("update {0} set {1} where {2}", tabName, string.Join(",", columns), "[" + keyName + "]=@" + keyName);
 
-            return ExecuteNonQuery(sqlPartUpdate) > 0;
+            var boo = ExecuteNonQuery(sqlPartUpdate) > 0;
+
+            if (boo)
+            {
+                TryClearCach("update");
+            }
+
+            return boo;
         }
 
         public MySqlDataContextMoudle()
