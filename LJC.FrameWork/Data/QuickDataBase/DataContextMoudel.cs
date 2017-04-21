@@ -679,43 +679,115 @@ namespace LJC.FrameWork.Data.QuickDataBase
 
             if (result>0)
             {
-                TryClearCach();
+                TryClearCach("add",result);
+            }
+
+            if (Instance != null)
+            {
+                Instance.SetValue(rpAttrList.Find(p => p.isKey).PropertyEx, result);
             }
 
             return result;
         }
 
-        private void TryClearCach()
+        private void TryClearCach(string exe,long id)
         {
             string cachKey;
             if (CachResult(out cachKey))
             {
-                MemCach.RemoveCachItem(cachKey);
+                var list = (List<T>)MemCach.GetCach(cachKey);
+                if (list != null && list.Count > 0)
+                {
+                    this._selSql = string.Empty;
+                    var oldorderbyList = orderByList;
+                    var oldselPara = selPara;
+                    orderByList = new List<DBOrderby>();
+                    var obj = LockHerper.GetLocker("loadall_" + this.tabName);
+
+                    try
+                    {
+                        switch (exe)
+                        {
+                            case "add":
+                                {
+                                    var t = this.WhereEq(keyName, id).ExecuteEntity();
+                                    if (t != null)
+                                    {
+                                        lock (obj)
+                                        {
+                                            list.Add(t);
+                                        }
+                                    }
+                                    break;
+                                }
+                            case "del":
+                                {
+                                    var t = list.Find(p => Convert.ToInt64(p.Eval(keyName))==id);
+                                    if (t != null)
+                                    {
+                                        lock (obj)
+                                        {
+                                            list.Remove(t);
+                                        }
+                                    }
+                                    break;
+                                }
+                            case "update":
+                                {
+                                    var t = list.Find(p => Convert.ToInt64(p.Eval(keyName)) == id);
+                                    var newt = this.WhereEq(keyName, id).ExecuteEntity();
+                                    if (t != null)
+                                    {
+                                        lock (obj)
+                                        {
+                                            t = newt;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        lock (obj)
+                                        {
+                                            list.Add(newt);
+                                        }
+                                    }
+
+                                    break;
+                                }
+                        }
+                    }
+                    finally
+                    {
+                        orderByList = oldorderbyList;
+                        selPara = oldselPara;
+                        _selSql = string.Empty;
+                    }
+                }
+                //MemCach.RemoveCachItem(cachKey);
             }
         }
 
         public bool Del()
         {
-            bool result = ExecuteNonQuery(DelSql) > 0;
+            long result = ExecuteNonQuery(DelSql);
 
-            if (result)
+            if (result > 0 && Instance != null)
             {
-                TryClearCach();
+                TryClearCach("del", Convert.ToInt64(Instance.Eval(keyName)));
             }
 
-            return result;
+            return result > 0;
         }
 
         public bool Update()
         {
-            bool result = ExecuteNonQuery(UpdateSql) > 0;
+            long result = ExecuteNonQuery(UpdateSql);
 
-            if (result)
+            if (result > 0 && Instance != null)
             {
-                TryClearCach();
+                TryClearCach("update", Convert.ToInt64(Instance.Eval(keyName)));
             }
 
-            return result;
+            return result > 0;
         }
 
         public virtual bool Update(params string[] colArray)

@@ -130,6 +130,22 @@ namespace Test
 
         static void Main(string[] args)
         {
+            var list = LJC.FrameWork.Data.QuickDataBase.DataContextMoudelFactory<RunConfig>.GetDataContext().ExecuteList();
+
+            var newrunconfig = list.FirstOrDefault();
+            newrunconfig.ID = 0;
+            LJC.FrameWork.Data.QuickDataBase.DataContextMoudelFactory<RunConfig>.GetDataContext(newrunconfig).Add();
+            var list2 = LJC.FrameWork.Data.QuickDataBase.DataContextMoudelFactory<RunConfig>.GetDataContext().ExecuteList();
+
+            newrunconfig.UserID = "123456";
+            LJC.FrameWork.Data.QuickDataBase.DataContextMoudelFactory<RunConfig>.GetDataContext(newrunconfig).Update();
+            list2 = LJC.FrameWork.Data.QuickDataBase.DataContextMoudelFactory<RunConfig>.GetDataContext().ExecuteList();
+
+            LJC.FrameWork.Data.QuickDataBase.DataContextMoudelFactory<RunConfig>.GetDataContext(new RunConfig { ID = list2.Last().ID}).Del();
+            list2 = LJC.FrameWork.Data.QuickDataBase.DataContextMoudelFactory<RunConfig>.GetDataContext().ExecuteList();
+            Console.Read();
+            return;
+
             ThreadPool.SetMinThreads(100, 100);
 
             MySession server = new MySession();
