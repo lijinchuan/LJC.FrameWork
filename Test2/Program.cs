@@ -1,5 +1,7 @@
-﻿using LJC.Com.StockService.Contract;
+﻿using Ljc.Com.NewsService.Entity;
+using LJC.Com.StockService.Contract;
 using LJC.FrameWork.Comm;
+using LJC.FrameWork.Comm.TextReaderWriter;
 using LJC.FrameWork.SOA;
 using System;
 using System.Collections.Generic;
@@ -84,6 +86,38 @@ namespace Test2
             }
         }
 
+        static void TestLogQueue()
+        {
+            LocalFileQueue<NewsEntity> tempqueue = new LocalFileQueue<NewsEntity>("testnews2", "newsqueuefile");
+            tempqueue.OnProcessQueue += tempqueue_OnProcessQueue;
+            string html = new System.Net.WebClient().DownloadString("http://china.huanqiu.com/article/2017-04/10547796.html");
+            System.Threading.Tasks.Parallel.For(0, 100, (i) =>
+            {
+                for (int m = 0; m < 30; m++)
+                {
+                    tempqueue.Enqueue(new NewsEntity
+                    {
+                        Title = "title_" + i + "_" + m,
+                        Cdate = DateTime.Now,
+                        Mdate = DateTime.Now,
+                        Class = "news" + i,
+                        Clicktime = m,
+                        Content = Guid.NewGuid().ToString() + html,
+                        Formurl = Guid.NewGuid().ToString()
+                    });
+
+                }
+            });
+        }
+
+        static bool tempqueue_OnProcessQueue(NewsEntity arg)
+        {
+            int newcount = System.Threading.Interlocked.Increment(ref count);
+            if (newcount == 3000)
+                Console.WriteLine("条数" + newcount + "," + arg.Title);
+            return true;
+        }
+
         static void TestNews()
         {
             var localqueue = new LJC.FrameWork.Comm.TextReaderWriter.LocalFileQueue<Ljc.Com.NewsService.Entity.NewsEntity>("test", @"C:\Users\Administrator\Desktop\queuefile\news1 - 副本.queue");
@@ -94,12 +128,17 @@ namespace Test2
 
         static void localqueue_OnProcessError(Ljc.Com.NewsService.Entity.NewsEntity arg1, Exception arg2)
         {
-            Console.WriteLine(arg2.ToString());
+            //Console.WriteLine(arg2.ToString());
         }
 
+        static int count = 0;
         static bool localqueue_OnProcessQueue(Ljc.Com.NewsService.Entity.NewsEntity arg)
         {
-            Console.WriteLine(arg.Title);
+            int newcount = System.Threading.Interlocked.Increment(ref count);
+
+            if (newcount == 3000)
+                Console.WriteLine("条数：" + arg.Title);
+            
 
             return true;
         }
@@ -107,6 +146,10 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            TestLogQueue();
+
+            Console.Read();
+
             for (int i = 0; i < 100; i++)
             {
                 System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
