@@ -180,7 +180,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
                     if (_queueReader.ReadObject<T>() != default(T))
                     {
                         _queueReader.SetPostion(newpostion);
-                        OnProcessError(last, new Exception(string.Format("队列损环，将尝试读取下一个队列。损坏位置{0}，恢复位置{1}。", oldpostion, newpostion)));
+                        OnProcessError(last, new Exception(string.Format("队列损环，将尝试读取下一个队列。损坏位置{0}，恢复位置{1}，损坏长度：{2}kb。", oldpostion, newpostion,(newpostion-oldpostion)/1000)));
 
                         break;
                     }
@@ -208,6 +208,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             int errortimes = 0;
             try
             {
+                //ProcessBadQueue(last);
                 foreach (var t in _queueReader.ReadObjectWating<T>())
                 {
                     last = t;

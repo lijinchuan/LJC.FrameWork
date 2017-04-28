@@ -34,7 +34,7 @@ namespace LJC.FrameWork.Comm
                     _sw.BaseStream.Position = _sw.BaseStream.Length;
                 }
             }
-            _sw.Flush();
+            Flush();
             _canReadFromBack = CanReadFormBack;
             if(_canReadFromBack)
             {
@@ -58,7 +58,12 @@ namespace LJC.FrameWork.Comm
         public void Flush()
         {
             if (!_isdispose)
-                _sw.Flush();
+            {
+                lock (this)
+                {
+                    _sw.Flush();
+                }
+            }
         }
 
         public void AppendObject<T>(T obj) where T : class
