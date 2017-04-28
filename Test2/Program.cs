@@ -86,7 +86,7 @@ namespace Test2
 
         static void TestNews()
         {
-            var localqueue = new LJC.FrameWork.Comm.TextReaderWriter.LocalFileQueue<Ljc.Com.NewsService.Entity.NewsEntity>("test", @"C:\Users\Administrator\Desktop\queuefile\news1 - 副本.queue");
+            var localqueue = new LJC.FrameWork.Comm.TextReaderWriter.LocalFileQueue<Ljc.Com.NewsService.Entity.NewsEntity>("news1", @"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\queuefile\news1.queue");
             localqueue.OnProcessQueue += localqueue_OnProcessQueue;
             localqueue.OnProcessError += localqueue_OnProcessError;
 
@@ -95,11 +95,17 @@ namespace Test2
         static void localqueue_OnProcessError(Ljc.Com.NewsService.Entity.NewsEntity arg1, Exception arg2)
         {
             Console.WriteLine(arg2.ToString());
+            LJC.FrameWork.LogManager.LogHelper.Instance.Info(arg2.ToString());
+            System.Threading.Thread.Sleep(5000);
         }
 
+        static int newscount = 0;
         static bool localqueue_OnProcessQueue(Ljc.Com.NewsService.Entity.NewsEntity arg)
         {
-            Console.WriteLine(arg.Title);
+            newscount++;
+            Console.WriteLine(newscount + ":" +arg.Id+" "+ arg.Title);
+
+            LJC.FrameWork.LogManager.LogHelper.Instance.Info(newscount + ":" + arg.Id + " " + arg.Title);
 
             return true;
         }
@@ -107,6 +113,12 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+
+            ReadError();
+            return;
+
+            TestNews();
+            Console.Read();
             for (int i = 0; i < 100; i++)
             {
                 System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
@@ -364,6 +376,34 @@ namespace Test2
             //throw new NotImplementedException();
             string msg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<string>(obj.MessageBuffer);
             Console.WriteLine("收到广播消息:" + msg);
+        }
+
+        static void ReadError()
+        {
+
+            var str = string.Empty;
+            using (System.IO.FileStream fs = new System.IO.FileStream(@"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\queuefile\news1.queue", System.IO.FileMode.Open))
+            {
+                long start = 391245165-10;
+                long end = 391251445+100;
+
+                byte[] buffer = new byte[end - start];
+
+                fs.Position = start;
+                fs.Read(buffer, 0, buffer.Length);
+
+                str = System.Text.Encoding.UTF8.GetString(buffer);
+
+
+
+                //LJC.FrameWork.LogManager.LogHelper.Instance.Debug(string.Format("{0}-{1}损坏区的内容是：{2}。长度是:{3}", start, end, str, str.Length));
+            }
+
+            var news = LJC.FrameWork.Comm.JsonUtil<Ljc.Com.NewsService.Entity.NewsEntity>.Deserialize(str);
+
+            var localqueue = new LJC.FrameWork.Comm.TextReaderWriter.LocalFileQueue<Ljc.Com.NewsService.Entity.NewsEntity>("news1", @"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\queuefile\news1.queue");
+            localqueue.Enqueue(news);
+            localqueue.Dispose();
         }
     }
 }

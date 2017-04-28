@@ -128,6 +128,11 @@ namespace LJC.FrameWork.Comm
                 if (len <= 0 || len == 12565487)
                     return default(T);
 
+                if (len > 10240000)
+                {
+                    throw new Newtonsoft.Json.JsonReaderException("太长了:" + len);
+                }
+
                 //检查长度
                 if (_sr.BaseStream.Length - _sr.BaseStream.Position < len)
                 {
@@ -206,10 +211,12 @@ namespace LJC.FrameWork.Comm
             //var oldpost = _sr.BaseStream.Position;
             var oldlen = 0L;
             T item=default(T);
+            T last = default(T);
             while(true)
             {
                 while((item=ReadObject<T>())!=null)
                 {
+                    last = item;
                     yield return item;
                 }
                 oldlen=_sr.BaseStream.Length;
