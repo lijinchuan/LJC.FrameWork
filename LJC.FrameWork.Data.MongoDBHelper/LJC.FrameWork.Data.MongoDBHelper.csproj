@@ -51,6 +51,7 @@
     <Compile Include="MongoComplexQuery.cs" />
     <Compile Include="MongoDBHelper.cs" />
     <Compile Include="MongoQueryCodition.cs" />
+    <Compile Include="MongoQueryEx.cs" />
     <Compile Include="MongoSimpleQuery.cs" />
     <Compile Include="MongoSort.cs" />
     <Compile Include="MongoUpdateBuilderEx.cs" />
