@@ -88,7 +88,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
 
         private static MongoCollection GetCollecion(string connectionName, string database, string collection)
         {
-            string collectionkey = string.Format("{2}:{1}@{0}", connectionName, database, collection);
+            string collectionkey = string.Format("{1}:{2}@{0}", connectionName, database, collection);
             MongoCollection mongocollection = null;
 
             if (!CollectionDic.TryGetValue(collectionkey, out mongocollection))
