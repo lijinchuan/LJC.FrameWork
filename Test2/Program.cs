@@ -1,5 +1,7 @@
-﻿using LJC.Com.StockService.Contract;
+﻿using Ljc.Com.NewsService.Entity;
+using LJC.Com.StockService.Contract;
 using LJC.FrameWork.Comm;
+using LJC.FrameWork.Comm.TextReaderWriter;
 using LJC.FrameWork.SOA;
 using System;
 using System.Collections.Generic;
@@ -84,9 +86,41 @@ namespace Test2
             }
         }
 
+        static void TestLogQueue()
+        {
+            LocalFileQueue<NewsEntity> tempqueue = new LocalFileQueue<NewsEntity>("testnews2", "newsqueuefile");
+            tempqueue.OnProcessQueue += tempqueue_OnProcessQueue;
+            string html = new System.Net.WebClient().DownloadString("http://china.huanqiu.com/article/2017-04/10547796.html");
+            System.Threading.Tasks.Parallel.For(0, 100, (i) =>
+            {
+                for (int m = 0; m < 30; m++)
+                {
+                    tempqueue.Enqueue(new NewsEntity
+                    {
+                        Title = "title_" + i + "_" + m,
+                        Cdate = DateTime.Now,
+                        Mdate = DateTime.Now,
+                        Class = "news" + i,
+                        Clicktime = m,
+                        Content = Guid.NewGuid().ToString() + html,
+                        Formurl = Guid.NewGuid().ToString()
+                    });
+
+                }
+            });
+        }
+
+        static bool tempqueue_OnProcessQueue(NewsEntity arg)
+        {
+            int newcount = System.Threading.Interlocked.Increment(ref count);
+            if (newcount == 3000)
+                Console.WriteLine("条数" + newcount + "," + arg.Title);
+            return true;
+        }
+
         static void TestNews()
         {
-            var localqueue = new LJC.FrameWork.Comm.TextReaderWriter.LocalFileQueue<Ljc.Com.NewsService.Entity.NewsEntity>("news1", @"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\queuefile\news1.queue");
+            var localqueue = new LJC.FrameWork.Comm.TextReaderWriter.LocalFileQueue<Ljc.Com.NewsService.Entity.NewsEntity>("test", @"C:\Users\Administrator\Desktop\queuefile\news1 - 副本.queue");
             localqueue.OnProcessQueue += localqueue_OnProcessQueue;
             localqueue.OnProcessError += localqueue_OnProcessError;
 
@@ -94,18 +128,17 @@ namespace Test2
 
         static void localqueue_OnProcessError(Ljc.Com.NewsService.Entity.NewsEntity arg1, Exception arg2)
         {
-            Console.WriteLine(arg2.ToString());
-            LJC.FrameWork.LogManager.LogHelper.Instance.Info(arg2.ToString());
-            System.Threading.Thread.Sleep(5000);
+            //Console.WriteLine(arg2.ToString());
         }
 
-        static int newscount = 0;
+        static int count = 0;
         static bool localqueue_OnProcessQueue(Ljc.Com.NewsService.Entity.NewsEntity arg)
         {
-            newscount++;
-            Console.WriteLine(newscount + ":" +arg.Id+" "+ arg.Title);
+            int newcount = System.Threading.Interlocked.Increment(ref count);
 
-            LJC.FrameWork.LogManager.LogHelper.Instance.Info(newscount + ":" + arg.Id + " " + arg.Title);
+            if (newcount == 3000)
+                Console.WriteLine("条数：" + arg.Title);
+            
 
             return true;
         }
@@ -113,12 +146,10 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            TestLogQueue();
 
-            ReadError();
-            return;
-
-            TestNews();
             Console.Read();
+
             for (int i = 0; i < 100; i++)
             {
                 System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
@@ -376,34 +407,6 @@ namespace Test2
             //throw new NotImplementedException();
             string msg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<string>(obj.MessageBuffer);
             Console.WriteLine("收到广播消息:" + msg);
-        }
-
-        static void ReadError()
-        {
-
-            var str = string.Empty;
-            using (System.IO.FileStream fs = new System.IO.FileStream(@"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\queuefile\news1.queue", System.IO.FileMode.Open))
-            {
-                long start = 391245165-10;
-                long end = 391251445+100;
-
-                byte[] buffer = new byte[end - start];
-
-                fs.Position = start;
-                fs.Read(buffer, 0, buffer.Length);
-
-                str = System.Text.Encoding.UTF8.GetString(buffer);
-
-
-
-                //LJC.FrameWork.LogManager.LogHelper.Instance.Debug(string.Format("{0}-{1}损坏区的内容是：{2}。长度是:{3}", start, end, str, str.Length));
-            }
-
-            var news = LJC.FrameWork.Comm.JsonUtil<Ljc.Com.NewsService.Entity.NewsEntity>.Deserialize(str);
-
-            var localqueue = new LJC.FrameWork.Comm.TextReaderWriter.LocalFileQueue<Ljc.Com.NewsService.Entity.NewsEntity>("news1", @"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\queuefile\news1.queue");
-            localqueue.Enqueue(news);
-            localqueue.Dispose();
         }
     }
 }
