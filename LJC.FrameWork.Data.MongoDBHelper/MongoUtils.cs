@@ -133,5 +133,36 @@ namespace LJC.FrameWork.Data.MongoDBHelper
 
             return Query.And(querylist);
         }
+
+        private static IMongoSortBy BuildSort(List<Tuple<string, MongoSort>> sorts)
+        {
+            if (sorts == null || sorts.Count == 0)
+            {
+                return SortBy.Null;
+            }
+
+            SortByBuilder sortby = new SortByBuilder();
+            foreach (var sort in sorts)
+            {
+                switch (sort.Item2)
+                {
+                    case MongoSort.ASC:
+                        {
+                            sortby.Ascending(sort.Item1);
+                            break;
+                        }
+                    case MongoSort.DESC:
+                        {
+                            sortby.Descending(sort.Item1);
+                            break;
+                        }
+                    default:
+                        {
+                            break;
+                        }
+                }
+            }
+            return sortby;
+        }
     }
 }

@@ -1,0 +1,49 @@
+﻿using MongoDB.Driver.Builders;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace LJC.FrameWork.Data.MongoDBHelper
+{
+    public class MongoSortWarpper
+    {
+        internal SortByBuilder MongoSortBy = null;
+
+        private MongoSortWarpper()
+        {
+
+        }
+
+        public static MongoSortWarpper NewWarpper()
+        {
+            return new MongoSortWarpper();
+        }
+
+        public MongoSortWarpper Asc(params string[] keys)
+        {
+            if (MongoSortBy == null)
+            {
+                MongoSortBy = SortBy.Ascending(keys);
+            }
+            else
+            {
+                MongoSortBy = MongoSortBy.Ascending(keys);
+            }
+            return this;
+        }
+
+        public MongoSortWarpper Desc(params string[] keys)
+        {
+            if (MongoSortBy == null)
+            {
+                MongoSortBy = SortBy.Descending(keys);
+            }
+            else
+            {
+                MongoSortBy = MongoSortBy.Descending(keys);
+            }
+            return this;
+        }
+    }
+}

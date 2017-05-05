@@ -122,47 +122,16 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return new List<T>();
         }
 
-        private static IMongoSortBy BuildSort(List<Tuple<string, MongoSort>> sorts)
+        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, int pageindex, int pagesize, MongoSortWarpper sorts, out long total)
         {
-            if (sorts == null || sorts.Count == 0)
-            {
-                return SortBy.Null;
-            }
-
-            SortByBuilder sortby = new SortByBuilder();
-            foreach (var sort in sorts)
-            {
-                switch (sort.Item2)
-                {
-                    case MongoSort.ASC:
-                        {
-                            sortby.Ascending(sort.Item1);
-                            break;
-                        }
-                    case MongoSort.DESC:
-                        {
-                            sortby.Descending(sort.Item1);
-                            break;
-                        }
-                    default:
-                        {
-                            break;
-                        }
-                }
-            }
-            return sortby;
-        }
-
-        public static List<T> Find<T>(string connectionName, string database, string collection, MongoComplexQuery querys, int pageindex, int pagesize, List<Tuple<string, MongoSort>> sorts, out long total)
-        {
-            var mongoquery = BuildQuery(querys);
+            var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
             var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
-            var mongosortby = BuildSort(sorts);
+            var mongosortby = (sorts == null || sorts.MongoSortBy == SortBy.Null) ? SortBy.Null : sorts.MongoSortBy;
             int skip = (pageindex - 1) * pagesize;
             List<T> list = null;
             if (mongosortby != SortBy.Null)
             {
-                list = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize).SetSortOrder(BuildSort(sorts)).ToList();
+                list = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize).SetSortOrder(mongosortby).ToList();
             }
             else
             {
@@ -179,29 +148,29 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return list;
         }
 
-        public static T FindAndModify<T>(string connectionName, string database, string collection, List<Tuple<MongoQueryCodition, string, object>> querys, MongoUpdateBuilderEx updates, List<Tuple<string, MongoSort>> sorts, bool returnNew, bool upsert)
+        public static T FindAndModify<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates, MongoSortWarpper sorts, bool returnNew, bool upsert)
         {
-            var mongoquery = BuildQuery(querys);
-            var mongosort = BuildSort(sorts);
+            var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
+            var mongosort = (sorts == null || sorts.MongoSortBy == SortBy.Null) ? SortBy.Null : sorts.MongoSortBy;
             var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
             var retresult = mongocollection.FindAndModify(mongoquery, mongosort, updates.MongoUpdateBuilder, returnNew, upsert);
 
             return retresult.GetModifiedDocumentAs<T>();
         }
 
-        public static T FindAndRemove<T>(string connectionName, string database, string collection, List<Tuple<MongoQueryCodition, string, object>> querys, List<Tuple<string, MongoSort>> sorts)
+        public static T FindAndRemove<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoSortWarpper sorts)
         {
-            var mongoquery = BuildQuery(querys);
-            var mongosort = BuildSort(sorts);
+            var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
+            var mongosort = (sorts == null || sorts.MongoSortBy == SortBy.Null) ? SortBy.Null : sorts.MongoSortBy;
             var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
             var retresult = mongocollection.FindAndRemove(new FindAndRemoveArgs { Query = mongoquery, SortBy = mongosort });
 
             return retresult.GetModifiedDocumentAs<T>();
         }
 
-        public static long Count(string connectionName, string database, string collection, List<Tuple<MongoQueryCodition, string, object>> querys)
+        public static long Count(string connectionName, string database, string collection, MongoQueryWarpper querys)
         {
-            var mongoquery = BuildQuery(querys);
+            var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
             var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
 
             var count = mongocollection.Count(mongoquery);
@@ -209,35 +178,49 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return count;
         }
 
-        public static List<T> Distinct<T>(string connectionName, string database, string collection, string key, List<Tuple<MongoQueryCodition, string, object>> querys)
+        public static List<T> Distinct<T>(string connectionName, string database, string collection, string key, MongoQueryWarpper querys)
         {
-            var mongoquery = BuildQuery(querys);
+            var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
             var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
 
             return mongocollection.Distinct<T>(key, mongoquery).ToList();
         }
 
-        public static List<T> FindAll<T>(string connectionName, string database, string collection, List<Tuple<string, MongoSort>> sorts)
+        public static List<T> FindAll<T>(string connectionName, string database, string collection, MongoSortWarpper sorts)
         {
             var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
 
-            var list = mongocollection.FindAllAs<T>().SetSortOrder(BuildSort(sorts)).ToList();
+            if (sorts == null || sorts.MongoSortBy == SortBy.Null)
+            {
+                var list = mongocollection.FindAllAs<T>().ToList();
 
-            return list;
+                return list;
+            }
+            else
+            {
+                var list = mongocollection.FindAllAs<T>().SetSortOrder(sorts.MongoSortBy).ToList();
+
+                return list;
+            }
         }
 
-        public static T FindOne<T>(string connectionName, string database, string collection, List<Tuple<MongoQueryCodition, string, object>> querys)
+        public static T FindOne<T>(string connectionName, string database, string collection, MongoQueryWarpper querys)
         {
-            var mongoquery = BuildQuery(querys);
+            var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
             var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
 
             var one = mongocollection.FindOneAs<T>(mongoquery);
             return one;
         }
 
-        public static bool Update<T>(string connectionName, string database, string collection, List<Tuple<MongoQueryCodition, string, object>> querys, MongoUpdateBuilderEx updates)
+        public static bool Update<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates)
         {
-            IMongoQuery mongoquery = BuildQuery(querys);
+            if (updates == null)
+            {
+                return false;
+            }
+
+            IMongoQuery mongoquery = querys == null ? Query.Null : querys.MongoQuery;
 
             MD.Builders.UpdateBuilder updateBuilder = updates.MongoUpdateBuilder;
             if (updateBuilder != null)
@@ -251,47 +234,18 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return false;
         }
 
-        public static bool Delete(string connectionName, string database, string collection, List<Tuple<MongoQueryCodition, string, object>> querys)
+        public static bool Delete(string connectionName, string database, string collection, MongoQueryWarpper querys)
         {
-            IMongoQuery mongoquery = BuildQuery(querys);
+            if (querys == null)
+            {
+                return false;
+            }
+            IMongoQuery mongoquery = querys.MongoQuery;
 
             var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
             mongocollection.Remove(mongoquery);
             return true;
         }
-        #endregion
-
-        #region 复杂的
-        public static List<T> Find2<T>(string connectionName, string database, string collection, MongoComplexQuery querys, int pageindex, int pagesize, List<Tuple<string, MongoSort>> sorts, out long total)
-        {
-            var mongoquery = Query.Null;
-            if (querys != null)
-            {
-                mongoquery = querys.BuildQuery(mongoquery);
-            }
-            var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
-            var mongosortby = BuildSort(sorts);
-            int skip = (pageindex - 1) * pagesize;
-            List<T> list = null;
-            if (mongosortby != SortBy.Null)
-            {
-                list = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize).SetSortOrder(BuildSort(sorts)).ToList();
-            }
-            else
-            {
-                list = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize).ToList();
-            }
-            if (list.Count < pagesize && list.Count > 0)
-            {
-                total = skip + list.Count;
-            }
-            else
-            {
-                total = mongocollection.Count(mongoquery);
-            }
-            return list;
-        }
-
         #endregion
 
         #region 索引
