@@ -62,6 +62,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LJC.FrameWork.Data.MongoDBHelper\LJC.FrameWork.Data.MongoDBHelper.csproj">
+      <Project>{56868031-8d7b-4e47-9edf-05192d3e1c46}</Project>
+      <Name>LJC.FrameWork.Data.MongoDBHelper</Name>
+    </ProjectReference>
     <ProjectReference Include="..\LJC.FrameWork.SOA\LJC.FrameWork.SOA.csproj">
       <Project>{b3d600b2-7e0e-44d6-84dd-1528dcfc7554}</Project>
       <Name>LJC.FrameWork.SOA</Name>

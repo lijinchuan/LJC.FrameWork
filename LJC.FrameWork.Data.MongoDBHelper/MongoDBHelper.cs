@@ -106,12 +106,6 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return mongocollection;
         }
 
-        private static MongoCollection<T> GetCollecion<T>(string connectionName, string database, string collection)
-        {
-            MongoCollection mongocollection = GetCollecion(connectionName, database, collection);
-            return (MongoCollection<T>)mongocollection;
-        }
-
         #endregion
 
         #region
@@ -132,7 +126,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
         #region 增删改查
         public static bool Insert<T>(string connectionName, string database, string collection, T entity)
         {
-            var mongocollection = GetCollecion<T>(connectionName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
 
             mongocollection.Insert(entity);
 
@@ -141,22 +135,17 @@ namespace LJC.FrameWork.Data.MongoDBHelper
 
         public static bool InsertBatch<T>(string connectionName, string database, string collection, List<T> entities)
         {
-            var mongocollection = GetCollecion<T>(connectionName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
 
             mongocollection.InsertBatch<T>(entities);
 
             return true;
         }
 
-        private static List<T> GetList<T>(string connectionName, string database, string collection, Expression<Func<T, bool>> query)
-        {
-            return new List<T>();
-        }
-
         public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, int pageindex, int pagesize, MongoSortWarpper sorts, out long total)
         {
             var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
-            var mongocollection = GetCollecion<T>(connectionName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
             var mongosortby = (sorts == null || sorts.MongoSortBy == SortBy.Null) ? SortBy.Null : sorts.MongoSortBy;
             int skip = (pageindex - 1) * pagesize;
             List<T> list = null;
@@ -179,24 +168,39 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return list;
         }
 
+        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, int pageindex, int pagesize, MongoSortWarpper<T> sorts, out long total) where T : new()
+        {
+            return Find<T>(collection, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, (MongoSortWarpper)sorts, out total);
+        }
+
         public static T FindAndModify<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates, MongoSortWarpper sorts, bool returnNew, bool upsert)
         {
             var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
             var mongosort = (sorts == null || sorts.MongoSortBy == SortBy.Null) ? SortBy.Null : sorts.MongoSortBy;
-            var mongocollection = GetCollecion<T>(connectionName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
             var retresult = mongocollection.FindAndModify(mongoquery, mongosort, updates.MongoUpdateBuilder, returnNew, upsert);
 
             return retresult.GetModifiedDocumentAs<T>();
+        }
+
+        public static T FindAndModify<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, MongoUpdateWarpper<T> updates, MongoSortWarpper<T> sorts, bool returnNew, bool upsert) where T : new()
+        {
+            return FindAndModify<T>(connectionName, database, collection, (MongoQueryWarpper)querys, (MongoUpdateWarpper)updates, (MongoSortWarpper)sorts, returnNew, upsert);
         }
 
         public static T FindAndRemove<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoSortWarpper sorts)
         {
             var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
             var mongosort = (sorts == null || sorts.MongoSortBy == SortBy.Null) ? SortBy.Null : sorts.MongoSortBy;
-            var mongocollection = GetCollecion<T>(connectionName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
             var retresult = mongocollection.FindAndRemove(new FindAndRemoveArgs { Query = mongoquery, SortBy = mongosort });
 
             return retresult.GetModifiedDocumentAs<T>();
+        }
+
+        public static T FindAndRemove<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, MongoSortWarpper<T> sorts) where T : new()
+        {
+            return FindAndRemove<T>(connectionName, database, collection, (MongoQueryWarpper)querys, (MongoSortWarpper)sorts);
         }
 
         public static long Count(string connectionName, string database, string collection, MongoQueryWarpper querys)
@@ -209,17 +213,27 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return count;
         }
 
+        public static long Count<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys) where T:new()
+        {
+            return Count(collection, database, collection, querys);
+        }
+
         public static List<T> Distinct<T>(string connectionName, string database, string collection, string key, MongoQueryWarpper querys)
         {
             var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
-            var mongocollection = GetCollecion<T>(connectionName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
 
             return mongocollection.Distinct<T>(key, mongoquery).ToList();
         }
 
+        public static List<T> Distinct<T>(string connectionName, string database, string collection, string key, MongoQueryWarpper<T> querys) where T : new()
+        {
+            return Distinct<T>(connectionName, database, collection, key, (MongoQueryWarpper)querys);
+        }
+
         public static List<T> FindAll<T>(string connectionName, string database, string collection, MongoSortWarpper sorts)
         {
-            var mongocollection = GetCollecion<T>(connectionName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
 
             if (sorts == null || sorts.MongoSortBy == SortBy.Null)
             {
@@ -235,13 +249,23 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             }
         }
 
+        public static List<T> FindAll<T>(string connectionName, string database, string collection, MongoSortWarpper<T> sorts) where T : new()
+        {
+            return FindAll<T>(connectionName, database, collection, (MongoSortWarpper)sorts);
+        }
+
         public static T FindOne<T>(string connectionName, string database, string collection, MongoQueryWarpper querys)
         {
             var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
-            var mongocollection = GetCollecion<T>(connectionName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
 
             var one = mongocollection.FindOneAs<T>(mongoquery);
             return one;
+        }
+
+        public static T FindOne<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys) where T : new()
+        {
+            return FindOne<T>(connectionName, database, collection, (MongoQueryWarpper)querys);
         }
 
         public static bool Update<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates)
@@ -256,7 +280,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             MD.Builders.UpdateBuilder updateBuilder = updates.MongoUpdateBuilder;
             if (updateBuilder != null)
             {
-                var mongocollection = GetCollecion<T>(connectionName, database, collection);
+                var mongocollection = GetCollecion(connectionName, database, collection);
 
                 mongocollection.Update(mongoquery, updateBuilder);
                 return true;
@@ -265,7 +289,12 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return false;
         }
 
-        public static bool Delete(string connectionName, string database, string collection, MongoQueryWarpper querys)
+        public static bool Update<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, MongoUpdateWarpper<T> updates) where T:new()
+        {
+            return Update<T>(connectionName, database, collection, (MongoQueryWarpper)querys, (MongoUpdateWarpper)updates);
+        }
+
+        public static bool Remove(string connectionName, string database, string collection, MongoQueryWarpper querys)
         {
             if (querys == null)
             {
@@ -277,6 +306,11 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             mongocollection.Remove(mongoquery);
             return true;
         }
+
+        public static bool Remove<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys) where T : new()
+        {
+            return Remove(connectionName, database, collection, (MongoQueryWarpper)querys);
+        }
         #endregion
 
         #region 索引
@@ -284,6 +318,11 @@ namespace LJC.FrameWork.Data.MongoDBHelper
         {
             var mongocollection = GetCollecion(connectionName, database, collection);
             mongocollection.CreateIndex(keynames);
+        }
+
+        public static void EnsureIndex<T>(string connectionName, string database, string collection, params Expression<Func<T>>[] keynames) where T : new()
+        {
+            EnsureIndex(connectionName, database, collection, keynames.Select(p => MongoDBUtil.GetMongoElementField(p)).ToArray());
         }
 
         public static void EnsureIndex(string connectionName, string database, string collection, MongoIndexKeysWarpper indexkeys, bool unique = false)
@@ -299,6 +338,11 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             }
         }
 
+        public static void EnsureIndex<T>(string connectionName, string database, string collection, MongoIndexKeysWarpper<T> indexkeys, bool unique = false) where T:new()
+        {
+            EnsureIndex(connectionName, database, collection, indexkeys, unique);
+        }
+
         public static void DropIndex(string connectionName, string database, string collection, params string[] keynames)
         {
             var mongocollection = GetCollecion(connectionName, database, collection);
@@ -307,11 +351,23 @@ namespace LJC.FrameWork.Data.MongoDBHelper
 
         }
 
+        public static void DropIndex<T>(string connectionName, string database, string collection, params Expression<Func<T>>[] keynames) where T:new()
+        {
+            DropIndex(connectionName,database,collection,keynames.Select(p => MongoDBUtil.GetMongoElementField(p)).ToArray());
+
+        }
+
         public static void DropIndex(string connectionName, string database, string collection, MongoIndexKeysWarpper indexkeys)
         {
             var mongocollection = GetCollecion(connectionName, database, collection);
 
             mongocollection.DropIndex(indexkeys.MongoIndexKeys);
+
+        }
+
+        public static void DropIndex<T>(string connectionName, string database, string collection, MongoIndexKeysWarpper<T> indexkeys) where T:new()
+        {
+            DropIndex(connectionName, database, collection, indexkeys);
 
         }
         #endregion

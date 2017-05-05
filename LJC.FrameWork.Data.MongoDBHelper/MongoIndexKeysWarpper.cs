@@ -10,14 +10,9 @@ namespace LJC.FrameWork.Data.MongoDBHelper
     {
         internal IndexKeysBuilder MongoIndexKeys = null;
 
-        private MongoIndexKeysWarpper()
+        public MongoIndexKeysWarpper()
         {
 
-        }
-
-        public static MongoIndexKeysWarpper NewWarpper()
-        {
-            return new MongoIndexKeysWarpper();
         }
 
         public MongoIndexKeysWarpper Ascending(params string[] names)

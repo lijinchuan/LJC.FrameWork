@@ -48,17 +48,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MongoComplexQuery.cs" />
     <Compile Include="MongoDBHelper.cs" />
+    <Compile Include="MongoDBUtil.cs" />
     <Compile Include="MongoIndexKeysWarpper.cs" />
-    <Compile Include="MongoQueryCodition.cs" />
+    <Compile Include="MongoIndexKeysWarpper~T.cs" />
     <Compile Include="MongoQueryWarpper.cs" />
-    <Compile Include="MongoSimpleQuery.cs" />
-    <Compile Include="MongoSort.cs" />
+    <Compile Include="MongoQueryWarpper~T.cs" />
     <Compile Include="MongoSortWarpper.cs" />
+    <Compile Include="MongoSortWarpper~T.cs" />
     <Compile Include="MongoUpdateWarpper.cs" />
-    <Compile Include="MongoUpdateCodition.cs" />
-    <Compile Include="MongoUtils.cs" />
+    <Compile Include="MongoUpdateWarpper~T.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

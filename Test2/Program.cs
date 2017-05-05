@@ -146,6 +146,9 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            var query= new LJC.FrameWork.Data.MongoDBHelper.MongoQueryWarpper<NewsEntity>().EQ(p => p.Cdate, 2);
+
+            return;
             TestLogQueue();
 
             Console.Read();

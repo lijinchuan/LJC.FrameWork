@@ -10,14 +10,9 @@ namespace LJC.FrameWork.Data.MongoDBHelper
     {
         internal SortByBuilder MongoSortBy = null;
 
-        private MongoSortWarpper()
+        public MongoSortWarpper()
         {
 
-        }
-
-        public static MongoSortWarpper NewWarpper()
-        {
-            return new MongoSortWarpper();
         }
 
         public MongoSortWarpper Asc(params string[] keys)

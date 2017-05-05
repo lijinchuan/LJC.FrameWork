@@ -5,6 +5,7 @@ using System.Text;
 using MongoDB.Driver;
 using MongoDB.Bson;
 using MongoDB.Driver.Builders;
+using System.Linq.Expressions;
 
 namespace LJC.FrameWork.Data.MongoDBHelper
 {
@@ -12,14 +13,9 @@ namespace LJC.FrameWork.Data.MongoDBHelper
     {
         internal IMongoQuery MongoQuery = Query.Null;
 
-        private MongoQueryWarpper()
+        public MongoQueryWarpper()
         {
 
-        }
-
-        public static MongoQueryWarpper NewWarpper()
-        {
-            return new MongoQueryWarpper();
         }
 
         public MongoQueryWarpper EQ(string name, object val)

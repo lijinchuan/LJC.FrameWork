@@ -12,14 +12,9 @@ namespace LJC.FrameWork.Data.MongoDBHelper
     {
         internal UpdateBuilder MongoUpdateBuilder = new UpdateBuilder();
 
-        private MongoUpdateWarpper()
+        public MongoUpdateWarpper()
         {
 
-        }
-
-        public static MongoUpdateWarpper NewWarpper()
-        {
-            return new MongoUpdateWarpper();
         }
 
         public MongoUpdateWarpper Set(string name, object val)
