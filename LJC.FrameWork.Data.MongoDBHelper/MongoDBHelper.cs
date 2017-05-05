@@ -83,7 +83,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
         }
         #endregion
 
-        #region 缓存
+        #region 表对象缓存
         private static Dictionary<string, MongoCollection> CollectionDic = new Dictionary<string, MongoCollection>();
 
         private static MongoCollection GetCollecion(string connectionName, string database, string collection)
