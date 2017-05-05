@@ -10,7 +10,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
 {
     public class MongoUpdateBuilderEx
     {
-        internal UpdateBuilder _mongoUpdateBuilder = new UpdateBuilder();
+        internal UpdateBuilder MongoUpdateBuilder = new UpdateBuilder();
 
         private MongoUpdateBuilderEx()
         {
@@ -25,7 +25,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
         public MongoUpdateBuilderEx Set(string name, object val)
         {
             var bsonval = BsonValue.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Set(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.Set(name, bsonval);
 
             return this;
         }
@@ -33,7 +33,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
         public MongoUpdateBuilderEx AddToSet(string name, object val)
         {
             var bsonval = BsonValue.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.AddToSet(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.AddToSet(name, bsonval);
 
             return this;
         }
@@ -41,95 +41,95 @@ namespace LJC.FrameWork.Data.MongoDBHelper
         public MongoUpdateBuilderEx AddToSetEach(string name, object[] val)
         {
             var bsonval = BsonArray.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.AddToSetEach(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.AddToSetEach(name, bsonval);
 
             return this;
         }
 
         public MongoUpdateBuilderEx BitwiseAnd(string name, long val)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.BitwiseAnd(name, val);
+            MongoUpdateBuilder = MongoUpdateBuilder.BitwiseAnd(name, val);
 
             return this;
         }
 
         public MongoUpdateBuilderEx BitwiseOr(string name, long val)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.BitwiseOr(name, val);
+            MongoUpdateBuilder = MongoUpdateBuilder.BitwiseOr(name, val);
 
             return this;
         }
 
         public MongoUpdateBuilderEx BitwiseXor(string name, long val)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.BitwiseXor(name, val);
+            MongoUpdateBuilder = MongoUpdateBuilder.BitwiseXor(name, val);
             return this;
         }
 
         public MongoUpdateBuilderEx Max(string name, object val)
         {
             var bsonval=BsonValue.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Max(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.Max(name, bsonval);
             return this;
         }
 
         public MongoUpdateBuilderEx Min(string name, object val)
         {
             var bsonval = BsonValue.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Min(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.Min(name, bsonval);
             return this;
         }
 
         public MongoUpdateBuilderEx Mul(string name, double val)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Mul(name, val);
+            MongoUpdateBuilder = MongoUpdateBuilder.Mul(name, val);
             return this;
         }
 
         public MongoUpdateBuilderEx Mul(string name, long val)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Mul(name, val);
+            MongoUpdateBuilder = MongoUpdateBuilder.Mul(name, val);
             return this;
         }
 
         public MongoUpdateBuilderEx SetOnInsert(string name, object val)
         {
             var bsonval=BsonValue.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.SetOnInsert(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.SetOnInsert(name, bsonval);
 
             return this;
         }
 
         public MongoUpdateBuilderEx PopFirst(string name)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.PopFirst(name);
+            MongoUpdateBuilder = MongoUpdateBuilder.PopFirst(name);
             return this;
         }
 
         public MongoUpdateBuilderEx PopLast(string name)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.PopLast(name);
+            MongoUpdateBuilder = MongoUpdateBuilder.PopLast(name);
 
             return this;
         }
 
         public MongoUpdateBuilderEx UnSet(string name)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Unset(name);
+            MongoUpdateBuilder = MongoUpdateBuilder.Unset(name);
 
             return this;
         }
 
         public MongoUpdateBuilderEx Incr(string name,long val)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Inc(name, val);
+            MongoUpdateBuilder = MongoUpdateBuilder.Inc(name, val);
 
             return this;
         }
 
         public MongoUpdateBuilderEx Incr(string name, double val)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Inc(name, val);
+            MongoUpdateBuilder = MongoUpdateBuilder.Inc(name, val);
 
             return this;
         }
@@ -137,53 +137,53 @@ namespace LJC.FrameWork.Data.MongoDBHelper
         public MongoUpdateBuilderEx Pull(string name, object val)
         {
             var bsonval = BsonValue.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Pull(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.Pull(name, bsonval);
             return this;
         }
 
         public MongoUpdateBuilderEx PullAll(string name,object[] val)
         {
             var bsonval=BsonArray.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.PullAll(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.PullAll(name, bsonval);
             return this;
         }
 
         public MongoUpdateBuilderEx Push(string name,object val)
         {
             var bsonval=BsonValue.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Push(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.Push(name, bsonval);
             return this;
         }
 
         public MongoUpdateBuilderEx PushAll(string name, object[] val)
         {
             var bsonval=BsonArray.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.PushAll(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.PushAll(name, bsonval);
             return this;
         }
 
         public MongoUpdateBuilderEx PushEach(string name, object[] val)
         {
             var bsonval=BsonArray.Create(val);
-            _mongoUpdateBuilder = _mongoUpdateBuilder.PushEach(name, bsonval);
+            MongoUpdateBuilder = MongoUpdateBuilder.PushEach(name, bsonval);
             return this;
         }
 
         public MongoUpdateBuilderEx Rename(string oldname,string newname)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Rename(oldname, newname);
+            MongoUpdateBuilder = MongoUpdateBuilder.Rename(oldname, newname);
             return this;
         }
 
         public MongoUpdateBuilderEx CurrentDate(string name)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.CurrentDate(name);
+            MongoUpdateBuilder = MongoUpdateBuilder.CurrentDate(name);
             return this;
         }
 
         public MongoUpdateBuilderEx Combine(MongoUpdateBuilderEx other)
         {
-            _mongoUpdateBuilder = _mongoUpdateBuilder.Combine(other._mongoUpdateBuilder);
+            MongoUpdateBuilder = MongoUpdateBuilder.Combine(other.MongoUpdateBuilder);
             return this;
         }
     }

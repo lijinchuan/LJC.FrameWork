@@ -1,33 +1,35 @@
-﻿using MongoDB.Driver;
-using MongoDB.Driver.Builders;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using MongoDB.Driver;
+using MongoDB.Bson;
+using MongoDB.Driver.Builders;
 
 namespace LJC.FrameWork.Data.MongoDBHelper
 {
-    public class MongoComplexQuery : MongoSimpleQuery
+    public class MongoQueryEx
     {
-        private Queue<MongoSimpleQuery> _queue = new Queue<MongoSimpleQuery>();
+        internal IMongoQuery MongoQuery = Query.Null;
 
-        protected MongoComplexQuery()
+        private MongoQueryEx()
         {
 
         }
 
-        public static MongoComplexQuery NewQuery()
+        public static MongoQueryEx NewQuery()
         {
-            return new MongoComplexQuery();
+            return new MongoQueryEx();
         }
 
-        public MongoComplexQuery EQ(string key, object val)
+        public MongoQueryEx EQ(string name, object val)
         {
-            _queue.Enqueue(new MongoSimpleQuery(key, MongoQueryCodition.EQ, val));
+            var bsonval = BsonValue.Create(val);
+            MongoQuery = Query.And(MongoQuery, Query.EQ(name, bsonval));
             return this;
         }
 
-        public MongoComplexQuery NE(string key, object val)
+        public MongoQueryEx NE(string key, object val)
         {
             _queue.Enqueue(new MongoSimpleQuery(key, MongoQueryCodition.NE, val));
             return this;
@@ -123,40 +125,6 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             subComplexQuery._uniontype = 0;
             _queue.Enqueue(subComplexQuery);
             return this;
-        }
-
-        public override IMongoQuery BuildQuery(IMongoQuery querybuilder)
-        {
-            if (this._queue.Count == 0)
-            {
-                return querybuilder;
-            }
-
-            IMongoQuery newquery = Query.Null;
-
-            MongoSimpleQuery simplequery = null;
-            while (_queue.Count > 0)
-            {
-                simplequery = _queue.Dequeue();
-                if (querybuilder == Query.Null)
-                {
-                    querybuilder = simplequery.BuildQuery(newquery);
-                }
-                else
-                {
-                    if (simplequery._uniontype == 0)
-                    {
-                        querybuilder = Query.Or(querybuilder, simplequery.BuildQuery(newquery));
-                    }
-                    else
-                    {
-                        querybuilder = Query.And(querybuilder, simplequery.BuildQuery(newquery));
-                    }
-                }
-            }
-
-            return querybuilder;
-
         }
     }
 }

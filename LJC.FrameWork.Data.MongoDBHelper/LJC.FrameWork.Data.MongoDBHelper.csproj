@@ -55,6 +55,7 @@
     <Compile Include="MongoSort.cs" />
     <Compile Include="MongoUpdateBuilderEx.cs" />
     <Compile Include="MongoUpdateCodition.cs" />
+    <Compile Include="MongoUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
