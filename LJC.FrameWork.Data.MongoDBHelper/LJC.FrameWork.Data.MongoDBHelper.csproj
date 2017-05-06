@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="MongoDBHelper.cs" />
     <Compile Include="MongoDBUtil.cs" />
+    <Compile Include="MongoDocumentObject.cs" />
     <Compile Include="MongoIndexKeysWarpper.cs" />
     <Compile Include="MongoIndexKeysWarpper~T.cs" />
     <Compile Include="MongoQueryWarpper.cs" />

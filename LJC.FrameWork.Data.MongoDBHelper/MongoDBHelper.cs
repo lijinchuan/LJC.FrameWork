@@ -173,6 +173,12 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return Find<T>(collection, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, (MongoSortWarpper)sorts, out total);
         }
 
+        public static T FindOneByIdAs<T>(string connectioName, string database, string collection, string id)
+        {
+            var mongocollection = GetCollecion(connectioName, database, collection);
+            return mongocollection.FindOneByIdAs<T>(id);
+        }
+
         public static T FindAndModify<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates, MongoSortWarpper sorts, bool returnNew, bool upsert)
         {
             var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
@@ -310,6 +316,13 @@ namespace LJC.FrameWork.Data.MongoDBHelper
         public static bool Remove<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys) where T : new()
         {
             return Remove(connectionName, database, collection, (MongoQueryWarpper)querys);
+        }
+
+        public static void RemoveAll(string connectioName, string database, string collection)
+        {
+            var mongocollection = GetCollecion(connectioName, database, collection);
+            mongocollection.RemoveAll();
+            return true;
         }
         #endregion
 
