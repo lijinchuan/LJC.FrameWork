@@ -318,7 +318,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
             return Remove(connectionName, database, collection, (MongoQueryWarpper)querys);
         }
 
-        public static void RemoveAll(string connectioName, string database, string collection)
+        public static bool RemoveAll(string connectioName, string database, string collection)
         {
             var mongocollection = GetCollecion(connectioName, database, collection);
             mongocollection.RemoveAll();
