@@ -111,13 +111,13 @@ namespace LJC.FrameWork.Data.MongoDBHelper
         #region
         public static void Drop(string connectionName, string database, string collection)
         {
-            var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
+            var mongocollection = GetCollecion(connectionName,database,collection);
             mongocollection.Drop();
         }
 
         public static bool Exists(string connectionName, string database, string collection)
         {
-            var mongocollection = CreateInstanceUseConfig(connectionName).GetDatabase(database).GetCollection(collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
             return mongocollection.Exists();
         }
 
