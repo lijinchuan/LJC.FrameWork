@@ -7,7 +7,7 @@ using MongoDB.Bson;
 using MongoDB.Driver.Builders;
 using System.Linq.Expressions;
 
-namespace LJC.FrameWork.Data.MongoDBHelper
+namespace LJC.FrameWork.Data.Mongo
 {
     public class MongoQueryWarpper
     {

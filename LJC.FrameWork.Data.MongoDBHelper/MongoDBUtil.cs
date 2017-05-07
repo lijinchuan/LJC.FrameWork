@@ -2,21 +2,37 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
-namespace LJC.FrameWork.Data.MongoDBHelper
+namespace LJC.FrameWork.Data.Mongo
 {
     public static class MongoDBUtil
     {
         public static string GetMongoElementField(Expression express)
         {
-            var member = ((MemberExpression)((UnaryExpression)express).Operand).Member;
-            var ele = member.GetCustomAttributes(typeof(MongoDB.Bson.Serialization.Attributes.BsonElementAttribute), true).FirstOrDefault();
-            if (ele != null)
+            MemberInfo member = null;
+            if (express is MemberExpression)
             {
-                return ((MongoDB.Bson.Serialization.Attributes.BsonElementAttribute)ele).ElementName;
+                member = ((MemberExpression)express).Member;
             }
-            return member.Name;
+            else if (express is UnaryExpression)
+            {
+                member = ((MemberExpression)((UnaryExpression)express).Operand).Member;
+            }
+
+            if (member != null)
+            {
+                var ele = member.GetCustomAttributes(typeof(MongoDB.Bson.Serialization.Attributes.BsonElementAttribute), true).FirstOrDefault();
+                if (ele != null)
+                {
+                    return ((MongoDB.Bson.Serialization.Attributes.BsonElementAttribute)ele).ElementName;
+                }
+                return member.Name;
+            }
+
+            throw new Exception("GetMongoElementField失败");
+
         }
 
         static string BinarExpressionProvider(Expression left, Expression right, ExpressionType type)

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace LJC.FrameWork.Data.MongoDBHelper
+namespace LJC.FrameWork.Data.Mongo
 {
     public class MongoSortWarpper
     {

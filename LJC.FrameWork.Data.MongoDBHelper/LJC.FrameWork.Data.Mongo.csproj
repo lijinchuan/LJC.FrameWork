@@ -7,8 +7,8 @@
     <ProjectGuid>{56868031-8D7B-4E47-9EDF-05192D3E1C46}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>LJC.FrameWork.Data.MongoDBHelper</RootNamespace>
-    <AssemblyName>LJC.FrameWork.Data.MongoDBHelper</AssemblyName>
+    <RootNamespace>LJC.FrameWork.Data.Mongo</RootNamespace>
+    <AssemblyName>LJC.FrameWork.Data.Mongo</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -60,6 +60,11 @@
     <Compile Include="MongoUpdateWarpper.cs" />
     <Compile Include="MongoUpdateWarpper~T.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

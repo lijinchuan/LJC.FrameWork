@@ -8,7 +8,7 @@ using MB = MongoDB.Bson;
 using MongoDB.Driver.Builders;
 using System.Linq.Expressions;
 
-namespace LJC.FrameWork.Data.MongoDBHelper
+namespace LJC.FrameWork.Data.Mongo
 {
     public static class MongoDBHelper
     {
@@ -170,7 +170,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
 
         public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, int pageindex, int pagesize, MongoSortWarpper<T> sorts, out long total) where T : new()
         {
-            return Find<T>(collection, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, (MongoSortWarpper)sorts, out total);
+            return Find<T>(connectionName, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, (MongoSortWarpper)sorts, out total);
         }
 
         public static T FindOneByIdAs<T>(string connectioName, string database, string collection, string id)
@@ -335,7 +335,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
 
         public static void EnsureIndex<T>(string connectionName, string database, string collection, params Expression<Func<T>>[] keynames) where T : new()
         {
-            EnsureIndex(connectionName, database, collection, keynames.Select(p => MongoDBUtil.GetMongoElementField(p)).ToArray());
+            EnsureIndex(connectionName, database, collection, keynames.Select(p => MongoDBUtil.GetMongoElementField(p.Body)).ToArray());
         }
 
         public static void EnsureIndex(string connectionName, string database, string collection, MongoIndexKeysWarpper indexkeys, bool unique = false)
@@ -366,7 +366,7 @@ namespace LJC.FrameWork.Data.MongoDBHelper
 
         public static void DropIndex<T>(string connectionName, string database, string collection, params Expression<Func<T>>[] keynames) where T:new()
         {
-            DropIndex(connectionName,database,collection,keynames.Select(p => MongoDBUtil.GetMongoElementField(p)).ToArray());
+            DropIndex(connectionName,database,collection,keynames.Select(p => MongoDBUtil.GetMongoElementField(p.Body)).ToArray());
 
         }
 

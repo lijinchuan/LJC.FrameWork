@@ -1,14 +1,13 @@
-﻿using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
+﻿using Ljc.Com.NewsService.Entity;
+using MongoDB.Bson;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace LJC.FrameWork.Data.Mongo
+namespace Test2
 {
-    [BsonIgnoreExtraElements]
-    public class MongoDocumentObject
+    public class NewsEntityEx : NewsEntity
     {
         public ObjectId _id
         {

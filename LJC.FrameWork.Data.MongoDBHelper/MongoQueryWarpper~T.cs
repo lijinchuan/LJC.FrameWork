@@ -4,7 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
-namespace LJC.FrameWork.Data.MongoDBHelper
+namespace LJC.FrameWork.Data.Mongo
 {
     public class MongoQueryWarpper<T>:MongoQueryWarpper where T:new()
     {

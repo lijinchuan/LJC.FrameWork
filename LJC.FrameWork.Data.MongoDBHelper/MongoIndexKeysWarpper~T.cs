@@ -4,67 +4,67 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
-namespace LJC.FrameWork.Data.MongoDBHelper
+namespace LJC.FrameWork.Data.Mongo
 {
     public class MongoIndexKeysWarpper<T>:MongoIndexKeysWarpper
     {
-        public MongoIndexKeysWarpper Ascending(params Expression<Func<T, object>>[] names)
+        public MongoIndexKeysWarpper<T> Ascending(params Expression<Func<T, object>>[] names)
         {
-            base.Ascending(names.Select(p => MongoDBUtil.GetMongoElementField(p)).ToArray());
+            base.Ascending(names.Select(p => MongoDBUtil.GetMongoElementField(p.Body)).ToArray());
 
             return this;
         }
 
-        public MongoIndexKeysWarpper Descending(params Expression<Func<T, object>>[] names)
+        public MongoIndexKeysWarpper<T> Descending(params Expression<Func<T, object>>[] names)
         {
-            base.Descending(names.Select(p => MongoDBUtil.GetMongoElementField(p)).ToArray());
+            base.Descending(names.Select(p => MongoDBUtil.GetMongoElementField(p.Body)).ToArray());
 
             return this;
         }
 
-        public MongoIndexKeysWarpper Hashed(Expression<Func<T, object>> name)
+        public MongoIndexKeysWarpper<T> Hashed(Expression<Func<T, object>> name)
         {
-            var field = MongoDBUtil.GetMongoElementField(name);
+            var field = MongoDBUtil.GetMongoElementField(name.Body);
             base.Hashed(field);
 
             return this;
         }
 
-        public MongoIndexKeysWarpper GeoSpatial(Expression<Func<T, object>> name)
+        public MongoIndexKeysWarpper<T> GeoSpatial(Expression<Func<T, object>> name)
         {
-            var field = MongoDBUtil.GetMongoElementField(name);
+            var field = MongoDBUtil.GetMongoElementField(name.Body);
             base.GeoSpatial(field);
             return this;
         }
 
-        public MongoIndexKeysWarpper GeoSpatialHaystack(Expression<Func<T, object>> name)
+        public MongoIndexKeysWarpper<T> GeoSpatialHaystack(Expression<Func<T, object>> name)
         {
-            var field = MongoDBUtil.GetMongoElementField(name);
+            var field = MongoDBUtil.GetMongoElementField(name.Body);
             base.GeoSpatialHaystack(field);
             return this;
         }
 
-        public MongoIndexKeysWarpper GeoSpatialHaystack(Expression<Func<T, object>> name, string additionalName)
+        public MongoIndexKeysWarpper<T> GeoSpatialHaystack(Expression<Func<T, object>> name, string additionalName)
         {
-            var field = MongoDBUtil.GetMongoElementField(name);
+            var field = MongoDBUtil.GetMongoElementField(name.Body);
             base.GeoSpatialHaystack(field,additionalName);
             return this;
         }
 
-        public MongoIndexKeysWarpper GeoSpatialSpherical(Expression<Func<T, object>> name)
+        public MongoIndexKeysWarpper<T> GeoSpatialSpherical(Expression<Func<T, object>> name)
         {
-            var field = MongoDBUtil.GetMongoElementField(name);
+            var field = MongoDBUtil.GetMongoElementField(name.Body);
             base.GeoSpatialSpherical(field);
             return this;
         }
 
-        public MongoIndexKeysWarpper Text(params Expression<Func<T, object>>[] names)
+        public MongoIndexKeysWarpper<T> Text(params Expression<Func<T, object>>[] names)
         {
-            base.Text(names.Select(p => MongoDBUtil.GetMongoElementField(p)).ToArray());
+            base.Text(names.Select(p => MongoDBUtil.GetMongoElementField(p.Body)).ToArray());
             return this;
         }
 
-        public MongoIndexKeysWarpper TextAll()
+        public MongoIndexKeysWarpper<T> TextAll()
         {
             base.TextAll();
             return this;

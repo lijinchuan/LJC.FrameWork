@@ -38,6 +38,12 @@
     <Reference Include="LJC.Com.StockService.Contract">
       <HintPath>..\DLL\LJC.Com.StockService.Contract.dll</HintPath>
     </Reference>
+    <Reference Include="MongoDB.Bson">
+      <HintPath>..\DLL\MongoDB\1.11.0.92\MongoDB.Bson.dll</HintPath>
+    </Reference>
+    <Reference Include="MongoDB.Driver">
+      <HintPath>..\DLL\MongoDB\1.11.0.92\MongoDB.Driver.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\DLL\Newtonsoft.Json.4.5.1\lib\net40\Newtonsoft.Json.dll</HintPath>
@@ -58,13 +64,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Man.cs" />
+    <Compile Include="NewsEntityEx.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LJC.FrameWork.Data.MongoDBHelper\LJC.FrameWork.Data.MongoDBHelper.csproj">
+    <ProjectReference Include="..\LJC.FrameWork.Data.MongoDBHelper\LJC.FrameWork.Data.Mongo.csproj">
       <Project>{56868031-8d7b-4e47-9edf-05192d3e1c46}</Project>
-      <Name>LJC.FrameWork.Data.MongoDBHelper</Name>
+      <Name>LJC.FrameWork.Data.Mongo</Name>
     </ProjectReference>
     <ProjectReference Include="..\LJC.FrameWork.SOA\LJC.FrameWork.SOA.csproj">
       <Project>{b3d600b2-7e0e-44d6-84dd-1528dcfc7554}</Project>

@@ -2,6 +2,7 @@
 using LJC.Com.StockService.Contract;
 using LJC.FrameWork.Comm;
 using LJC.FrameWork.Comm.TextReaderWriter;
+using LJC.FrameWork.Data.Mongo;
 using LJC.FrameWork.SOA;
 using System;
 using System.Collections.Generic;
@@ -146,7 +147,37 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
-            var query= new LJC.FrameWork.Data.MongoDBHelper.MongoQueryWarpper<NewsEntity>().EQ(p => p.Cdate, 2);
+            string mongoname="Mongo";
+            string dbname="Test";
+            string collname="News";
+            var query= new LJC.FrameWork.Data.Mongo.MongoQueryWarpper<NewsEntity>().EQ(p => p.Cdate, 2);
+            //for (int i = 0; i < 100; i++)
+            //{
+            //    LJC.FrameWork.Data.Mongo.MongoDBHelper.Insert<NewsEntity>("mongo", "Test", "News", new NewsEntity
+            //    {
+            //        Cdate=DateTime.Now,
+            //        Class="cjzf",
+            //        Clicktime=i*100,
+            //        Conkeywords="conkeywords",
+            //        Content="content"+i.ToString(),
+            //        Formurl="http://www.sina.com",
+            //        Id=i+1,
+            //        IsHtmlMaked=true,
+            //        Md5=Guid.NewGuid().ToString(),
+            //        Title="title"+i,
+            //        NewsDate=DateTime.Now.AddMinutes(-i),
+            //        Source="source"+i,
+            //        Isvalid=true,
+            //        NewsWriter="writer"+i,
+            //        Path="path"+i
+            //    });
+            //}
+
+           
+            //var lists=LJC.FrameWork.Data.Mongo.MongoDBHelper.FindAll<NewsEntity>(mongoname, dbname, collname,new LJC.FrameWork.Data.Mongo.MongoSortWarpper<NewsEntity>().Desc(p=>p.Id));
+
+            long total = 0;
+            var lists = LJC.FrameWork.Data.Mongo.MongoDBHelper.Find<NewsEntity>(mongoname, dbname, collname, new MongoQueryWarpper<NewsEntity>().EQ(p => p.Title, "title35"), 1, 100, new MongoSortWarpper<NewsEntity>().Asc(p => p.Clicktime), out total);
 
             return;
             TestLogQueue();

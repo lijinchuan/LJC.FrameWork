@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork", "LJC.FrameWork\LJC.FrameWork.csproj", "{77C9B3F8-7EC5-4AB4-AD65-3B0CC9E1A914}"
 EndProject
@@ -21,7 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.WebApi", "LJC
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.Couchbase", "LJC.FrameWork.Couchbase\LJC.FrameWork.Couchbase.csproj", "{5A3D8DF8-AD9C-43D2-B5F7-D4D457EC4FDE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.Data.MongoDBHelper", "LJC.FrameWork.Data.MongoDBHelper\LJC.FrameWork.Data.MongoDBHelper.csproj", "{56868031-8D7B-4E47-9EDF-05192D3E1C46}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.Data.Mongo", "LJC.FrameWork.Data.MongoDBHelper\LJC.FrameWork.Data.Mongo.csproj", "{56868031-8D7B-4E47-9EDF-05192D3E1C46}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
