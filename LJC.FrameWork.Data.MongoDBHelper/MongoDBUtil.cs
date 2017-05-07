@@ -18,7 +18,11 @@ namespace LJC.FrameWork.Data.Mongo
             }
             else if (express is UnaryExpression)
             {
-                member = ((MemberExpression)((UnaryExpression)express).Operand).Member;
+                var unarexp = ((UnaryExpression)express).Operand;
+                if (unarexp is MemberExpression)
+                {
+                    member = ((MemberExpression)unarexp).Member;
+                }
             }
 
             if (member != null)
