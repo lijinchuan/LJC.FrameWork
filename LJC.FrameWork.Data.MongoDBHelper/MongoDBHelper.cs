@@ -173,9 +173,9 @@ namespace LJC.FrameWork.Data.Mongo
             return Find<T>(connectionName, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, (MongoSortWarpper)sorts, out total);
         }
 
-        public static T FindOneByIdAs<T>(string connectioName, string database, string collection, string id)
+        public static T FindOneByIdAs<T>(string connectionName, string database, string collection, string id)
         {
-            var mongocollection = GetCollecion(connectioName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
             return mongocollection.FindOneByIdAs<T>(id);
         }
 
@@ -318,9 +318,9 @@ namespace LJC.FrameWork.Data.Mongo
             return Remove(connectionName, database, collection, (MongoQueryWarpper)querys);
         }
 
-        public static bool RemoveAll(string connectioName, string database, string collection)
+        public static bool RemoveAll(string connectionName, string database, string collection)
         {
-            var mongocollection = GetCollecion(connectioName, database, collection);
+            var mongocollection = GetCollecion(connectionName, database, collection);
             mongocollection.RemoveAll();
             return true;
         }
