@@ -186,6 +186,11 @@ namespace LJC.FrameWork.MSMQ
             }
         }
 
+        public void SendQueue(string content, bool recoverable = true)
+        {
+            SendQueue(content, string.Empty, recoverable);
+        }
+
         public void SendQueue(string content, string labeltext = "", bool recoverable = true)
         {
 
@@ -221,7 +226,7 @@ namespace LJC.FrameWork.MSMQ
         private static bool MergeMsg(Message msg, ref Message newmsg)
         {
             MsmqLable label = null;
-            if (string.IsNullOrWhiteSpace(msg.Label) || (label = msg.Body.ToString().JsonToEntity<MsmqLable>()).Split <= 1)
+            if (string.IsNullOrWhiteSpace(msg.Label) || (label = msg.Label.JsonToEntity<MsmqLable>()).Split <= 1)
             {
                 newmsg = msg;
                 return true;
@@ -233,7 +238,12 @@ namespace LJC.FrameWork.MSMQ
                 dic.Add(label.SplitNo, msg);
                 if (dic.Count == label.Split)
                 {
-                    newmsg = new Message(string.Join(string.Empty, dic.Select(p => p.Value.ToString())));
+
+                    var msgbody=string.Join(string.Empty,dic.Select(p=>p.Value.Body.ToString()));
+                    //LogManager.LogHelper.Instance.Debug(msgbody);
+
+                    newmsg = new Message(msgbody);
+
                     TempMergeMsgDic.TryRemove(label.MergeId, out dic);
                     return true;
                 }
