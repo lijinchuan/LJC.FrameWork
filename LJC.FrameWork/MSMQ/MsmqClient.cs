@@ -1,4 +1,6 @@
-﻿using System;
+﻿using LJC.FrameWork.Comm;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Messaging;
@@ -39,6 +41,10 @@ namespace LJC.FrameWork.MSMQ
         private int _lastActivityMills = 0;
 
         private Lazy<MessageQueue> _mq = null;
+
+        private const int MaxMsgSize = 2048 * 1000;
+        private static ConcurrentDictionary<string, SortedDictionary<int, Message>> TempMergeMsgDic = new ConcurrentDictionary<string, SortedDictionary<int, Message>>();
+
 
         private MessageQueue GetMessageQueue()
         {
@@ -133,23 +139,72 @@ namespace LJC.FrameWork.MSMQ
             }
         }
 
-        public void SendQueue(string content, bool recoverable = true)
+        public static IEnumerable<Message> SplitMessage(string content, string labletxt = "")
         {
-            Message msg = new Message(content);
-            msg.Recoverable = recoverable;
-
-            try
+            if (content == null || content.Length <= MaxMsgSize)
             {
-                _mq.Value.Send(msg);
+                if (string.IsNullOrWhiteSpace(labletxt))
+                {
+                    yield return new Message(content);
+                }
+                else
+                {
+                    var msg = new Message(content);
+                    msg.Label = new MsmqLable { Lable = labletxt }.ToJson();
+                    yield return msg;
+                }
             }
-            catch (MessageQueueException)
+
+            MsmqLable lable = new MsmqLable();
+            lable.MergeId = Guid.NewGuid().ToString();
+            lable.MsgSize = content.Length;
+            lable.Split = (int)Math.Ceiling(content.Length * 1.0 / MaxMsgSize);
+            int startindex = 0;
+            while (lable.SplitNo <= lable.Split)
             {
-                _mq.Value.Dispose();
-                _mq = new Lazy<MessageQueue>(() => GetMessageQueue());
+                var len = Math.Min(content.Length - startindex, MaxMsgSize);
+                if (len == 0)
+                {
+                    break;
+                }
+                
+                var substring = content.Substring(startindex,len);
+                lable.SplitNo++;
 
-                _mq.Value.Send(msg);
+                yield return new Message
+                {
+                    Body = substring,
+                    Label = lable.ToJson()
+                };
+
+                if (len < MaxMsgSize)
+                {
+                    break;
+                }
+
+                startindex += len;
             }
+        }
 
+        public void SendQueue(string content, string labeltext = "", bool recoverable = true)
+        {
+
+            foreach (var submsg in SplitMessage(content, labeltext))
+            {
+                submsg.Recoverable = recoverable;
+
+                try
+                {
+                    _mq.Value.Send(submsg);
+                }
+                catch (MessageQueueException)
+                {
+                    _mq.Value.Dispose();
+                    _mq = new Lazy<MessageQueue>(() => GetMessageQueue());
+
+                    _mq.Value.Send(submsg);
+                }
+            }
             _lastActivityMills = Environment.TickCount;
         }
 
@@ -158,6 +213,36 @@ namespace LJC.FrameWork.MSMQ
             if (ex.Message.IndexOf("timeout", StringComparison.OrdinalIgnoreCase) != -1 || ex.Message.IndexOf("超时") != -1)
             {
                 return true;
+            }
+
+            return false;
+        }
+
+        private static bool MergeMsg(Message msg, ref Message newmsg)
+        {
+            MsmqLable label = null;
+            if (string.IsNullOrWhiteSpace(msg.Label) || (label = msg.Body.ToString().JsonToEntity<MsmqLable>()).Split <= 1)
+            {
+                newmsg = msg;
+                return true;
+            }
+
+            SortedDictionary<int, Message> dic = null;
+            if (TempMergeMsgDic.TryGetValue(label.MergeId, out dic))
+            {
+                dic.Add(label.SplitNo, msg);
+                if (dic.Count == label.Split)
+                {
+                    newmsg = new Message(string.Join(string.Empty, dic.Select(p => p.Value.ToString())));
+                    TempMergeMsgDic.TryRemove(label.MergeId, out dic);
+                    return true;
+                }
+            }
+            else
+            {
+                dic = new SortedDictionary<int, Message>();
+                dic.Add(label.SplitNo, msg);
+                TempMergeMsgDic.TryAdd(label.MergeId, dic);
             }
 
             return false;
@@ -204,7 +289,11 @@ namespace LJC.FrameWork.MSMQ
                     }
                 }
 
-                yield return msg;
+                Message newmsg = null;
+                if (MergeMsg(msg, ref newmsg))
+                {
+                    yield return newmsg;
+                }
             }
 
             _lastActivityMills = Environment.TickCount;

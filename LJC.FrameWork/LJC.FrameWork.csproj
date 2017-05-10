@@ -270,6 +270,7 @@
     <Compile Include="LogManager\TextLog.cs" />
     <Compile Include="LogManager\UrgentLogwriter.cs" />
     <Compile Include="MSMQ\MsmqClient.cs" />
+    <Compile Include="MSMQ\MsmqLable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SocketApplication\AutoReSetEventResult.cs" />
     <Compile Include="SocketApplication\FieldEnum.cs" />
