@@ -175,6 +175,11 @@ namespace LJC.FrameWork.SocketEasy.Sever
             }
             else
             {
+                if (e.BufferIndex > 0)
+                {
+                    _bufferpoll.RealseBuffer(e.BufferIndex);
+                    e.BufferIndex = -1;
+                }
                 buf = new byte[len];
             }
 
@@ -359,8 +364,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     else
                     {
                         //???
-                        var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
-                        e.SetBuffer(offset + args.BufferRev, args.BufferLen - args.BufferRev);
+                        //var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
+                        e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
                         //SetBuffer(args,args.BufferRev, args.BufferLen - args.BufferRev);
                     }
                 }
