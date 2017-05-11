@@ -318,24 +318,24 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 }
                 else
                 {
-                    var offset1 = (args.BufferLen == args.Buffer.Length) ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
-                    var bytes = args.Buffer.Skip(offset1 + args.BufferRev).Take(args.BytesTransferred).ToArray();
-                    args.BufferRev += args.BytesTransferred;
-
                     if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
                     {
+                        var offset1 = (args.BufferLen == args.Buffer.Length) ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
+                        var bytes = args.Buffer.Skip(offset1 + args.BufferRev).Take(args.BytesTransferred).ToArray();
                         LogManager.LogHelper.Instance.Debug(string.Format(e.AcceptSocket.Handle + "接收数据{0}/{1},{2}", args.BufferLen, args.BufferRev, Convert.ToBase64String(bytes)), null);
                     }
 
+                    args.BufferRev += args.BytesTransferred;
+
                     if (args.BufferRev == args.BufferLen)
                     {
-                        byte[] bt =new byte[args.BufferLen];
-                        var offset = args.BufferIndex==-1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
+                        byte[] bt = new byte[args.BufferLen];
+                        var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
                         for (int i = 0; i < args.BufferLen; i++)
                         {
                             bt[i] = args.Buffer[offset + i];
                         }
-                        
+
                         ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                         {
                             Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
@@ -354,11 +354,13 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                         args.IsReadPackLen = false;
                         //args.SetBuffer(_bufferpoll.Buffer, _bufferpoll.GetOffset(args.BufferIndex), 4);
-                        SetBuffer(args,0, 4);
+                        SetBuffer(args, 0, 4);
                     }
                     else
                     {
-                        e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
+                        //???
+                        var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
+                        e.SetBuffer(offset + args.BufferRev, args.BufferLen - args.BufferRev);
                         //SetBuffer(args,args.BufferRev, args.BufferLen - args.BufferRev);
                     }
                 }

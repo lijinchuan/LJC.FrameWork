@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LJC.FrameWork.SOA
 {
-    internal class SOATransferResponse
+    public class SOATransferResponse
     {
         public string ClientId
         {

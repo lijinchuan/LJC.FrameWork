@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LJC.FrameWork.SOA
 {
-    internal class SOAResponse
+    public class SOAResponse
     {
         private bool _isSuccess = false;
         public bool IsSuccess
