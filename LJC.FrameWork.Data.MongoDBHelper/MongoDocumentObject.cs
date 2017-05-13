@@ -8,8 +8,9 @@ using System.Text;
 namespace LJC.FrameWork.Data.Mongo
 {
     [BsonIgnoreExtraElements]
-    public class MongoDocumentObject
+    public class IMongoDocumentObject
     {
+        [Newtonsoft.Json.JsonConverter(typeof(ObjectIdConverter))]
         public ObjectId _id
         {
             get;
