@@ -88,7 +88,7 @@ namespace LJC.FrameWork.SocketApplication
                     }
                     catch (Exception ex)
                     {
-                        Exception e = new Exception("解析消息体失败", ex);
+                        Exception e = new Exception("解析消息体失败：" + reqID, ex);
                         e.Data.Add("messageid", reqID);
                         throw e;
                     }
