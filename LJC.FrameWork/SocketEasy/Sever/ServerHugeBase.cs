@@ -329,28 +329,48 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                     if (args.BufferRev == args.BufferLen)
                     {
-                        byte[] bt = new byte[args.BufferLen];
+                        byte[] bt = null;
                         var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
-                        for (int i = 0; i < args.BufferLen; i++)
+
+                        //校验
+                        var crc32 = BitConverter.ToInt32(args.Buffer, offset);
+
+                        var calcrc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(args.Buffer, offset + 4, args.BufferLen - 4);
+                        if (calcrc32 == crc32)
                         {
-                            bt[i] = args.Buffer[offset + i];
-                        }
-
-                        ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
-                        {
-                            Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
-
-                            //if (!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
-                            //{
-                            //    Console.WriteLine(message.MessageHeader.TransactionID);
-                            //}
-
-                            Session connSession;
-                            if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
+                            bt = new byte[args.BufferLen - 4];
+                            for (int i = 4; i < args.BufferLen; i++)
                             {
-                                FormApp(message, connSession);
+                                bt[i - 4] = args.Buffer[offset + i];
                             }
-                        }), bt);
+
+                            ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
+                            {
+                                Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
+
+                                //if (!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
+                                //{
+                                //    Console.WriteLine(message.MessageHeader.TransactionID);
+                                //}
+
+                                Session connSession;
+                                if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
+                                {
+                                    FormApp(message, connSession);
+                                }
+                            }), bt);
+                        }
+                        else
+                        {
+                            Exception ex=new Exception("检查校验码出错");
+                            ex.Data.Add("crc32",crc32);
+                            ex.Data.Add("calcrc32",calcrc32);
+                            ex.Data.Add("data", bt == null ? "" : Convert.ToBase64String(bt));
+
+                            LogManager.LogHelper.Instance.Error("接收数据出错", ex);
+
+                            throw ex;
+                        }
 
                         args.IsReadPackLen = false;
                         //args.SetBuffer(_bufferpoll.Buffer, _bufferpoll.GetOffset(args.BufferIndex), 4);

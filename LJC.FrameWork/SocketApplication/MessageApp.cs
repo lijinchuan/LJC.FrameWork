@@ -316,28 +316,18 @@ namespace LJC.FrameWork.SocketApplication
         {
             int readLen = 0, timeout = 0, count = 0;
             byte[] buff4 = new byte[4];
-            while (readLen < 4)
-            {
-                count = s.Receive(buff4, readLen, 4 - readLen, SocketFlags.None);
-
-                if (count == 0)
-                {
-                    Thread.Sleep(1);
-                    timeout += 1;
-                    if (timeout > 10000)
-                        break;
-                    continue;
-                }
-                readLen += count;
-                //ms.Write(buffer, 0, count);
-            }
+            s.Receive(buff4, 0, 4, SocketFlags.None);
 
             int dataLen = BitConverter.ToInt32(buff4, 0);
+            s.Receive(buff4, 0, 4, SocketFlags.None);
+            var crc32 = BitConverter.ToInt32(buff4, 0);
+
 
             //MemoryStream ms = new MemoryStream();
             readLen = 0;
             timeout = 0;
 
+            dataLen -= 4;
             byte[] buffer = new byte[dataLen];
 
             if (SocketApplicationEnvironment.TraceSocketDataBag)
@@ -358,10 +348,17 @@ namespace LJC.FrameWork.SocketApplication
                     continue;
                 }
                 readLen += count;
-                //ms.Write(buffer, 0, count);
             }
-            //buffer = ms.ToArray();
-            //ms.Close();
+
+            var calcrc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(buffer, 0);
+            if (calcrc32 != crc32)
+            {
+                  Exception ex=new Exception("检查校验码出错");
+                  ex.Data.Add("crc32", crc32);
+                  ex.Data.Add("calcrc32", calcrc32);
+                  ex.Data.Add("data", Convert.ToBase64String(buffer));
+                  LogManager.LogHelper.Instance.Error("接收数据错误", ex);
+            }
 
             if (SocketApplicationEnvironment.TraceSocketDataBag)
             {

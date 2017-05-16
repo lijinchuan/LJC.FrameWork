@@ -90,6 +90,14 @@ namespace LJC.FrameWork.SocketApplication
                         data[i] = dataLen[i];
                     }
 
+                    var crc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(data, 8);
+                    LogManager.LogHelper.Instance.Debug("校验值:" + crc32);
+                    var crc32bytes = BitConverter.GetBytes(crc32);
+                    for (int i = 4; i < 8; i++)
+                    {
+                        data[i] = crc32bytes[i - 4];
+                    }
+
                     lock (s)
                     {
                         var sendcount = s.Send(data, SocketFlags.None);
@@ -110,9 +118,17 @@ namespace LJC.FrameWork.SocketApplication
 
                         byte[] dataLen = BitConverter.GetBytes((int)size - 4);
                         int offset=_sendBufferManger.GetOffset(bufferindex);
-                        for (int i = 0;i<4;i++)
+                        for (int i = 0; i < 4; i++)
                         {
                             _sendBufferManger.Buffer[i + offset] = dataLen[i];
+                        }
+
+                        var crc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(_sendBufferManger.Buffer, offset + 8, (int)size - 8);
+                        LogManager.LogHelper.Instance.Debug("校验值:" + crc32);
+                        var crc32bytes = BitConverter.GetBytes(crc32);
+                        for (int i = 4; i < 8; i++)
+                        {
+                            _sendBufferManger.Buffer[i + offset] = crc32bytes[i - 4];
                         }
 
                         int sendcount = 0;

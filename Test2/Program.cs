@@ -148,6 +148,18 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            var buffer0 = Convert.FromBase64String("AAAAAgUBAAAAAAAAAAACAwABAQ==");
+            var crc320 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(buffer0, 0);
+
+            var bytesnum = new byte[6];
+            var numb = BitConverter.GetBytes(123);
+            for (int i = 0; i < 4; i++)
+            {
+                bytesnum[i + 1] = numb[i];
+            }
+            int crc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(bytesnum, 0);
+            var num = BitConverter.ToInt32(bytesnum, 1);
+
             string newsID = "100";
             string encryNewsId = Convert.ToBase64String(Encoding.ASCII.GetBytes(new LJC.FrameWork.Comm.EncryHelper().Encrypto(newsID)));
             string realnewsid = new LJC.FrameWork.Comm.EncryHelper().Decrypto(Encoding.ASCII.GetString(Convert.FromBase64String(encryNewsId)));

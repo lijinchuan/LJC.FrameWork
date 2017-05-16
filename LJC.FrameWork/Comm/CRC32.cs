@@ -47,14 +47,35 @@ namespace LJC.FrameWork.Comm
         public static int GetCRC32(string msg, Encoding encode)
         {
             byte[] bytes = encode.GetBytes(msg);//解决中文的问题
-            return GetCRC32(bytes);
+            return GetCRC32(bytes, 0);
         }
 
-        public static int GetCRC32(byte[] bytes)
+        public static int GetCRC32(byte[] bytes,int offset)
         {
             int iCount = bytes.Length;
+            if (offset >= iCount)
+            {
+                throw new IndexOutOfRangeException("offset");
+            }
             UInt32 crc = 0xFFFFFFFF;
-            for (int i = 0; i < iCount; i++)
+            for (int i = offset; i < iCount; i++)
+            {
+                crc = ((crc >> 8) & 0x00FFFFFF) ^ crcTable[(crc ^ bytes[i]) & 0xFF];
+            }
+            UInt32 temp = crc ^ 0xFFFFFFFF;
+            int t = (int)temp;
+            return (t);
+        }
+
+        public static int GetCRC32(byte[] bytes, int offset,int len)
+        {
+            int iCount = offset+len;
+            if (offset >= iCount)
+            {
+                throw new IndexOutOfRangeException("offset");
+            }
+            UInt32 crc = 0xFFFFFFFF;
+            for (int i = offset; i < iCount; i++)
             {
                 crc = ((crc >> 8) & 0x00FFFFFF) ^ crcTable[(crc ^ bytes[i]) & 0xFF];
             }
