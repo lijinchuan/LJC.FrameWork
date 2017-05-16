@@ -130,6 +130,7 @@
     <Compile Include="Comm\CookieHelper.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Comm\CRC32.cs" />
     <Compile Include="Comm\DataHelper.cs">
       <SubType>Code</SubType>
     </Compile>

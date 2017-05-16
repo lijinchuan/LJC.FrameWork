@@ -10,9 +10,9 @@ namespace LJC.FrameWork.Comm
     /// <summary>
     /// 提供MD5,SHA1,SHA256,SHA512加密方法
     /// </summary>
-    public class HashEncrypt
+    public partial class HashEncrypt
     {
-                //private string strIN;
+        //private string strIN;
         private bool isReturnNum;
         private bool isCaseSensitive;
 

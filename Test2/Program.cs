@@ -148,6 +148,10 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            string newsID = "100";
+            string encryNewsId = Convert.ToBase64String(Encoding.ASCII.GetBytes(new LJC.FrameWork.Comm.EncryHelper().Encrypto(newsID)));
+            string realnewsid = new LJC.FrameWork.Comm.EncryHelper().Decrypto(Encoding.ASCII.GetString(Convert.FromBase64String(encryNewsId)));
+
             var ids = "601901.SH,600543.SH,300596.SZ,600730.SH,002508.SZ,601318.SH,000333.SZ,000820.SZ,000858.SZ,603833.SH,600421.SH,603883.SH,600507.SH,002202.SZ,002450.SZ,002509.SZ,600518.SH,600601.SH,600031.SH,600109.SH,000876.SZ,002405.SZ,600015.SH,000528.SZ,000651.SZ,300628.SZ,000937.SZ,000818.SZ,600197.SH,601229.SH,300070.SZ,000826.SZ,002594.SZ,601336.SH,600663.SH,600004.SH,002555.SZ,000046.SZ,002780.SZ,000788.SZ,300348.SZ,002701.SZ,300338.SZ,002573.SZ,000061.SZ,600612.SH,000856.SZ,002736.SZ,000663.SZ,300282.SZ".Split(',');
             var result = LJC.FrameWork.SOA.ESBClient.DoSOARequest<List<LJC.Com.StockService.Contract.StockSimpleInfo>>(1, 10021, ids);
             var rightbuffer = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(result);
