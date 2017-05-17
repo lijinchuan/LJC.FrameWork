@@ -182,21 +182,17 @@ namespace LJC.FrameWork.SocketEasy.Sever
                                     byte[] buff4 = new byte[4];
                                     int count = item.Receive(buff4);
 
-                                    if (count != 4)
-                                    {
-                                        throw new SessionAbortException("接收数据出错。");
-                                    }
-
                                     int dataLen = BitConverter.ToInt32(buff4, 0);
-
-
-
                                     if (dataLen > MaxPackageLength)
                                     {
                                         throw new Exception("超过了最大字节数：" + MaxPackageLength);
                                     }
 
+                                    count = item.Receive(buff4);
+                                    var crc32 = BitConverter.ToInt32(buff4, 0);
+
                                     MemoryStream ms = new MemoryStream();
+                                    dataLen -= 4;
                                     int readLen = 0;
                                     byte[] reciveBuffer = new byte[1024];
 
@@ -208,6 +204,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
                                     }
                                     var buffer = ms.ToArray();
                                     ms.Close();
+
+                                    var calcrc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(buffer, 0);
+                                    if (crc32 != calcrc32)
+                                    {
+                                        throw new Exception("数据校验错误");
+                                    }
 
                                     ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                                     {

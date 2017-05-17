@@ -265,6 +265,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
         void SocketAsyncEventArgs_Completed(object sender, SocketAsyncEventArgs e)
         {
             e.Completed -= SocketAsyncEventArgs_Completed;
+
             var args = e as IOCPSocketAsyncEventArgs;
 
             if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
@@ -284,127 +285,150 @@ namespace LJC.FrameWork.SocketEasy.Sever
             }
             else
             {
-                if (!args.IsReadPackLen)
+                try
                 {
-                    var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
-
-                    var dataLen = BitConverter.ToInt32(new byte[] { e.Buffer[offset], e.Buffer[offset + 1], e.Buffer[offset + 2], e.Buffer[offset + 3] }, 0);
-
-                    if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                    #region 数据逻辑
+                    if (!args.IsReadPackLen)
                     {
-                        LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "准备接收数据:长度" + dataLen, null);
-                    }
+                        var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
 
-                    if (dataLen > MaxPackageLength)
-                    {
+                        var dataLen = BitConverter.ToInt32(new byte[] { e.Buffer[offset], e.Buffer[offset + 1], e.Buffer[offset + 2], e.Buffer[offset + 3] }, 0);
+
                         if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
                         {
-                            LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开,长度太长");
+                            LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "准备接收数据:长度" + dataLen, null);
                         }
 
-                        Session removesession;
-                        if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
+                        if (dataLen > MaxPackageLength)
                         {
-                            RealseSocketAsyncEventArgs(args);
-                        }
-                        return;
+                            if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                            {
+                                LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开,长度太长");
+                            }
 
+                            Session removesession;
+                            if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
+                            {
+                                RealseSocketAsyncEventArgs(args);
+                            }
+                            return;
+
+                        }
+                        else
+                        {
+                            args.IsReadPackLen = true;
+                            //byte[] readbuffer = new byte[dataLen];
+                            args.BufferLen = dataLen;
+                            args.BufferRev = 0;
+                            //args.SetBuffer(readbuffer, 0, dataLen);
+
+                            SetBuffer(args, 0, dataLen);
+                        }
                     }
                     else
                     {
-                        args.IsReadPackLen = true;
-                        //byte[] readbuffer = new byte[dataLen];
-                        args.BufferLen = dataLen;
-                        args.BufferRev = 0;
-                        //args.SetBuffer(readbuffer, 0, dataLen);
-
-                        SetBuffer(args,0, dataLen);
-                    }
-                }
-                else
-                {
-                    if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
-                    {
-                        var offset1 = (args.BufferLen == args.Buffer.Length) ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
-                        var bytes = args.Buffer.Skip(offset1 + args.BufferRev).Take(args.BytesTransferred).ToArray();
-                        //if (args.BytesTransferred < args.BufferLen)
+                        if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
                         {
-                            LogManager.LogHelper.Instance.Debug(string.Format(e.AcceptSocket.Handle + "接收数据{0}/{1}/{2},{3}", args.BufferLen, args.BufferRev, args.BytesTransferred, Convert.ToBase64String(bytes)), null);
-                        }
-                    }
-
-                    args.BufferRev += args.BytesTransferred;
-
-                    if (args.BufferRev == args.BufferLen)
-                    {
-                        byte[] bt = null;
-                        var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
-
-                        //校验
-                        var crc32 = BitConverter.ToInt32(args.Buffer, offset);
-
-                        var calcrc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(args.Buffer, offset + 4, args.BufferLen - 4);
-                        if (calcrc32 == crc32)
-                        {
-                            bt = new byte[args.BufferLen - 4];
-                            for (int i = 4; i < args.BufferLen; i++)
+                            var offset1 = (args.BufferLen == args.Buffer.Length) ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
+                            var bytes = args.Buffer.Skip(offset1 + args.BufferRev).Take(args.BytesTransferred).ToArray();
+                            //if (args.BytesTransferred < args.BufferLen)
                             {
-                                bt[i - 4] = args.Buffer[offset + i];
+                                LogManager.LogHelper.Instance.Debug(string.Format(e.AcceptSocket.Handle + "接收数据{0}/{1}/{2},{3}", args.BufferLen, args.BufferRev, args.BytesTransferred, Convert.ToBase64String(bytes)), null);
                             }
+                        }
 
-                            ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
+                        args.BufferRev += args.BytesTransferred;
+
+                        Exception messageError = null;
+                        if (args.BufferRev == args.BufferLen)
+                        {
+                            byte[] bt = null;
+                            var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
+
+                            //校验
+                            var crc32 = BitConverter.ToInt32(args.Buffer, offset);
+
+                            var calcrc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(args.Buffer, offset + 4, args.BufferLen - 4);
+                            if (calcrc32 == crc32)
                             {
-                                Message message = EntityBufCore.DeSerialize<Message>((byte[])buf);
+                                bt = new byte[args.BufferLen - 4];
+                                for (int i = 4; i < args.BufferLen; i++)
+                                {
+                                    bt[i - 4] = args.Buffer[offset + i];
+                                }
 
-                                //if (!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
-                                //{
-                                //    Console.WriteLine(message.MessageHeader.TransactionID);
-                                //}
+                                ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
+                                {
+                                    Message message = null;
+                                    try
+                                    {
+                                        message = EntityBufCore.DeSerialize<Message>((byte[])buf);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        messageError = ex;
+                                    }
+
+                                    Session connSession;
+                                    if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
+                                    {
+                                        if (messageError == null)
+                                        {
+                                            FormApp(message, connSession);
+                                        }
+                                        else
+                                        {
+                                            OnError(messageError);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        OnError(new Exception("取会话失败,args.UserToken=" + args.UserToken));
+                                    }
+                                }), bt);
+                            }
+                            else
+                            {
+                                messageError = new Exception("检查校验码出错");
+                                messageError.Data.Add("crc32", crc32);
+                                messageError.Data.Add("calcrc32", calcrc32);
+                                messageError.Data.Add("data", bt == null ? "" : Convert.ToBase64String(bt));
+
+                                //LogManager.LogHelper.Instance.Error("接收数据出错", messageError);
 
                                 Session connSession;
                                 if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
                                 {
-                                    FormApp(message, connSession);
+                                    OnError(messageError);
                                 }
-                            }), bt);
+                                else
+                                {
+                                    OnError(new Exception("取会话失败,args.UserToken=" + args.UserToken));
+                                }
+                            }
+
+                            args.IsReadPackLen = false;
+                            //args.SetBuffer(_bufferpoll.Buffer, _bufferpoll.GetOffset(args.BufferIndex), 4);
+                            SetBuffer(args, 0, 4);
                         }
                         else
                         {
-                            Exception ex=new Exception("检查校验码出错");
-                            ex.Data.Add("crc32",crc32);
-                            ex.Data.Add("calcrc32",calcrc32);
-                            ex.Data.Add("data", bt == null ? "" : Convert.ToBase64String(bt));
-
-                            LogManager.LogHelper.Instance.Error("接收数据出错", ex);
-
-                            throw ex;
+                            //???
+                            //var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
+                            e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
+                            //SetBuffer(args,args.BufferRev, args.BufferLen - args.BufferRev);
                         }
-
-                        args.IsReadPackLen = false;
-                        //args.SetBuffer(_bufferpoll.Buffer, _bufferpoll.GetOffset(args.BufferIndex), 4);
-                        SetBuffer(args, 0, 4);
                     }
-                    else
-                    {
-                        //???
-                        //var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
-                        e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
-                        //SetBuffer(args,args.BufferRev, args.BufferLen - args.BufferRev);
-                    }
+                    #endregion
                 }
-
-                e.Completed += SocketAsyncEventArgs_Completed;
-                if (!e.AcceptSocket.ReceiveAsync(e))
+                finally
                 {
-                    LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "同步完成，手动处理", null);
-                    SocketAsyncEventArgs_Completed(null, e);
-                    //if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
-                    //{
-                    //    LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开:!e.AcceptSocket.ReceiveAsync");
-                    //}
-                    //Session old;
-                    //_connectSocketDic.TryRemove(e.UserToken.ToString(), out old);
-                    //RealseSocketAsyncEventArgs(args);
+                    e.Completed += SocketAsyncEventArgs_Completed;
+                    if (!e.AcceptSocket.ReceiveAsync(e))
+                    {
+                        LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "同步完成，手动处理", null);
+                        SocketAsyncEventArgs_Completed(null, e);
+                    }
                 }
             }
         }

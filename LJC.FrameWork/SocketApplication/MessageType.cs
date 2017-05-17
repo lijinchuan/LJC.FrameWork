@@ -26,6 +26,10 @@ namespace LJC.FrameWork.SocketApplication
         /// <summary>
         /// 重登陆
         /// </summary>
-        RELOGIN
+        RELOGIN,
+        /// <summary>
+        /// 致命错误
+        /// </summary>
+        FATAL,
     }
 }
