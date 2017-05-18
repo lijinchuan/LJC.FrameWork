@@ -276,7 +276,7 @@ namespace LJC.FrameWork.Data.Mongo
 
         public static bool Update<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates)
         {
-            if (updates == null)
+            if (updates == null || updates.IsEmpty)
             {
                 return false;
             }
