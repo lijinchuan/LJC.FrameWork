@@ -134,7 +134,7 @@ namespace LJC.FrameWork.Data.Mongo
                         bool unique = false, background = false;
                         var indexkeys = instance.CreateIndex(ref unique, ref background);
 
-                        if (indexkeys != null)
+                        if (indexkeys != null && indexkeys.Length > 0 && !collectionWarpper.MongoDBCollection.IndexExists(indexkeys))
                         {
                             if (unique)
                             {
