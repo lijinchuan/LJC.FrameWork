@@ -7,6 +7,7 @@ using MD = MongoDB.Driver;
 using MB = MongoDB.Bson;
 using MongoDB.Driver.Builders;
 using System.Linq.Expressions;
+using MongoDB.Driver.GridFS;
 
 namespace LJC.FrameWork.Data.Mongo
 {
@@ -371,6 +372,21 @@ namespace LJC.FrameWork.Data.Mongo
             var mongocollection = GetCollecion(connectionName, database, collection);
             mongocollection.RemoveAll();
             return true;
+        }
+
+        public static bool GFSUpload(string connectionName, string database, string filename, byte[] buffer)
+        {
+            var gfs = new MongoGridFS(CreateInstanceUseConfig(connectionName).GetDatabase(database));
+            new MongoGridFSWarpper(gfs).Upload(filename, buffer);
+
+            return true;
+        }
+
+        public static byte[] GFSGet(string connectionName, string database, string filename)
+        {
+            var gfs = new MongoGridFS(CreateInstanceUseConfig(connectionName).GetDatabase(database));
+
+            return new MongoGridFSWarpper(gfs).GetGFS(filename);
         }
         #endregion
 
