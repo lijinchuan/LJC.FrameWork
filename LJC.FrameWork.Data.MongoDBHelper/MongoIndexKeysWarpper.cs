@@ -15,6 +15,12 @@ namespace LJC.FrameWork.Data.Mongo
 
         }
 
+        public MongoIndexKeysWarpper(string[] keys)
+        {
+            MongoIndexKeys = new IndexKeysBuilder();
+            MongoIndexKeys.Ascending(keys);
+        }
+
         public MongoIndexKeysWarpper Ascending(params string[] names)
         {
             if (MongoIndexKeys == null)

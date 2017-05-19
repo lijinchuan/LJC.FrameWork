@@ -52,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MongoCollectionWarpper.cs" />
     <Compile Include="MongoDBHelper.cs" />
     <Compile Include="MongoDBUtil.cs" />
     <Compile Include="MongoDocumentObject.cs" />
