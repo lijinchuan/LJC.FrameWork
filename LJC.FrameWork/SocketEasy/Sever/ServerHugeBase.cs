@@ -151,7 +151,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         private void SetBuffer(IOCPSocketAsyncEventArgs e,int offset,int len)
         {
-            if(offset>0)
+            if (offset > 0)
             {
                 e.SetBuffer(offset, len);
                 return;
@@ -169,7 +169,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     }
                     else
                     {
-                        e.BufferIndex=newindex;
+                        e.BufferIndex = newindex;
                     }
                 }
             }
@@ -183,7 +183,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 buf = new byte[len];
             }
 
-            if(buf!=null)
+            if (buf != null)
             {
                 e.SetBuffer(buf, offset, len);
             }
@@ -290,13 +290,34 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     #region 数据逻辑
                     if (!args.IsReadPackLen)
                     {
+                        if (args.BytesTransferred != 4)
+                        {
+                            throw new Exception("读取长度失败");
+                        }
                         var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
 
-                        var dataLen = BitConverter.ToInt32(new byte[] { e.Buffer[offset], e.Buffer[offset + 1], e.Buffer[offset + 2], e.Buffer[offset + 3] }, 0);
+                        var dataLen = BitConverter.ToInt32(e.Buffer, offset);
 
                         if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
                         {
                             LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "准备接收数据:长度" + dataLen, null);
+                        }
+
+                        try
+                        {
+                            if (dataLen < 0)
+                            {
+                                throw new Exception("数据长度小于0");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            ex.Data.Add("dataLen", dataLen);
+                            ex.Data.Add("args.Buffer.Length", args.Buffer.Length);
+                            ex.Data.Add("args.BytesTransferred", args.BytesTransferred);
+                            ex.Data.Add("args.BytesTransferred", args.SocketError);
+                            LogManager.LogHelper.Instance.Error("setbuffer出错", ex);
+                            throw ex;
                         }
 
                         if (dataLen > MaxPackageLength)
@@ -321,6 +342,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                             args.BufferLen = dataLen;
                             args.BufferRev = 0;
                             //args.SetBuffer(readbuffer, 0, dataLen);
+                            
 
                             SetBuffer(args, 0, dataLen);
                         }

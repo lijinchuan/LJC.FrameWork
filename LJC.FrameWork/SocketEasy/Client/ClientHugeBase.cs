@@ -246,14 +246,28 @@ namespace LJC.FrameWork.SocketEasy.Client
                         args.BufferRev += args.BytesTransferred;
                         if (args.BufferRev == args.BufferLen)
                         {
-                            byte[] bt = new byte[args.BufferLen];
-                            for (int i = 0; i < bt.Length;i++ )
+                            //检验
+                            byte[] bt4 = e.Buffer.Take(4).ToArray();
+                            var crc32 = BitConverter.ToInt32(bt4, 0);
+
+                            byte[] bt = new byte[args.BufferLen-4];
+                            for (int i = 0; i < bt.Length; i++)
                             {
-                                bt[i] = e.Buffer[i];
+                                bt[i] = e.Buffer[i + 4];
                             }
-
-                            ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), bt);
-
+                            var calcrc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(bt, 0);
+                            if (calcrc32 != crc32)
+                            {
+                                var ex = new Exception("数据校验错误");
+                                ex.Data.Add("calcrc32", calcrc32);
+                                ex.Data.Add("crc32", crc32);
+                                ex.Data.Add("data", Convert.ToBase64String(bt));
+                                OnError(ex);
+                            }
+                            else
+                            {
+                                ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), bt);
+                            }
                             args.IsReadPackLen = false;
                             //args.SetBuffer(_lenbyte, 0, 4);
                             SetBuffer(args, 0, 4);
