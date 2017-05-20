@@ -262,6 +262,23 @@ namespace LJC.FrameWork.SocketEasy.Sever
             socketServer.AcceptAsync(GetSocketAsyncEventArgs());
         }
 
+        void RemoveSession(IOCPSocketAsyncEventArgs args)
+        {
+            if (args.UserToken != null)
+            {
+                Session removesession;
+                //用户断开了
+                if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
+                {
+                    RealseSocketAsyncEventArgs(args);
+                }
+            }
+            else
+            {
+                RealseSocketAsyncEventArgs(args);
+            }
+        }
+
         void SocketAsyncEventArgs_Completed(object sender, SocketAsyncEventArgs e)
         {
             e.Completed -= SocketAsyncEventArgs_Completed;
@@ -275,16 +292,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开:" + args.SocketError);
                 }
 
-                Session removesession;
-                //用户断开了
-                if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
-                {
-                    RealseSocketAsyncEventArgs(args);
-                }
+                RemoveSession(args);
                 return;
             }
             else
             {
+                bool hasdataerror = false;
                 try
                 {
                     #region 数据逻辑
@@ -303,37 +316,9 @@ namespace LJC.FrameWork.SocketEasy.Sever
                             LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "准备接收数据:长度" + dataLen, null);
                         }
 
-                        try
+                        if (dataLen > MaxPackageLength || dataLen <= 0)
                         {
-                            if (dataLen < 0)
-                            {
-                                throw new Exception("数据长度小于0");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            ex.Data.Add("dataLen", dataLen);
-                            ex.Data.Add("args.Buffer.Length", args.Buffer.Length);
-                            ex.Data.Add("args.BytesTransferred", args.BytesTransferred);
-                            ex.Data.Add("args.BytesTransferred", args.SocketError);
-                            LogManager.LogHelper.Instance.Error("setbuffer出错", ex);
-                            throw ex;
-                        }
-
-                        if (dataLen > MaxPackageLength)
-                        {
-                            if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
-                            {
-                                LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开,长度太长");
-                            }
-
-                            Session removesession;
-                            if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
-                            {
-                                RealseSocketAsyncEventArgs(args);
-                            }
-                            return;
-
+                            throw new SocketSessionDataException(string.Format("数据异常，长度:" + dataLen));
                         }
                         else
                         {
@@ -342,7 +327,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                             args.BufferLen = dataLen;
                             args.BufferRev = 0;
                             //args.SetBuffer(readbuffer, 0, dataLen);
-                            
+
 
                             SetBuffer(args, 0, dataLen);
                         }
@@ -443,13 +428,22 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     }
                     #endregion
                 }
+                catch (SocketSessionDataException ex)
+                {
+                    RemoveSession(args);
+                    hasdataerror = true;
+                    OnError(ex);
+                }
                 finally
                 {
-                    e.Completed += SocketAsyncEventArgs_Completed;
-                    if (!e.AcceptSocket.ReceiveAsync(e))
+                    if (!hasdataerror)
                     {
-                        LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "同步完成，手动处理", null);
-                        SocketAsyncEventArgs_Completed(null, e);
+                        e.Completed += SocketAsyncEventArgs_Completed;
+                        if (!e.AcceptSocket.ReceiveAsync(e))
+                        {
+                            LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "同步完成，手动处理", null);
+                            SocketAsyncEventArgs_Completed(null, e);
+                        }
                     }
                 }
             }
