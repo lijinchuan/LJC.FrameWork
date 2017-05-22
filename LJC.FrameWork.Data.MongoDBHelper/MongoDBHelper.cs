@@ -136,14 +136,7 @@ namespace LJC.FrameWork.Data.Mongo
                         {
                             if (indexkeys != null && indexkeys.Item1.Length > 0 && !collectionWarpper.MongoDBCollection.IndexExists(indexkeys.Item1))
                             {
-                                if (indexkeys.Item2)
-                                {
-                                    collectionWarpper.MongoDBCollection.CreateIndex(new MongoIndexKeysWarpper(indexkeys.Item1).MongoIndexKeys, IndexOptions.SetUnique(true));
-                                }
-                                else
-                                {
-                                    collectionWarpper.MongoDBCollection.CreateIndex(new MongoIndexKeysWarpper(indexkeys.Item1).MongoIndexKeys);
-                                }
+                                collectionWarpper.MongoDBCollection.CreateIndex(new MongoIndexKeysWarpper(indexkeys.Item1).MongoIndexKeys, IndexOptions.SetUnique(indexkeys.Item2).SetBackground(indexkeys.Item3));
                             }
                         }
 

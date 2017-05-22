@@ -23,7 +23,7 @@ namespace LJC.FrameWork.Data.Mongo
         /// <param name="unique">是否是唯一索引</param>
         /// <param name="background">是否在后台创建</param>
         /// <returns>返回列组，如果为空，则不创建</returns>
-        public virtual IEnumerable<Tuple<string[],bool>> CreateIndex()
+        public virtual IEnumerable<Tuple<string[],bool,bool>> CreateIndex()
         {
             yield break;
         }
