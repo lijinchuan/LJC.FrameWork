@@ -122,7 +122,7 @@ namespace LJC.FrameWork.EntityBuf
             return ebtype;
         }
 
-        private static Tuple<EntityBufType, bool> GetTypeBufType(Type tp)
+        public static Tuple<EntityBufType, bool> GetTypeBufType(Type tp)
         {
             if (tp == null)
             {
@@ -158,7 +158,7 @@ namespace LJC.FrameWork.EntityBuf
             }
         }
 
-        private static List<Tuple<EntityBufType,bool>> GetTypeEntityBufType(Type tp)
+        public static List<Tuple<EntityBufType,bool>> GetTypeEntityBufType(Type tp)
         {
             if (tp == null)
                 return null;
