@@ -132,18 +132,18 @@ namespace LJC.FrameWork.Data.Mongo
                     if (!collectionWarpper.IsCreateIndex)
                     {
                         var instance = (MongoDocumentObject)System.Activator.CreateInstance(typeof(T));
-                        bool unique = false, background = false;
-                        var indexkeys = instance.CreateIndex(ref unique, ref background);
-
-                        if (indexkeys != null && indexkeys.Length > 0 && !collectionWarpper.MongoDBCollection.IndexExists(indexkeys))
+                        foreach (var indexkeys in instance.CreateIndex())
                         {
-                            if (unique)
+                            if (indexkeys != null && indexkeys.Item1.Length > 0 && !collectionWarpper.MongoDBCollection.IndexExists(indexkeys.Item1))
                             {
-                                collectionWarpper.MongoDBCollection.CreateIndex(new MongoIndexKeysWarpper(indexkeys).MongoIndexKeys, IndexOptions.SetUnique(true).SetBackground(background));
-                            }
-                            else
-                            {
-                                collectionWarpper.MongoDBCollection.CreateIndex(new MongoIndexKeysWarpper(indexkeys).MongoIndexKeys);
+                                if (indexkeys.Item2)
+                                {
+                                    collectionWarpper.MongoDBCollection.CreateIndex(new MongoIndexKeysWarpper(indexkeys.Item1).MongoIndexKeys, IndexOptions.SetUnique(true));
+                                }
+                                else
+                                {
+                                    collectionWarpper.MongoDBCollection.CreateIndex(new MongoIndexKeysWarpper(indexkeys.Item1).MongoIndexKeys);
+                                }
                             }
                         }
 
