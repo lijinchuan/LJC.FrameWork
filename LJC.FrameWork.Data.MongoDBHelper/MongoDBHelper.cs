@@ -217,8 +217,8 @@ namespace LJC.FrameWork.Data.Mongo
 
         public static T FindOneByIdAs<T>(string connectionName, string database, string collection, string id)
         {
-            var mongocollection = GetCollecion<T>(connectionName, database, collection);
-            return mongocollection.FindOneByIdAs<T>(id);
+            var _id = new MongoDB.Bson.ObjectId(id);
+            return FindOne<T>(connectionName, database, collection, new MongoQueryWarpper().EQ("_id", _id));
         }
 
         public static T FindAndModify<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates, MongoSortWarpper sorts, bool returnNew, bool upsert)
