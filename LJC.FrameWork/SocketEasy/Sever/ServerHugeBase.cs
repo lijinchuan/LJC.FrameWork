@@ -153,6 +153,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
         {
             if (offset > 0)
             {
+                offset = (e.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(e.BufferIndex)) + offset;
                 e.SetBuffer(offset, len);
                 return;
             }
@@ -420,10 +421,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
                         }
                         else
                         {
-                            //???
-                            //var offset = args.BufferIndex == -1 ? 0 : _bufferpoll.GetOffset(args.BufferIndex);
-                            e.SetBuffer(args.BufferRev, args.BufferLen - args.BufferRev);
-                            //SetBuffer(args,args.BufferRev, args.BufferLen - args.BufferRev);
+                            SetBuffer(args, args.BufferRev, args.BufferLen - args.BufferRev);
+                            LogManager.LogHelper.Instance.Debug("e.SetBuffer:" + (args.BufferRev) + ",len:" + (args.BufferLen - args.BufferRev), null);
                         }
                     }
                     #endregion
