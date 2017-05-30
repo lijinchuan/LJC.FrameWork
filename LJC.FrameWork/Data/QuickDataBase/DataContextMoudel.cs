@@ -355,8 +355,10 @@ namespace LJC.FrameWork.Data.QuickDataBase
         {
             T t = new T();
 
-            foreach (DataColumn col in row.Table.Columns)
+            //foreach (DataColumn col in row.Table.Columns)
+            for(var i=0;i<row.Table.Columns.Count;i++)
             {
+                var col = row.Table.Columns[i];
                 object val = row[col];
                
                 if (val == DBNull.Value)
@@ -381,6 +383,75 @@ namespace LJC.FrameWork.Data.QuickDataBase
                 {
                     t.SetValue(r.PropertyEx, val);
                 }
+
+            }
+
+            return t;
+        }
+
+        private T ParseDataRow(DataRow row,ref Action<T,object>[] funarray)
+        {
+            T t = new T();
+
+            //foreach (DataColumn col in row.Table.Columns)
+            for (var i = 0; i < row.Table.Columns.Count; i++)
+            {
+                var col = row.Table.Columns[i];
+                object val = row[col];
+
+                if (funarray != null && funarray[i] != null)
+                {
+                    funarray[i](t, val);
+                    continue;
+                }
+
+                if (funarray == null)
+                {
+                    funarray = new Action<T, object>[row.Table.Columns.Count];
+                }
+
+                if (val == DBNull.Value)
+                {
+                    continue;
+                }
+
+                var r = rpAttrList.Find(p => p.Column.Equals(col.ColumnName, StringComparison.OrdinalIgnoreCase));
+                if (r == null)
+                {
+                    funarray[i] = new Action<T, object>((instance, o) => { });
+                    continue;
+                }
+
+                if (r.Property.PropertyType.IsEnum /*&& r.Property.PropertyType.IsEnumDefined(val)*/)
+                {
+                    var fun = new Action<T, object>((instance, o) =>
+                       {
+                           if (r.IsEncry)
+                           {
+                               if (!string.IsNullOrEmpty(o.ToString()))
+                                   o = new EncryHelper().Decrypto(o.ToString());
+                           }
+                           instance.SetValue(r.PropertyEx, Enum.Parse(r.Property.PropertyType, o.ToString()));
+                       });
+
+                    funarray[i] = fun;
+                }
+                else
+                {
+                    var fun = new Action<T, object>((instance, o) =>
+                    {
+                        if (r.IsEncry)
+                        {
+                            if (!string.IsNullOrEmpty(o.ToString()))
+                                o = new EncryHelper().Decrypto(o.ToString());
+                        }
+                        instance.SetValue(r.PropertyEx, o);
+                    });
+
+                    funarray[i] = fun;
+                }
+
+                funarray[i](t, val);
 
             }
 
@@ -460,8 +531,13 @@ namespace LJC.FrameWork.Data.QuickDataBase
             var ds = DB.ExecuteDataSet(cmd);
             if (ds.Tables.Count > 0)
             {
+                Action<T, object>[] funs = null;
                 var table0 = ds.Tables[0];
-                result = table0.AsEnumerable().Select(p => ParseDataRow(p)).ToList();
+                for(int i = 0; i < table0.Rows.Count; i++)
+                {
+                    result.Add(ParseDataRow(table0.Rows[i],ref funs));
+                }
+                //result = table0.AsEnumerable().Select(p => ParseDataRow(p,ref funs)).ToList();
             }
 
             return result;
@@ -499,7 +575,12 @@ namespace LJC.FrameWork.Data.QuickDataBase
             if (ds.Tables.Count > 0)
             {
                 var table0=ds.Tables[0];
-                result = table0.AsEnumerable().Select(p => ParseDataRow(p)).ToList();
+                Action<T, object>[] funs = null;
+                for (int i = 0; i < table0.Rows.Count; i++)
+                {
+                    result.Add(ParseDataRow(table0.Rows[i], ref funs));
+                }
+                //result = table0.AsEnumerable().Select(p => ParseDataRow(p,ref funs)).ToList();
             }
 
             #region 抛弃连接对象
@@ -655,8 +736,13 @@ namespace LJC.FrameWork.Data.QuickDataBase
             var ds = DB.ExecuteDataSet(cmd);
             if (ds.Tables.Count > 0)
             {
+                Action<T, object>[] funs = null;
                 var table0 = ds.Tables[0];
-                result = table0.AsEnumerable().Select(p => ParseDataRow(p)).ToList();
+                for (int i = 0; i < table0.Rows.Count; i++)
+                {
+                    result.Add(ParseDataRow(table0.Rows[i], ref funs));
+                }
+                //result = table0.AsEnumerable().Select(p => ParseDataRow(p,ref funs)).ToList();
             }
 
             ////这里可以优化下，采用断线对象
