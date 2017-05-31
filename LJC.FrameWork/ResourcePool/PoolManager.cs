@@ -21,12 +21,12 @@ namespace LJC.FrameWork.ResourcePool
             PoolManager<T>._AllAllocateRes = null;
             PoolManager<T>._PoolSize = 10;
             PoolManager<T>._PoolTimeout = null;
-            PoolManager<T>._RecheckPoolAfterMs = 0x186a0;
+            PoolManager<T>._RecheckPoolAfterMs = 60000;
             PoolManager<T>._PoolIndex = 0;
         }
 
         public PoolManager()
-            : this(new PoolConfig { MaxPoolSize = 10, PoolTimeout = 0xea60 })
+            : this(new PoolConfig { MaxPoolSize = 10, PoolTimeout = 60000 })
         {
         }
 
