@@ -273,6 +273,11 @@
     <Compile Include="MSMQ\MsmqClient.cs" />
     <Compile Include="MSMQ\MsmqLable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ResourcePool\ResourceHelper.cs" />
+    <Compile Include="ResourcePool\Resource.cs" />
+    <Compile Include="ResourcePool\PoolManager.cs" />
+    <Compile Include="ResourcePool\PoolConfig.cs" />
+    <Compile Include="ResourcePool\State.cs" />
     <Compile Include="SocketApplication\AutoReSetEventResult.cs" />
     <Compile Include="SocketApplication\FieldEnum.cs" />
     <Compile Include="SocketApplication\LoginRequestMessage.cs" />
