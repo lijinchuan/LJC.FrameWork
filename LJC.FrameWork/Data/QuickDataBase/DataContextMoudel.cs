@@ -399,6 +399,11 @@ namespace LJC.FrameWork.Data.QuickDataBase
                 var col = row.Table.Columns[i];
                 object val = row[col];
 
+                if (val == DBNull.Value)
+                {
+                    continue;
+                }
+
                 if (funarray != null && funarray[i] != null)
                 {
                     funarray[i](t, val);
@@ -408,11 +413,6 @@ namespace LJC.FrameWork.Data.QuickDataBase
                 if (funarray == null)
                 {
                     funarray = new Action<T, object>[row.Table.Columns.Count];
-                }
-
-                if (val == DBNull.Value)
-                {
-                    continue;
                 }
 
                 var r = rpAttrList.Find(p => p.Column.Equals(col.ColumnName, StringComparison.OrdinalIgnoreCase));
