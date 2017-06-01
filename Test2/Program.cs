@@ -148,6 +148,29 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("127.0.0.1", 50000);
+
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 30000; i++)
+            {
+                sb.Append(i.ToString());
+            }
+            var testmsg = new Message
+                {
+                    MessageHeader = new MessageHeader() { MessageType = (int)MessageType.LOGIN }
+                };
+            testmsg.SetMessageBody(sb.ToString());
+            clientbase.StartClient();
+            while (true)
+            {
+                clientbase.SendMessage(testmsg);
+
+                Thread.Sleep(100);
+            }
+            
+            Console.Read();
+            return;
+
             var buffer0 = Convert.FromBase64String("AAAAAgUBAAAAAAAAAAACAwABAQ==");
             var crc320 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(buffer0, 0);
 

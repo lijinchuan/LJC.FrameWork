@@ -130,6 +130,13 @@ namespace Test
 
         static void Main(string[] args)
         {
+            LJC.FrameWork.SocketEasyUDP.Server.ServerBase serverbase = new LJC.FrameWork.SocketEasyUDP.Server.ServerBase(50000);
+            serverbase.StartServer();
+
+            Console.WriteLine("服务启动...");
+
+            Console.Read();
+
             var list = LJC.FrameWork.Data.QuickDataBase.DataContextMoudelFactory<RunConfig>.GetDataContext().ExecuteList();
 
             var newrunconfig = list.FirstOrDefault();

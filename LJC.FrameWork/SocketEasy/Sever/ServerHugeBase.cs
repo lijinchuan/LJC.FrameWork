@@ -52,13 +52,8 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         static ServerHugeBase()
         {
-            var threadpoolset=(ThreadPoolConfig)System.Configuration.ConfigurationManager.GetSection("ThreadPoolConfig");
-            if (threadpoolset == null)
-            {
-                ThreadPool.SetMinThreads(1000, 1000);
-                ThreadPool.SetMaxThreads(3000, 3000);
-            }
-            else
+            var threadpoolset = (ThreadPoolConfig)System.Configuration.ConfigurationManager.GetSection("ThreadPoolConfig");
+            if (threadpoolset != null)
             {
                 ThreadPool.SetMinThreads(threadpoolset.MinWorkerThreads, threadpoolset.MinCompletionPortThreads);
                 ThreadPool.SetMaxThreads(threadpoolset.MaxWorkerThreads, threadpoolset.MaxCompletionPortThreads);
