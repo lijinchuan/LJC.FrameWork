@@ -86,6 +86,22 @@ namespace LJC.FrameWork.Comm
 
         }
 
-        
+        public static string ToUrlBase64(string base64)
+        {
+            base64 = base64.Replace("+", "-");
+            base64 = base64.Replace("/", "_");
+            base64 = base64.Replace("=", "~");
+
+            return base64;
+        }
+
+        public static string FromUrlBase64(string urlbase64)
+        {
+            urlbase64 = urlbase64.Replace("-", "+");
+            urlbase64 = urlbase64.Replace("_", "/");
+            urlbase64 = urlbase64.Replace("~", "=");
+
+            return urlbase64;
+        }
     }
 }
