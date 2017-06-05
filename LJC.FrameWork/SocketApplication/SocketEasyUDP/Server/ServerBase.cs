@@ -43,25 +43,32 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             }
         }
 
-        private void OnSocket(object endpoint,byte[] bytes)
+        protected virtual Message OnMessage(Message message)
         {
-            //__s.SendTo(LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(message), Remote);
-
-            var message = new Message();
-            message.MessageHeader.MessageType = (int)MessageType.REJECT;
-            message.MessageHeader.MessageTime = DateTime.Now;
-
-            Console.WriteLine(bytes.Length);
+            return null;
         }
 
-        public override bool SendMessage(Message msg)
+        private void OnSocket(object endpoint,byte[] bytes)
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
+                {
+                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(bytes);
+                    var msg = OnMessage(message);
+                    if (msg != null)
+                    {
+                        SendMessage(msg, (EndPoint)endpoint);
+                    }
+                }));
+        }
+
+        public override bool SendMessage(Message msg, EndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
             foreach (var segment in SplitBytes(bytes))
             {
                 lock (__s)
                 {
-                    __s.Send(bytes, SocketFlags.None);
+                    __s.SendTo(bytes, SocketFlags.None, endpoint);
                 }
             }
 

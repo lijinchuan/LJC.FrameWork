@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
@@ -12,7 +13,7 @@ namespace LJC.FrameWork.SocketEasyUDP
         private Dictionary<Guid, byte[][]> TempBagDic = new Dictionary<Guid, byte[][]>();
         private Dictionary<Guid, DateTime> BagTimestamp = new Dictionary<Guid, DateTime>();
 
-        public virtual bool SendMessage(Message msg)
+        public virtual bool SendMessage(Message msg,EndPoint endpoint)
         {
             throw new NotImplementedException();
         }

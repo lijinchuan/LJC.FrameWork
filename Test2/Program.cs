@@ -151,7 +151,7 @@ namespace Test2
             LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("127.0.0.1", 50000);
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 30000; i++)
+            for (int i = 0; i < 300; i++)
             {
                 sb.Append(i.ToString());
             }
@@ -163,7 +163,7 @@ namespace Test2
             clientbase.StartClient();
             while (true)
             {
-                clientbase.SendMessage(testmsg);
+                clientbase.SendMessage(testmsg, null);
 
                 Thread.Sleep(100);
             }

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
@@ -20,9 +21,9 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
         }
 
 
-        public override bool SendMessage(SocketApplication.Message msg)
+        public override bool SendMessage(SocketApplication.Message msg, EndPoint endpoint)
         {
-            var bytes=LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
+            var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
 
             foreach (var segment in SplitBytes(bytes))
             {
@@ -52,11 +53,18 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                 }).BeginInvoke(null, null);
         }
 
-        public void OnMessage(byte[] data)
+        protected virtual void OnMessage(Message message)
         {
-            var msg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(data);
+        }
+        
 
-            Console.WriteLine(msg.MessageHeader.MessageType.ToString());
+        private void OnMessage(byte[] data)
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
+            {
+                var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(data);
+                OnMessage(message);
+            }));
         }
     }
 }
