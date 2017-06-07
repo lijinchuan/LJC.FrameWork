@@ -145,9 +145,32 @@ namespace Test2
             return true;
         }
 
+        static void TestEsbservices()
+        {
+            TestESBEervice service = new TestESBEervice();
+            service.LoginSuccess += new Action(() =>
+            {
+                service.RegisterService();
+                Console.WriteLine("注册成功");
+            });
+            service.SessionResume += new Action(() => { service.RegisterService(); Console.WriteLine("恢复重注册"); });
+            service.Error += service_Error;
+            service.OnClientReset += new Action(() => { service.RegisterService(); Console.WriteLine("重置重注册"); });
+            service.Login(null, null);
+        }
+
+        static void service_Error(Exception obj)
+        {
+            Console.WriteLine(obj.Message);
+        }
+
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            TestEsbservices();
+            Console.Read();
+            return;
+
             LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("127.0.0.1", 50000);
 
             StringBuilder sb = new StringBuilder();

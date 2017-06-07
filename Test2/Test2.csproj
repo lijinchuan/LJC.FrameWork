@@ -67,6 +67,7 @@
     <Compile Include="NewsEntityEx.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestESBEervice.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LJC.FrameWork.Data.MongoDBHelper\LJC.FrameWork.Data.Mongo.csproj">

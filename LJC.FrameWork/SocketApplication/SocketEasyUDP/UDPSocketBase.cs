@@ -8,7 +8,7 @@ using System.Text;
 
 namespace LJC.FrameWork.SocketEasyUDP
 {
-    public class UDPSocketBase
+    public class UDPSocketBase:IDisposable
     {
         private Dictionary<Guid, byte[][]> TempBagDic = new Dictionary<Guid, byte[][]>();
         private Dictionary<Guid, DateTime> BagTimestamp = new Dictionary<Guid, DateTime>();
@@ -134,5 +134,10 @@ namespace LJC.FrameWork.SocketEasyUDP
 
         }
         #endregion
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

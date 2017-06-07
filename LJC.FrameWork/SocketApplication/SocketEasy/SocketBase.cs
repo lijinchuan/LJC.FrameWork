@@ -13,9 +13,9 @@ namespace LJC.FrameWork.SocketEasy
     public class SocketBase:IDisposable
     {
         protected bool stop = false;
-        private Socket udpMCSocket;
         public event Action<Exception> Error;
 
+        private Socket udpMCSocket;
         /// <summary>
         /// 广播
         /// </summary>
