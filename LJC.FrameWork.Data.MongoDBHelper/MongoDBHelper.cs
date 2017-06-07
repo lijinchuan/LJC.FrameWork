@@ -316,7 +316,7 @@ namespace LJC.FrameWork.Data.Mongo
             return FindOne<T>(connectionName, database, collection, (MongoQueryWarpper)querys);
         }
 
-        public static bool Update<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates)
+        public static bool Update<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates,MongoUpdateFlagsWarpper flgs=null)
         {
             if (updates == null || updates.IsEmpty)
             {
@@ -330,7 +330,14 @@ namespace LJC.FrameWork.Data.Mongo
             {
                 var mongocollection = GetCollecion<T>(connectionName, database, collection);
 
-                mongocollection.Update(mongoquery, updateBuilder);
+                if (flgs == null)
+                {
+                    mongocollection.Update(mongoquery, updateBuilder);
+                }
+                else
+                {
+                    mongocollection.Update(mongoquery, updateBuilder, flgs.MongoUpdateFlags);
+                }
                 return true;
             }
 

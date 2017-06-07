@@ -63,6 +63,7 @@
     <Compile Include="MongoQueryWarpper~T.cs" />
     <Compile Include="MongoSortWarpper.cs" />
     <Compile Include="MongoSortWarpper~T.cs" />
+    <Compile Include="MongoUpdateFlagsWarpper.cs" />
     <Compile Include="MongoUpdateWarpper.cs" />
     <Compile Include="MongoUpdateWarpper~T.cs" />
     <Compile Include="ObjectIdConverter.cs" />
