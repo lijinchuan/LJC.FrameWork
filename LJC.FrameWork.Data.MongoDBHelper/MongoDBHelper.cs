@@ -344,9 +344,9 @@ namespace LJC.FrameWork.Data.Mongo
             return false;
         }
 
-        public static bool Update<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, MongoUpdateWarpper<T> updates) where T:new()
+        public static bool Update<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, MongoUpdateWarpper<T> updates, MongoUpdateFlagsWarpper flgs = null) where T : new()
         {
-            return Update<T>(connectionName, database, collection, (MongoQueryWarpper)querys, (MongoUpdateWarpper)updates);
+            return Update<T>(connectionName, database, collection, (MongoQueryWarpper)querys, (MongoUpdateWarpper)updates, flgs);
         }
 
         public static bool Remove(string connectionName, string database, string collection, MongoQueryWarpper querys)
