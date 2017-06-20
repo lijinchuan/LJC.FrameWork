@@ -7,7 +7,7 @@ using System.Text;
 
 namespace LJC.FrameWork.Data.Mongo
 {
-    [BsonIgnoreExtraElements]
+    [BsonIgnoreExtraElements(true, Inherited = true)]
     public class MongoDocumentObject
     {
         [Newtonsoft.Json.JsonConverter(typeof(ObjectIdConverter))]
