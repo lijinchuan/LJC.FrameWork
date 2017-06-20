@@ -125,7 +125,7 @@ namespace LJC.FrameWork.Data.Mongo
 
             MongoCollectionWarpper collectionWarpper = GetCollecionInternal(connectionName, database, collection);
 
-            if (collectionWarpper != null && !collectionWarpper.IsCreateIndex && typeof(T) == typeof(MongoDocumentObject))
+            if (collectionWarpper != null && !collectionWarpper.IsCreateIndex && typeof(T).IsSubclassOf(typeof(MongoDocumentObject)))
             {
                 lock (collectionWarpper)
                 {
