@@ -307,6 +307,7 @@
     <Compile Include="SocketApplication\SocketEasy\Sever\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketEasy\Sever\SeverBase.cs" />
     <Compile Include="SocketApplication\SocketEasy\SocketBase.cs" />
+    <Compile Include="Web\HttpUtil.cs" />
     <Compile Include="Web\PageTraceUtil.cs" />
     <Compile Include="Web\PerformanceMonitor.cs" />
     <Compile Include="Web\PerformanceMonitorModule.cs" />

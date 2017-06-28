@@ -6,6 +6,8 @@
     </httpHandlers>
 2)system.webServer下添加配置
      <handlers>
+	  <remove verb="*" path="API/*/Json"/>
+	  <remove verb="*" path="API/*"/>
       <add name="APIJsonHandler" path="API/*/Json" verb="*" type="LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi" modules="IsapiModule" scriptProcessor="%windir%\Microsoft.NET\Framework64\V4.0.30319\aspnet_isapi.dll" resourceType="Unspecified" requireAccess="Script" preCondition="bitness64" />
       <add name="APIFunHandler" path="API/*" verb="*" type="LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi" modules="IsapiModule" scriptProcessor="%windir%\Microsoft.NET\Framework64\V4.0.30319\aspnet_isapi.dll" resourceType="Unspecified" requireAccess="Script" preCondition="bitness64" />
     </handlers>

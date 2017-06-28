@@ -54,16 +54,11 @@ namespace LJC.FrameWork.WebApi
                             apiNode.SetAttribute("type", "LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi");
                             httphandlers.AppendChild(apiNode);
 
-                            save = true;
-                        }
-
-                        if (httphandlers.SelectSingleNode("add[@path='API/*']") == null)
-                        {
-                            var apiNode = doc.CreateElement("add");
-                            apiNode.SetAttribute("path", "API/*");
-                            apiNode.SetAttribute("verb", "*");
-                            apiNode.SetAttribute("type", "LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi");
-                            httphandlers.AppendChild(apiNode);
+                            var apiNode2 = doc.CreateElement("add");
+                            apiNode2.SetAttribute("path", "API/*");
+                            apiNode2.SetAttribute("verb", "*");
+                            apiNode2.SetAttribute("type", "LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi");
+                            httphandlers.AppendChild(apiNode2);
 
                             save = true;
                         }
@@ -93,6 +88,16 @@ namespace LJC.FrameWork.WebApi
                     {
                         if (handlerNode.SelectSingleNode("add[@name='APIJsonHandler']") == null)
                         {
+                            var removeNode = doc.CreateElement("remove");
+                            removeNode.SetAttribute("verb", "*");
+                            removeNode.SetAttribute("path", "API/*/Json");
+                            handlerNode.AppendChild(removeNode);
+
+                            var removeNode2 = doc.CreateElement("remove");
+                            removeNode2.SetAttribute("verb", "*");
+                            removeNode2.SetAttribute("path", "API/*");
+                            handlerNode.AppendChild(removeNode2);
+
                             var apiNode = doc.CreateElement("add");
                             apiNode.SetAttribute("name", "APIJsonHandler");
                             apiNode.SetAttribute("path", "API/*/Json");
@@ -105,22 +110,19 @@ namespace LJC.FrameWork.WebApi
                             //apiNode.SetAttribute("preCondition", "bitness64");
                             apiNode.SetAttribute("preCondition", "integratedMode");
                             handlerNode.AppendChild(apiNode);
-                        }
 
-                        if (handlerNode.SelectSingleNode("add[@name='APIFunHandler']") == null)
-                        {
-                            var apiNode = doc.CreateElement("add");
-                            apiNode.SetAttribute("name", "APIFunHandler");
-                            apiNode.SetAttribute("path", "API/*");
-                            apiNode.SetAttribute("verb", "*");
-                            apiNode.SetAttribute("type", "LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi");
+                            var apiNode2 = doc.CreateElement("add");
+                            apiNode2.SetAttribute("name", "APIFunHandler");
+                            apiNode2.SetAttribute("path", "API/*");
+                            apiNode2.SetAttribute("verb", "*");
+                            apiNode2.SetAttribute("type", "LJC.FrameWork.WebApi.APIFactory, LJC.FrameWork.WebApi");
                             //apiNode.SetAttribute("modules", "IsapiModule");
                             //apiNode.SetAttribute("scriptProcessor", "%windir%\\Microsoft.NET\\Framework64\\V4.0.30319\\aspnet_isapi.dll");
-                            apiNode.SetAttribute("resourceType", "Unspecified");
-                            apiNode.SetAttribute("requireAccess", "Script");
+                            apiNode2.SetAttribute("resourceType", "Unspecified");
+                            apiNode2.SetAttribute("requireAccess", "Script");
                             //apiNode.SetAttribute("preCondition", "bitness64");
-                            apiNode.SetAttribute("preCondition", "integratedMode");
-                            handlerNode.AppendChild(apiNode);
+                            apiNode2.SetAttribute("preCondition", "integratedMode");
+                            handlerNode.AppendChild(apiNode2);
 
                             save = true;
                         }
