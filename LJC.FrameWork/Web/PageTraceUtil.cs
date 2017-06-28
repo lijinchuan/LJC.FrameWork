@@ -29,7 +29,7 @@ namespace LJC.FrameWork.Web
                     queue.Clear();
                 }
 
-                Trace("start");
+                Trace(string.Format("start->sessionid:{0},ip:{1}", httpcontext.Session == null ? string.Empty : httpcontext.Session.SessionID, HttpUtil.GetRemoteIp(httpcontext)));
             }
             catch { }
         }
