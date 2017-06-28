@@ -29,7 +29,7 @@ namespace LJC.FrameWork.Web
                     queue.Clear();
                 }
 
-                Trace(string.Format("start->sessionid:{0},ip:{1}", httpcontext.Session == null ? string.Empty : httpcontext.Session.SessionID, HttpUtil.GetRemoteIp(httpcontext)));
+                Trace("start");
             }
             catch { }
         }
@@ -60,7 +60,7 @@ namespace LJC.FrameWork.Web
             string traceid = null;
             try
             {
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new StringBuilder(string.Format("sessionid:{0},clientip:{1} ", httpcontext.Session == null ? string.Empty : httpcontext.Session.SessionID, HttpUtil.GetRemoteIp(httpcontext)));
 
                 traceid = httpcontext.Items[TraceIDName].ToString();
 
