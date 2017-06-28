@@ -11,6 +11,7 @@ namespace LJC.FrameWork.Web
     {
         private static ConcurrentDictionary<string, Queue<Tuple<string, long>>> TraceDic = new ConcurrentDictionary<string, Queue<Tuple<string, long>>>();
         private const string TraceIDName = "_traceid";
+        private const string SessionIDName = "_sessionid";
 
         public static void StartTrace(this HttpContext httpcontext)
         {
@@ -38,7 +39,14 @@ namespace LJC.FrameWork.Web
         {
             try
             {
-                TraceDic[System.Web.HttpContext.Current.Items[TraceIDName].ToString()].Enqueue(new Tuple<string, long>(message, Environment.TickCount));
+                var context = System.Web.HttpContext.Current;
+                var dic=TraceDic[context.Items[TraceIDName].ToString()];
+                dic.Enqueue(new Tuple<string, long>(message, Environment.TickCount));
+
+                if (!context.Items.Contains(SessionIDName) && context.Session != null)
+                {
+                    context.Items.Add(SessionIDName, context.Session.SessionID);
+                }
             }
             catch { }
         }
@@ -60,7 +68,7 @@ namespace LJC.FrameWork.Web
             string traceid = null;
             try
             {
-                StringBuilder sb = new StringBuilder(string.Format("sessionid:{0},clientip:{1} ", httpcontext.Session == null ? string.Empty : httpcontext.Session.SessionID, HttpUtil.GetRemoteIp(httpcontext)));
+                StringBuilder sb = new StringBuilder(string.Format("sessionid:{0},clientip:{1} ", httpcontext.Items.Contains(SessionIDName) ? httpcontext.Items[SessionIDName].ToString() : string.Empty, HttpUtil.GetRemoteIp(httpcontext)));
 
                 traceid = httpcontext.Items[TraceIDName].ToString();
 
