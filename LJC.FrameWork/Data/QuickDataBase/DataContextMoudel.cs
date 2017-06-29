@@ -763,14 +763,14 @@ namespace LJC.FrameWork.Data.QuickDataBase
         {
             var result = Int64.Parse(ExecuteScalar(AddSql).ToString());
 
-            if (result>0)
-            {
-                TryClearCach("add");
-            }
-
             if (Instance != null)
             {
                 Instance.SetValue(rpAttrList.Find(p => p.isKey).PropertyEx, result);
+            }
+
+            if (result>0)
+            {
+                TryClearCach("add");
             }
 
             return result;
