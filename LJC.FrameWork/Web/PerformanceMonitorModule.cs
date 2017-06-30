@@ -25,6 +25,61 @@ namespace LJC.FrameWork.Web
 
             context.BeginRequest += Context_BeginRequest;
             context.EndRequest += Context_EndRequest;
+
+            context.AcquireRequestState += context_AcquireRequestState;
+            context.AuthenticateRequest += context_AuthenticateRequest;
+            context.AuthorizeRequest += context_AuthorizeRequest;
+            context.PreRequestHandlerExecute += context_PreRequestHandlerExecute;
+            context.PostRequestHandlerExecute += context_PostRequestHandlerExecute;
+            context.ReleaseRequestState += context_ReleaseRequestState;
+            context.ResolveRequestCache += context_ResolveRequestCache;
+            context.PreSendRequestHeaders += context_PreSendRequestHeaders;
+            context.PreSendRequestContent += context_PreSendRequestContent;
+        }
+
+        void context_PreSendRequestContent(object sender, EventArgs e)
+        {
+            PageTraceUtil.Trace("PreSendRequestContent");
+        }
+
+        void context_PreSendRequestHeaders(object sender, EventArgs e)
+        {
+            PageTraceUtil.Trace("PreSendRequestHeaders");
+        }
+
+        void context_ResolveRequestCache(object sender, EventArgs e)
+        {
+            PageTraceUtil.Trace("ResolveRequestCache");
+        }
+
+        void context_ReleaseRequestState(object sender, EventArgs e)
+        {
+            PageTraceUtil.Trace("ReleaseRequestState");
+        }
+
+        void context_PostRequestHandlerExecute(object sender, EventArgs e)
+        {
+            PageTraceUtil.Trace("PostRequestHandlerExecute");
+        }
+
+        void context_PreRequestHandlerExecute(object sender, EventArgs e)
+        {
+            PageTraceUtil.Trace("PreRequestHandlerExecute");
+        }
+
+        void context_AuthorizeRequest(object sender, EventArgs e)
+        {
+            PageTraceUtil.Trace("AuthorizeRequest");
+        }
+
+        void context_AuthenticateRequest(object sender, EventArgs e)
+        {
+            PageTraceUtil.Trace("AuthenticateRequest");
+        }
+
+        void context_AcquireRequestState(object sender, EventArgs e)
+        {
+            PageTraceUtil.Trace("AcquireRequestState");
         }
 
         private void Context_BeginRequest(object sender, EventArgs e)
