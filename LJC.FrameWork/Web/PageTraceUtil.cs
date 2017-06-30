@@ -20,7 +20,7 @@ namespace LJC.FrameWork.Web
                 string traceid = Guid.NewGuid().ToString();
                 httpcontext.Items.Add(TraceIDName, traceid);
                 Queue<Tuple<string, long>> queue = null;
-                if (!TraceDic.ContainsKey(traceid))
+                if (!TraceDic.TryGetValue(traceid,out queue))
                 {
                     queue = new Queue<Tuple<string, long>>();
                     TraceDic.TryAdd(traceid, queue);

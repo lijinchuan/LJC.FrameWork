@@ -17,7 +17,7 @@ namespace LJC.FrameWork.Comm
             {
                 var traceid = Thread.CurrentThread.ManagedThreadId;
                 Queue<Tuple<string, long>> queue = null;
-                if (!TraceDic.ContainsKey(traceid))
+                if (!TraceDic.TryGetValue(traceid, out queue))
                 {
                     queue = new Queue<Tuple<string, long>>();
                     TraceDic.TryAdd(traceid, queue);
