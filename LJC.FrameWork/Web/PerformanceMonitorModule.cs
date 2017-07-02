@@ -16,6 +16,8 @@ namespace LJC.FrameWork.Web
 
         public static Action<PerformanceMonitor> LogMonitor = null;
 
+        public static Action<HttpContext> PreAuthenticateRequest;
+
         public void Init(HttpApplication context)
         {
             if(LogMonitor==null)
@@ -74,6 +76,15 @@ namespace LJC.FrameWork.Web
 
         void context_AuthenticateRequest(object sender, EventArgs e)
         {
+            if (PreAuthenticateRequest != null)
+            {
+                HttpContext httpContext = ((HttpApplication)sender).Context;
+                if (httpContext != null)
+                {
+                    PreAuthenticateRequest(httpContext);
+                }
+            }
+
             PageTraceUtil.Trace("AuthenticateRequest");
         }
 
