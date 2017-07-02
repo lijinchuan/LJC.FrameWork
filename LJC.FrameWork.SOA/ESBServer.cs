@@ -95,6 +95,11 @@ namespace LJC.FrameWork.SOA
                             ProcessorCount=Environment.ProcessorCount,
                         };
                     }
+                case 3:
+                    {
+                        int serviceno=EntityBuf.EntityBufCore.DeSerialize<int>(param);
+                        return ServiceContainer.Exists(p => p.ServiceNo == serviceno);
+                    }
                 default:
                     {
                         throw new NotImplementedException(string.Format("未实现的功能:{0}", funcId));

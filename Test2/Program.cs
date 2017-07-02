@@ -299,7 +299,7 @@ namespace Test2
             {
                 System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
                 sw.Start();
-                var list = ESBClient.DoSOARequest<List<CategoryLevel2Entity>>(Consts.ServiceNo, Consts.FunID_GetCategoryLevel2List, null)
+                var list = ESBClient.DoSOARequest<List<CategoryLevel2Entity>>(LJC.Com.StockService.Contract.Consts.ServiceNo, LJC.Com.StockService.Contract.Consts.FunID_GetCategoryLevel2List, null)
                     .ToDictionary(q => q.CategoryCode);
                 sw.Stop();
                 Console.WriteLine(i + "用时:" + sw.Elapsed.TotalMilliseconds);
