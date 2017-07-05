@@ -66,7 +66,7 @@ namespace LJC.FrameWork.SOA
                 request.Param = EntityBufCore.Serialize(param);
             }
 
-            Message msg = new Message((int)SOAMessageType.DoSOARequest);
+            Message msg = new Message((int)SOAMessageType.DoSOARedirectRequest);
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
             msg.MessageBuffer = EntityBufCore.Serialize(request);
 

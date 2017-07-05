@@ -167,6 +167,9 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SessionClient client = null;
         static void Main(string[] args)
         {
+            TestEsbservices();
+            Console.Read();
+            return;
             LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("127.0.0.1", 50000);
 
             StringBuilder sb = new StringBuilder();

@@ -130,6 +130,14 @@ namespace Test
 
         static void Main(string[] args)
         {
+            int ix = 0;
+            while (true)
+            {
+                var str = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<string>(1, 100, "你好啊"+(ix++));
+                Console.WriteLine(str);
+
+                Thread.Sleep(1000);
+            }
             Console.Read();
 
             LJC.FrameWork.SocketEasyUDP.Server.ServerBase serverbase = new LJC.FrameWork.SocketEasyUDP.Server.ServerBase(50000);

@@ -244,7 +244,7 @@ namespace LJC.FrameWork.SocketApplication
         public static int GetIdelTcpPort()
         {
             var portsused = GetTcpPortUsed();
-            for (int i = 1024; i < 65536; i++)
+            for (int i = 1025; i < 65536; i++)
             {
                 if (!portsused.Contains(i))
                 {
@@ -258,7 +258,7 @@ namespace LJC.FrameWork.SocketApplication
         public static int GetIdelUdpPort()
         {
             var portsused = GetUdpPortUsed();
-            for (int i = 1024; i < 65536; i++)
+            for (int i = 1025; i < 65536; i++)
             {
                 if (!portsused.Contains(i))
                 {

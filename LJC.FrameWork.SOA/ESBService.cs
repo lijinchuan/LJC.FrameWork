@@ -23,6 +23,17 @@ namespace LJC.FrameWork.SOA
             this.ServiceNo = sNo;
             this.BeferLogout += this.UnRegisterService;
             this.OnClientReset += ESBService_OnClientReset;
+
+            this.SupportTcpServiceRidrect = supportTcpServiceRidrect;
+        }
+
+        public ESBService(int sNo, bool supportTcpServiceRidrect = false)
+           : base(ESBConfig.ReadConfig().ESBServer, ESBConfig.ReadConfig().ESBPort)
+        {
+            this.ServiceNo = sNo;
+            this.BeferLogout += this.UnRegisterService;
+
+            this.SupportTcpServiceRidrect = supportTcpServiceRidrect;
         }
 
         void ESBService_OnClientReset()
@@ -59,13 +70,6 @@ namespace LJC.FrameWork.SOA
                 Thread.Sleep(1000);
             }
             Login(null, null);
-        }
-
-        public ESBService(int sNo)
-            :base(ESBConfig.ReadConfig().ESBServer,ESBConfig.ReadConfig().ESBPort)
-        {
-            this.ServiceNo = sNo;
-            this.BeferLogout += this.UnRegisterService;
         }
 
         public int ServiceNo
@@ -283,8 +287,11 @@ namespace LJC.FrameWork.SOA
                         try
                         {
                             var iport = SocketApplicationComm.GetIdelTcpPort();
-                            RedirectServiceServer = new ESBRedirectService(addrs.Select(p => p.ToString()).ToArray(), iport);
+                            
+                            RedirectServiceServer = new ESBRedirectService(bindips.Select(p => p.ToString()).ToArray(), iport);
                             RedirectServiceServer.DoResponseAction = DoResponse;
+                            RedirectServiceServer.StartServer();
+                            break;
                         }
                         catch (Exception ex)
                         {

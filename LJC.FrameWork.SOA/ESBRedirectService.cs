@@ -13,6 +13,7 @@ namespace LJC.FrameWork.SOA
         public ESBRedirectService(string[] ips, int port)
             : base(ips, port)
         {
+            ServerModeNeedLogin = false;
         }
 
         public string[] GetBindIps()
@@ -44,7 +45,7 @@ namespace LJC.FrameWork.SOA
                             resp.IsSuccess = true;
                             resp.ResponseTime = DateTime.Now;
                             resp.Result = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj);
-                            retmsg.SetMessageBody(retmsg);
+                            retmsg.SetMessageBody(resp);
 
                             session.SendMessage(retmsg);
                         }
