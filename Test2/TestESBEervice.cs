@@ -8,7 +8,7 @@ namespace Test2
     public class TestESBEervice:LJC.FrameWork.SOA.ESBService
     {
         public TestESBEervice()
-            : base("127.0.0.1", 8888, 1)
+            : base("127.0.0.1", 8888, 1,true)
         {
         }
     }

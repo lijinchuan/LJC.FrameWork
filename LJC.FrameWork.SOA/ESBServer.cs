@@ -8,7 +8,6 @@ using System.Diagnostics;
 using System.Threading;
 using LJC.FrameWork.LogManager;
 using LJC.FrameWork.EntityBuf;
-using LJC.FrameWork.SOA.Contract;
 
 namespace LJC.FrameWork.SOA
 {

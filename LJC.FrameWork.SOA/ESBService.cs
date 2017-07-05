@@ -10,7 +10,14 @@ namespace LJC.FrameWork.SOA
 {
     public class ESBService:SessionClient,IService
     {
-        public ESBService(string serverIP, int serverPort,int sNo)
+        private bool SupportTcpServiceRidrect
+        {
+            get;
+            set;
+        }
+       
+
+        public ESBService(string serverIP, int serverPort,int sNo,bool supportTcpServiceRidrect=false)
             : base(serverIP, serverPort)
         {
             this.ServiceNo = sNo;
@@ -151,10 +158,21 @@ namespace LJC.FrameWork.SOA
             if (this.ServiceNo < 0)
                 throw new Exception("注册服务失败：服务号不能为负数");
 
+            if (SupportTcpServiceRidrect)
+            {
+                StartRedirectService();
+            }
+
             Message msg = new Message((int)SOAMessageType.RegisterService);
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
             RegisterServiceRequest req = new RegisterServiceRequest();
             req.ServiceNo = this.ServiceNo;
+            if (SupportTcpServiceRidrect)
+            {
+                req.RedirectTcpIps = RedirectServiceServer.GetBindIps();
+                req.RedirectTcpPort = RedirectServiceServer.GetBindTcpPort();
+            }
+
             msg.SetMessageBody(req);
 
            bool boo= SendMessageAnsy<RegisterServiceResponse>(msg).IsSuccess;

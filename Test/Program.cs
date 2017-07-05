@@ -130,6 +130,8 @@ namespace Test
 
         static void Main(string[] args)
         {
+            Console.Read();
+
             LJC.FrameWork.SocketEasyUDP.Server.ServerBase serverbase = new LJC.FrameWork.SocketEasyUDP.Server.ServerBase(50000);
             serverbase.StartServer();
 

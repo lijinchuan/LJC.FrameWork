@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LJC.FrameWork.SOA
 {
-    public class SOARedirectRequest:SOARequest
+    internal class SOARedirectRequest:SOARequest
     {
     }
 }

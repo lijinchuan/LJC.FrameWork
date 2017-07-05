@@ -15,6 +15,16 @@ namespace LJC.FrameWork.SOA
         {
         }
 
+        public string[] GetBindIps()
+        {
+            return this.bindIpArray;
+        }
+
+        public int GetBindTcpPort()
+        {
+            return this.ipPort;
+        }
+
         protected override void FormApp(SocketApplication.Message message, SocketApplication.Session session)
         {
             if (message.IsMessage((int)SOAMessageType.DoSOARedirectRequest))
