@@ -8,6 +8,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Net;
+using System.Collections;
+using System.Net.NetworkInformation;
 
 namespace LJC.FrameWork.SocketApplication
 {
@@ -193,6 +195,78 @@ namespace LJC.FrameWork.SocketApplication
             {
                 Console.WriteLine(info);
             }
+        }
+
+        /// <summary>
+        /// 获取操作系统已用的端口号
+        /// </summary>
+        /// <returns></returns>
+        public static List<int> GetTcpPortUsed()
+        {
+            //获取本地计算机的网络连接和通信统计数据的信息
+            IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
+            //返回本地计算机上的所有Tcp监听程序
+            IPEndPoint[] ipsTCP = ipGlobalProperties.GetActiveTcpListeners();
+            //返回本地计算机上的Internet协议版本4(IPV4 传输控制协议(TCP)连接的信息。
+            TcpConnectionInformation[] tcpConnInfoArray = ipGlobalProperties.GetActiveTcpConnections();
+
+            List<int> allPorts = new List<int>();
+            foreach (IPEndPoint ep in ipsTCP)
+            {
+                allPorts.Add(ep.Port);
+            }
+            foreach (TcpConnectionInformation conn in tcpConnInfoArray)
+            {
+                allPorts.Add(conn.LocalEndPoint.Port);
+            }
+            return allPorts;
+        }
+
+        /// <summary>
+        /// 获取操作系统已用的端口号
+        /// </summary>
+        /// <returns></returns>
+        public static List<int> GetUdpPortUsed()
+        {
+            //获取本地计算机的网络连接和通信统计数据的信息
+            IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
+            //返回本地计算机上的所有UDP监听程序
+            IPEndPoint[] ipsUDP = ipGlobalProperties.GetActiveUdpListeners();
+
+            List<int> allPorts = new List<int>();
+            foreach (IPEndPoint ep in ipsUDP)
+            {
+                allPorts.Add(ep.Port);
+            }
+            return allPorts;
+        }
+
+        public static int GetIdelTcpPort()
+        {
+            var portsused = GetTcpPortUsed();
+            for (int i = 1024; i < 65536; i++)
+            {
+                if (!portsused.Contains(i))
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+
+        public static int GetIdelUdpPort()
+        {
+            var portsused = GetUdpPortUsed();
+            for (int i = 1024; i < 65536; i++)
+            {
+                if (!portsused.Contains(i))
+                {
+                    return i;
+                }
+            }
+
+            return 0;
         }
     }
 }

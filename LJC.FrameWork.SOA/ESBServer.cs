@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Threading;
 using LJC.FrameWork.LogManager;
 using LJC.FrameWork.EntityBuf;
+using LJC.FrameWork.SOA.Contract;
 
 namespace LJC.FrameWork.SOA
 {
@@ -79,14 +80,14 @@ namespace LJC.FrameWork.SOA
         {
             switch(funcId)
             {
-                case 1:
+                case Consts.FunNo_ECHO:
                     {
                         return new SOAServerEchoResponse
                         {
                             Ok=true
                         };
                     }
-                case 2:
+                case Consts.FunNo_Environment:
                     {
                         return new SOAServerEnvironmentResponse
                         {
@@ -95,10 +96,27 @@ namespace LJC.FrameWork.SOA
                             ProcessorCount=Environment.ProcessorCount,
                         };
                     }
-                case 3:
+                case Consts.FunNo_ExistsAServiceNo:
                     {
                         int serviceno=EntityBuf.EntityBufCore.DeSerialize<int>(param);
                         return ServiceContainer.Exists(p => p.ServiceNo == serviceno);
+                    }
+                case Consts.FunNo_GetRegisterServiceInfo:
+                    {
+                        var req=EntityBuf.EntityBufCore.DeSerialize<GetRegisterServiceInfoRequest>(param);
+                        GetRegisterServiceInfoResponse resp = new GetRegisterServiceInfoResponse();
+
+                        resp.ServiceNo = req.ServiceNo;
+                        resp.Infos = ServiceContainer.Where(p => p.ServiceNo.Equals(req.ServiceNo)).Select(p => new RegisterServiceInfo
+                        {
+                            ServiceNo=p.ServiceNo,
+                            RedirectTcpIps=p.RedirectTcpIps,
+                            RedirectTcpPort=p.RedirectTcpPort,
+                            RedirectUdpIps=p.RedirectUdpIps,
+                            RedirectUdpPort=p.RedirectUdpPort,
+                        }).ToArray();
+
+                        return resp;
                     }
                 default:
                     {
@@ -255,9 +273,12 @@ namespace LJC.FrameWork.SOA
                         {
                             ServiceNo = req.ServiceNo,
                             Session = session,
+                            RedirectTcpIps=req.RedirectTcpIps,
+                            RedirectTcpPort=req.RedirectTcpPort,
+                            RedirectUdpIps=req.RedirectUdpIps,
+                            RedirectUdpPort=req.RedirectUdpPort
                         });
                     }
-
 
                     msg.SetMessageBody(new RegisterServiceResponse
                     {

@@ -40,14 +40,20 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Consts.cs" />
+    <Compile Include="Contract\GetRegisterServiceInfoRequest.cs" />
+    <Compile Include="Contract\GetRegisterServiceInfoResponse.cs" />
+    <Compile Include="Contract\RegisterServiceInfo.cs" />
     <Compile Include="Contract\RegisterServiceRequest.cs" />
     <Compile Include="Contract\RegisterServiceResponse.cs" />
+    <Compile Include="Contract\SOARedirectRequest.cs" />
+    <Compile Include="Contract\SOARedirectResponse.cs" />
     <Compile Include="Contract\UnRegisterServiceRequest.cs" />
     <Compile Include="Contract\UnRegisterServiceResponse.cs" />
     <Compile Include="ESBClientInfo.cs" />
     <Compile Include="ESBClient.cs" />
     <Compile Include="ESBClientPoolManager.cs" />
     <Compile Include="ESBConfig.cs" />
+    <Compile Include="ESBRedirectService.cs" />
     <Compile Include="ESBService.cs" />
     <Compile Include="ESBServiceInfo.cs" />
     <Compile Include="ESBServer.cs" />

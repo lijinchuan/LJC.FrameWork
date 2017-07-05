@@ -5,15 +5,15 @@ using System.Text;
 
 namespace LJC.FrameWork.SOA.Contract
 {
-    public class ResisterServiceResponse
+    public class GetRegisterServiceInfoResponse
     {
-        public bool IsSuccess
+        public int ServiceNo
         {
             get;
             set;
         }
 
-        public string ErrMsg
+        public RegisterServiceInfo[] Infos
         {
             get;
             set;

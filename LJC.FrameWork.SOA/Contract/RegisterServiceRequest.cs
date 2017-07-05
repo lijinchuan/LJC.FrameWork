@@ -12,5 +12,29 @@ namespace LJC.FrameWork.SOA
             get;
             set;
         }
+
+        public string[] RedirectTcpIps
+        {
+            get;
+            set;
+        }
+
+        public int RedirectTcpPort
+        {
+            get;
+            set;
+        }
+
+        public string[] RedirectUdpIps
+        {
+            get;
+            set;
+        }
+
+        public int RedirectUdpPort
+        {
+            get;
+            set;
+        }
     }
 }

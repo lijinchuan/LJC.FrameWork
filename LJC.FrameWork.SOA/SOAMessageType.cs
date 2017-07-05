@@ -13,5 +13,7 @@ namespace LJC.FrameWork.SOA
         DoSOATransferResponse,
         RegisterService,
         UnRegisterService,
+        DoSOARedirectRequest,
+        DoSOARedirectResponse
     }
 }

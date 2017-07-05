@@ -5,12 +5,7 @@ using System.Text;
 
 namespace LJC.FrameWork.SOA
 {
-    public class ResisterServiceRequest
+    public class SOARedirectRequest:SOARequest
     {
-        public int ServiceNo
-        {
-            get;
-            set;
-        }
     }
 }
