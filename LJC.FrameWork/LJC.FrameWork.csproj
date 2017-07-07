@@ -293,6 +293,7 @@
     <Compile Include="SocketApplication\SocketApplicationComm.cs" />
     <Compile Include="Comm\BufferPollManager.cs" />
     <Compile Include="SocketApplication\SocketApplicationException.cs" />
+    <Compile Include="SocketApplication\SocketEasyUDP\Client\SessionClient.cs" />
     <Compile Include="SocketApplication\SocketEnvironment.cs" />
     <Compile Include="SocketApplication\SocketSessionDataException.cs" />
     <Compile Include="SocketApplication\SocketEasyUDP\Client\ClientBase.cs" />
