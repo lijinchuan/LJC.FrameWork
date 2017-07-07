@@ -13,6 +13,8 @@ namespace LJC.FrameWork.SocketEasyUDP
         private Dictionary<Guid, byte[][]> TempBagDic = new Dictionary<Guid, byte[][]>();
         private Dictionary<Guid, DateTime> BagTimestamp = new Dictionary<Guid, DateTime>();
 
+        private bool _disposed = false;
+
         public virtual bool SendMessage(Message msg,EndPoint endpoint)
         {
             throw new NotImplementedException();
@@ -135,9 +137,46 @@ namespace LJC.FrameWork.SocketEasyUDP
         }
         #endregion
 
+        #region 资源清理
+        protected virtual void DisposeManagedResource()
+        {
+
+        }
+
+        protected virtual void DisposeUnManagedResource()
+        {
+
+        }
+
+        private void Dispose(bool flag)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (flag)
+            {
+                //清理托管资源
+                DisposeManagedResource();
+            }
+            
+            //清理非托管资源
+            DisposeUnManagedResource();
+
+            _disposed = true;
+            GC.SuppressFinalize(this);
+        }
+
         public void Dispose()
         {
-            throw new NotImplementedException();
+            Dispose(true);
         }
+
+        public ~UDPSocketBase()
+        {
+            Dispose(false);
+        }
+        #endregion
     }
 }

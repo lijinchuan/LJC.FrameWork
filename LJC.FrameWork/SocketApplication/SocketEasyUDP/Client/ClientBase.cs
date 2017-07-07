@@ -66,5 +66,20 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                 OnMessage(message);
             }));
         }
+
+        protected override void DisposeManagedResource()
+        {
+            base.DisposeManagedResource();
+        }
+
+        protected override void DisposeUnManagedResource()
+        {
+            if (_udpClient != null)
+            {
+                _udpClient.Close();
+            }
+
+            base.DisposeUnManagedResource();
+        }
     }
 }

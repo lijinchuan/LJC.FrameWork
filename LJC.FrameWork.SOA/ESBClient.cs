@@ -163,8 +163,10 @@ namespace LJC.FrameWork.SOA
                                                  }
                                              }
                                          };
-                                        client.StartClient();
-                                        poollist.Add(new ESBClientPoolManager(5, () => client));
+                                        if (client.StartClient())
+                                        {
+                                            poollist.Add(new ESBClientPoolManager(5, () => client));
+                                        }
                                         break;
                                     }
                                     catch
