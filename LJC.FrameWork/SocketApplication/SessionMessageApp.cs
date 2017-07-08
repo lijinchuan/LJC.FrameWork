@@ -267,7 +267,7 @@ namespace LJC.FrameWork.SocketApplication
 
             //s.Send(msg.ToBytes());
             session.LastSessionTime = DateTime.Now;
-            session.Socket.SendMessge(message);
+            session.Socket.SendMessge(msg);
 
             SocketApplicationComm.Debug(string.Format("{0}发来心跳！", session.SessionID));
         }

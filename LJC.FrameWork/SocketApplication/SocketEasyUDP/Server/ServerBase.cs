@@ -43,9 +43,8 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             }
         }
 
-        protected virtual Message OnMessage(Message message)
+        protected virtual void FromApp(Message message,EndPoint endpoint)
         {
-            return null;
         }
 
         private void OnSocket(object endpoint,byte[] bytes)
@@ -53,11 +52,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
                 {
                     var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(bytes);
-                    var msg = OnMessage(message);
-                    if (msg != null)
-                    {
-                        SendMessage(msg, (EndPoint)endpoint);
-                    }
+                    FromApp(message, (EndPoint)endpoint);
                 }));
         }
 

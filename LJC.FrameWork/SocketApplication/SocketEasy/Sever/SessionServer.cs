@@ -40,7 +40,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
             //s.Send(msg.ToBytes());
             session.LastSessionTime = DateTime.Now;
-            session.Socket.SendMessge(message);
+            session.Socket.SendMessge(msg);
 
             SocketApplicationComm.Debug(string.Format("{0}发来心跳！", session.SessionID));
         }
@@ -178,7 +178,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 App_Login(message, session);
             }
-            if (message.IsMessage(MessageType.LOGOUT))
+            else if (message.IsMessage(MessageType.LOGOUT))
             {
                 App_LoginOut(message, session);
             }
@@ -186,76 +186,10 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 App_HeatBeat(message, session);
             }
-            else
-            {
-                //if(!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
-                //{
-                //    Console.WriteLine("收到消息:" + message.MessageHeader.TransactionID);
-                //}
-
-                FormAppMessage(message, session);
-            }
 
             base.FormApp(message, session);
         }
 
-        #endregion
-
-        #region 同步消息
-
-        public T SendMessageAnsy<T>(Session s, Message message, int timeOut = 60000)
-        {
-            if (string.IsNullOrEmpty(message.MessageHeader.TransactionID))
-                throw new Exception("消息没有设置唯一的序号。无法进行同步。");
-
-            string reqID = message.MessageHeader.TransactionID;
-
-            using (AutoReSetEventResult autoResetEvent = new AutoReSetEventResult(reqID))
-            {
-                watingEvents.Add(reqID, autoResetEvent);
-                if (s.Socket.SendMessge(message))
-                {
-                    WaitHandle.WaitAny(new WaitHandle[] { autoResetEvent }, timeOut);
-
-                    watingEvents.Remove(reqID);
-
-                    if (autoResetEvent.IsTimeOut)
-                    {
-                        throw new Exception("请求超时");
-                    }
-                    else
-                    {
-                        T result = EntityBufCore.DeSerialize<T>((byte[])autoResetEvent.WaitResult);
-                        return result;
-                    }
-                }
-                else
-                {
-                    throw new Exception("发送失败。");
-                }
-            }
-        }
-
-        protected void FormAppMessage(Message message, Session session)
-        {
-            //base.ReciveMessage(message);
-            byte[] result = message.MessageBuffer;
-
-            if (result != null && !string.IsNullOrEmpty(message.MessageHeader.TransactionID))
-            {
-                if (watingEvents.Count == 0)
-                    return;
-
-                AutoReSetEventResult autoEvent = watingEvents.First(p => p.Key == message.MessageHeader.TransactionID).Value;
-                if (autoEvent != null)
-                {
-                    autoEvent.WaitResult = result;
-                    autoEvent.IsTimeOut = false;
-                    autoEvent.Set();
-                    return;
-                }
-            }
-        }
         #endregion
     }
 }

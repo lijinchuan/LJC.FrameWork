@@ -120,7 +120,7 @@ namespace LJC.FrameWork.SocketApplication
             this.IsValid = false;
         }
 
-        public bool SendMessage(Message msg)
+        public virtual bool SendMessage(Message msg)
         {
             if (this.Socket == null)
                 throw new Exception("无套接字");

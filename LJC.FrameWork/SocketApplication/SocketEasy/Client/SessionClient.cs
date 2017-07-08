@@ -253,7 +253,7 @@ namespace LJC.FrameWork.SocketEasy.Client
         #endregion
 
         #region
-        /// 需要实现DoMessage
+        /// 
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="message"></param>

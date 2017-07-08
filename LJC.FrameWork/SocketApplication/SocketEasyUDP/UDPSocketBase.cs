@@ -173,7 +173,7 @@ namespace LJC.FrameWork.SocketEasyUDP
             Dispose(true);
         }
 
-        public ~UDPSocketBase()
+        ~UDPSocketBase()
         {
             Dispose(false);
         }

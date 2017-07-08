@@ -12,6 +12,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
     {
         private UdpClient _udpClient;
         private System.Net.IPEndPoint _serverPoint = null;
+        protected bool _stop = true;
 
         public ClientBase(string host,int port)
         {
@@ -38,16 +39,27 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
 
         public void StartClient()
         {
+            _stop = false;
             new Action(() =>
                 {
-                    while (true)
+                    while (!_stop)
                     {
-                        var bytes = _udpClient.Receive(ref _serverPoint);
-
-                        var margebytes = MargeBag(bytes);
-                        if (margebytes != null)
+                        try
                         {
-                            OnMessage(margebytes);
+                            var bytes = _udpClient.Receive(ref _serverPoint);
+
+                            var margebytes = MargeBag(bytes);
+                            if (margebytes != null)
+                            {
+                                OnMessage(margebytes);
+                            }
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                        }
+                        catch
+                        {
+
                         }
                     }
                 }).BeginInvoke(null, null);

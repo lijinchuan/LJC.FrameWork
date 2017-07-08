@@ -294,6 +294,7 @@
     <Compile Include="Comm\BufferPollManager.cs" />
     <Compile Include="SocketApplication\SocketApplicationException.cs" />
     <Compile Include="SocketApplication\SocketEasyUDP\Client\SessionClient.cs" />
+    <Compile Include="SocketApplication\SocketEasyUDP\Server\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketEnvironment.cs" />
     <Compile Include="SocketApplication\SocketSessionDataException.cs" />
     <Compile Include="SocketApplication\SocketEasyUDP\Client\ClientBase.cs" />
@@ -308,6 +309,7 @@
     <Compile Include="SocketApplication\SocketEasy\Sever\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketEasy\Sever\SeverBase.cs" />
     <Compile Include="SocketApplication\SocketEasy\SocketBase.cs" />
+    <Compile Include="SocketApplication\UDPSession.cs" />
     <Compile Include="Web\HttpUtil.cs" />
     <Compile Include="Web\PageTraceUtil.cs" />
     <Compile Include="Web\PerformanceMonitor.cs" />
