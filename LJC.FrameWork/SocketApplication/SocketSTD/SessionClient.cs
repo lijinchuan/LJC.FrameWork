@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace LJC.FrameWork.SocketApplication
+namespace LJC.FrameWork.SocketApplication.SocketSTD
 {
     public class SessionClient : SessionMessageApp
     {

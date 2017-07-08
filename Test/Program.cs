@@ -11,6 +11,7 @@ using System.Data.SqlClient;
 using LJC.FrameWork.Data;
 using System.Linq.Expressions;
 using System.Threading;
+using LJC.FrameWork.SocketApplication.SocketSTD;
 
 namespace Test
 {
@@ -205,7 +206,7 @@ namespace Test
         static void Main1(string[] args)
         {
 
-            LJC.FrameWork.SocketApplication.MessageApp appServer = new LJC.FrameWork.SocketApplication.MessageApp();
+            MessageApp appServer = new MessageApp();
             appServer.EnableBroadCast = true;
             appServer.EnableMultiCast = true;
             var msg = new LJC.FrameWork.SocketApplication.Message

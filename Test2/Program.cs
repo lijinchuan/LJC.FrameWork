@@ -5,6 +5,7 @@ using LJC.FrameWork.Comm.TextReaderWriter;
 using LJC.FrameWork.Data.Mongo;
 using LJC.FrameWork.SOA;
 using LJC.FrameWork.SocketApplication;
+using LJC.FrameWork.SocketApplication.SocketEasyUDP.Client;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -164,7 +165,7 @@ namespace Test2
             Console.WriteLine(obj.Message);
         }
 
-        static LJC.FrameWork.SocketApplication.SessionClient client = null;
+        static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
             TestEsbservices();
@@ -327,7 +328,7 @@ namespace Test2
             //TryRead1();
 
             //ThreadPool.SetMinThreads(100, 100);
-            client = new LJC.FrameWork.SocketApplication.SessionClient("127.0.0.1", 5555, true);
+            client = new LJC.FrameWork.SocketApplication.SocketSTD.SessionClient("127.0.0.1", 5555, true);
             client.LoginSuccess += client_LoginSuccess;
             client.Error += client_Error;
             client.Login("", "");
@@ -535,7 +536,7 @@ namespace Test2
 
         static void Main1(string[] args)
         {
-            LJC.FrameWork.SocketApplication.MessageApp appClient = new LJC.FrameWork.SocketApplication.MessageApp();
+            LJC.FrameWork.SocketApplication.SocketSTD.MessageApp appClient = new LJC.FrameWork.SocketApplication.SocketSTD.MessageApp();
             
             appClient.EnableBroadCast = true;
             appClient.EnableMultiCast = true;

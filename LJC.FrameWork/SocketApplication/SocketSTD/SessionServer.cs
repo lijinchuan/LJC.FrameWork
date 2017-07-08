@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-namespace LJC.FrameWork.SocketApplication
+namespace LJC.FrameWork.SocketApplication.SocketSTD
 {
     public class SessionServer:SessionMessageApp
     {

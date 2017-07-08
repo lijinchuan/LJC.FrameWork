@@ -8,7 +8,7 @@ using System.Threading;
 using System.IO;
 using LJC.FrameWork.EntityBuf;
 
-namespace LJC.FrameWork.SocketApplication
+namespace LJC.FrameWork.SocketApplication.SocketSTD
 {
     public class MessageApp : IDisposable
     {

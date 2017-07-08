@@ -47,7 +47,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         {
         }
 
-        public override bool SendMessage(Message msg, EndPoint endpoint)
+        public sealed override bool SendMessage(Message msg, EndPoint endpoint)
         {
             if (SessionContext != null)
             {
@@ -121,7 +121,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             }
         }
 
-        protected override void OnMessage(Message message)
+        protected sealed override void OnMessage(Message message)
         {
             if (message.IsMessage((int)MessageType.LOGIN))
             {

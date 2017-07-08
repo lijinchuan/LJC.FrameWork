@@ -5,6 +5,7 @@ using System.Text;
 using LJC.FrameWork.SocketApplication;
 using System.Threading;
 using LJC.FrameWork.LogManager;
+using LJC.FrameWork.SocketApplication.SocketSTD;
 
 namespace LJC.FrameWork.SOA
 {

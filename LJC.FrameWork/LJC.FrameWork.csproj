@@ -283,13 +283,13 @@
     <Compile Include="SocketApplication\LoginRequestMessage.cs" />
     <Compile Include="SocketApplication\LoginResponseMessage.cs" />
     <Compile Include="SocketApplication\Message.cs" />
-    <Compile Include="SocketApplication\MessageApp.cs" />
+    <Compile Include="SocketApplication\SocketSTD\MessageApp.cs" />
     <Compile Include="SocketApplication\MessageType.cs" />
     <Compile Include="SocketApplication\Session.cs" />
     <Compile Include="SocketApplication\SessionAbortException.cs" />
-    <Compile Include="SocketApplication\SessionClient.cs" />
-    <Compile Include="SocketApplication\SessionMessageApp.cs" />
-    <Compile Include="SocketApplication\SessionServer.cs" />
+    <Compile Include="SocketApplication\SocketSTD\SessionClient.cs" />
+    <Compile Include="SocketApplication\SocketSTD\SessionMessageApp.cs" />
+    <Compile Include="SocketApplication\SocketSTD\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketApplicationComm.cs" />
     <Compile Include="Comm\BufferPollManager.cs" />
     <Compile Include="SocketApplication\SocketApplicationException.cs" />

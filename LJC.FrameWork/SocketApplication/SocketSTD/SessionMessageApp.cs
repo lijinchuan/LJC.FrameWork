@@ -7,7 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Timers;
 
-namespace LJC.FrameWork.SocketApplication
+namespace LJC.FrameWork.SocketApplication.SocketSTD
 {
     public class SessionMessageApp : MessageApp
     {
