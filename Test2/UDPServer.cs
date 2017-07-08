@@ -1,4 +1,5 @@
-﻿using LJC.FrameWork.SocketApplication.SocketEasyUDP.Server;
+﻿using LJC.FrameWork.SocketApplication;
+using LJC.FrameWork.SocketApplication.SocketEasyUDP.Server;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,7 @@ namespace Test2
 
         }
 
-        protected override void FromSessionMessage(LJC.FrameWork.SocketApplication.Message message, LJC.FrameWork.SocketApplication.UDPSession session)
+        protected override void FromSessionMessage(Message message, UDPSession session)
         {
             base.FromSessionMessage(message, session);
         }

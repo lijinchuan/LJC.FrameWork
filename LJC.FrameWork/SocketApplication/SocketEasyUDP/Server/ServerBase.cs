@@ -63,7 +63,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             {
                 lock (__s)
                 {
-                    __s.SendTo(bytes, SocketFlags.None, endpoint);
+                    __s.SendTo(segment, SocketFlags.None, endpoint);
                 }
             }
 

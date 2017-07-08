@@ -57,7 +57,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                         catch (ObjectDisposedException)
                         {
                         }
-                        catch
+                        catch(Exception ex)
                         {
 
                         }

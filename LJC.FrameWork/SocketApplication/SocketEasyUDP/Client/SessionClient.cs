@@ -84,7 +84,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             {
                 _heartbeatTimer.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
 
-                if (DateTime.Now.Subtract(SessionContext.LastSessionTime).TotalSeconds < SessionContext.HeadBeatInterVal)
+                if (DateTime.Now.Subtract(SessionContext.LastSessionTime).TotalSeconds < 10)
                     return;
 
                 Message msg = new Message(MessageType.HEARTBEAT);

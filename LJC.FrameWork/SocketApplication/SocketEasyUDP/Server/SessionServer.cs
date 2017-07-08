@@ -166,7 +166,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             {
                 if (message.IsMessage(MessageType.LOGIN))
                 {
-                    App_Login(message, new UDPSession { SessionID = key, SessionServer = this });
+                    App_Login(message, new UDPSession { SessionID = key, SessionServer=this,EndPoint = (IPEndPoint)endpoint });
                 }
                 else
                 {
