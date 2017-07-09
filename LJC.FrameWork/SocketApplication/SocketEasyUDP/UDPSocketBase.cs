@@ -15,9 +15,19 @@ namespace LJC.FrameWork.SocketEasyUDP
 
         private bool _disposed = false;
 
+        public event Action<Exception> Error = null;
+
         public virtual bool SendMessage(Message msg,EndPoint endpoint)
         {
             throw new NotImplementedException();
+        }
+
+        protected virtual void OnError(Exception e)
+        {
+            if (Error != null)
+            {
+                Error(e);
+            }
         }
 
         #region 拆包

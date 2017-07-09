@@ -13,7 +13,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
         private Dictionary<string, UDPSession> _sessiondic = new Dictionary<string, UDPSession>();
         private Dictionary<string, AutoReSetEventResult> watingEvents = new Dictionary<string, AutoReSetEventResult>();
 
-        public SessionServer(string ip,int port) : base(ip, port)
+        public SessionServer(string[] ips,int port) : base(ips, port)
         {
 
         }

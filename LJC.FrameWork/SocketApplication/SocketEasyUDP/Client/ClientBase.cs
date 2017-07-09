@@ -54,12 +54,13 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                                 OnMessage(margebytes);
                             }
                         }
-                        catch (ObjectDisposedException)
+                        catch (ObjectDisposedException ex)
                         {
+                            OnError(ex);
                         }
                         catch(Exception ex)
                         {
-
+                            OnError(ex);
                         }
                     }
                 }).BeginInvoke(null, null);

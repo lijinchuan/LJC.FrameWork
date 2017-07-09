@@ -241,9 +241,16 @@ namespace LJC.FrameWork.SocketApplication
             return allPorts;
         }
 
-        public static int GetIdelTcpPort()
+        public static int GetIdelTcpPort(int testport=0)
         {
             var portsused = GetTcpPortUsed();
+            if (testport != 0)
+            {
+                if (!portsused.Contains(testport))
+                {
+                    return testport;
+                }
+            }
             for (int i = 1025; i < 65536; i++)
             {
                 if (!portsused.Contains(i))
@@ -255,9 +262,16 @@ namespace LJC.FrameWork.SocketApplication
             return 0;
         }
 
-        public static int GetIdelUdpPort()
+        public static int GetIdelUdpPort(int testport = 0)
         {
             var portsused = GetUdpPortUsed();
+            if (testport != 0)
+            {
+                if (!portsused.Contains(testport))
+                {
+                    return testport;
+                }
+            }
             for (int i = 1025; i < 65536; i++)
             {
                 if (!portsused.Contains(i))

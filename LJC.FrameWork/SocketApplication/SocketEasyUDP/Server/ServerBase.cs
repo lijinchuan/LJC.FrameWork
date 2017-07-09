@@ -12,21 +12,57 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
     {
         Socket __s = null;
         Dictionary<string, Socket> _connectDic = new Dictionary<string, Socket>();
+        protected string[] _bindingips = null;
+        protected int _bindport = 0;
+        private bool _isBindIp = false;
+
+        private object _bindlocker = new object();
+
+        private void BindIps()
+        {
+            if (!_isBindIp)
+            {
+                lock (_bindlocker)
+                {
+                    if (!_isBindIp)
+                    {
+                        __s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                        if (_bindingips == null)
+                        {
+                            __s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Any, _bindport));
+                        }
+                        else
+                        {
+                            foreach (var ip in _bindingips)
+                            {
+                                __s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(ip), _bindport));
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         public ServerBase(int port)
         {
-            __s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            __s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Any, port));
+            //__s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            //__s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Any, port));
+
+            _bindport = port;
         }
 
-        public ServerBase(string ip, int port)
+        public ServerBase(string[] ips, int port)
         {
-            __s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            __s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(ip), port));
+            //__s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            //__s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(ip), port));
+
+            _bindingips = ips;
+            _bindport = port;
         }
 
         public void StartServer()
         {
+            BindIps();
             while (true)
             {
                 IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
@@ -68,6 +104,17 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             }
 
             return true;
+        }
+
+
+        protected override void DisposeUnManagedResource()
+        {
+            if (__s != null)
+            {
+                __s.Close();
+                __s.Dispose();
+            }
+            base.DisposeUnManagedResource();
         }
     }
 }

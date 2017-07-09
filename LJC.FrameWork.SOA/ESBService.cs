@@ -16,16 +16,22 @@ namespace LJC.FrameWork.SOA
             get;
             set;
         }
+
+        private bool SupportUDPServiceRedrect
+        {
+            get;
+            set;
+        }
        
 
-        public ESBService(string serverIP, int serverPort,int sNo,bool supportTcpServiceRidrect=false)
+        public ESBService(string serverIP, int serverPort,int sNo,bool supportTcpServiceRedirect=false,bool supportUdpServiceRedirect=false)
             : base(serverIP, serverPort)
         {
             this.ServiceNo = sNo;
             this.BeferLogout += this.UnRegisterService;
             this.OnClientReset += ESBService_OnClientReset;
 
-            this.SupportTcpServiceRidrect = supportTcpServiceRidrect;
+            this.SupportTcpServiceRidrect = supportTcpServiceRedirect;
         }
 
         public ESBService(int sNo, bool supportTcpServiceRidrect = false)
@@ -174,8 +180,13 @@ namespace LJC.FrameWork.SOA
             req.ServiceNo = this.ServiceNo;
             if (SupportTcpServiceRidrect)
             {
-                req.RedirectTcpIps = RedirectServiceServer.GetBindIps();
-                req.RedirectTcpPort = RedirectServiceServer.GetBindTcpPort();
+                req.RedirectTcpIps = RedirectTcpServiceServer.GetBindIps();
+                req.RedirectTcpPort = RedirectTcpServiceServer.GetBindTcpPort();
+            }
+            if (SupportUDPServiceRedrect)
+            {
+                req.RedirectUdpIps = RedirectUpdServiceServer.GetBindIps();
+                req.RedirectUdpPort = RedirectUpdServiceServer.GetBindUdpPort();
             }
 
             msg.SetMessageBody(req);
@@ -260,7 +271,8 @@ namespace LJC.FrameWork.SOA
         }
 
         #region 开通直连服务
-        private ESBRedirectService RedirectServiceServer = null;
+        private ESBRedirectService RedirectTcpServiceServer = null;
+        private ESBUDPService RedirectUpdServiceServer = null;
 
         public void StartRedirectService()
         {
@@ -280,18 +292,19 @@ namespace LJC.FrameWork.SOA
 
             if (addrs.Length > 0)
             {
-                if (RedirectServiceServer == null)
+                int iport = 0;
+                if (SupportTcpServiceRidrect&& RedirectTcpServiceServer == null)
                 {
                     int trytimes = 0;
                     while (true)
                     {
                         try
                         {
-                            var iport = SocketApplicationComm.GetIdelTcpPort();
+                            iport = SocketApplicationComm.GetIdelTcpPort();
                             
-                            RedirectServiceServer = new ESBRedirectService(bindips.Select(p => p.ToString()).ToArray(), iport);
-                            RedirectServiceServer.DoResponseAction = DoResponse;
-                            RedirectServiceServer.StartServer();
+                            RedirectTcpServiceServer = new ESBRedirectService(bindips.Select(p => p.ToString()).ToArray(), iport);
+                            RedirectTcpServiceServer.DoResponseAction = DoResponse;
+                            RedirectTcpServiceServer.StartServer();
                             break;
                         }
                         catch (Exception ex)
@@ -300,6 +313,31 @@ namespace LJC.FrameWork.SOA
                             if (trytimes >= 10)
                             {
                                 throw new Exception("启动tcp直连服务端口失败,已尝试" + trytimes + "次", ex);
+                            }
+                        }
+                    }
+                }
+
+                if (SupportUDPServiceRedrect && this.RedirectUpdServiceServer == null)
+                {
+                    int trytimes = 0;
+                    while (true)
+                    {
+                        try
+                        {
+                            iport = SocketApplicationComm.GetIdelUdpPort(iport);
+
+                            RedirectUpdServiceServer = new ESBUDPService(bindips.Select(p => p.ToString()).ToArray(), iport);
+                            RedirectUpdServiceServer.DoResponseAction = DoResponse;
+                            RedirectUpdServiceServer.StartServer();
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            trytimes++;
+                            if (trytimes >= 10)
+                            {
+                                throw new Exception("启动udp直连服务端口失败,已尝试" + trytimes + "次", ex);
                             }
                         }
                     }

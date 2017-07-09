@@ -16,7 +16,6 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         public event Action LoginFail;
         public event Action LoginSuccess;
-        public event Action<Exception> Error;
         protected Exception BuzException = null;
 
         private Session SessionContext;
@@ -26,15 +25,12 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         }
 
-        protected virtual void OnError(Exception e)
+        protected override void OnError(Exception e)
         {
             if (_stop)
                 return;
 
-            if (Error != null)
-            {
-                Error(e);
-            }
+            base.OnError(e);
         }
 
         #region login事件
