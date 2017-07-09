@@ -12,7 +12,8 @@ namespace LJC.FrameWork.SOA
     public class ESBClient:SessionClient
     {
         private static ESBClientPoolManager _clientmanager = new ESBClientPoolManager();
-        private static Dictionary<int, List<ESBClientPoolManager>> _escClientDicManager = new Dictionary<int, List<ESBClientPoolManager>>();
+        private static Dictionary<int, List<ESBClientPoolManager>> _esbClientDicManager = new Dictionary<int, List<ESBClientPoolManager>>();
+        private static Dictionary<int, List<ESBUdpClient>> _esbUdpClientDic = new Dictionary<int, List<ESBUdpClient>>();
 
         internal ESBClient(string serverIP, int serverPort,bool startSession=true)
             : base(serverIP, serverPort,startSession)
@@ -121,15 +122,16 @@ namespace LJC.FrameWork.SOA
         public static T DoSOARequest2<T>(int serviceId, int functionId, object param)
         {
             List<ESBClientPoolManager> poolmanagerlist = null;
-            if (!_escClientDicManager.TryGetValue(serviceId,out poolmanagerlist))
+            if (!_esbClientDicManager.TryGetValue(serviceId,out poolmanagerlist))
             {
                 bool takecleint = false;
-                lock (_escClientDicManager)
+                lock (_esbClientDicManager)
                 {
-                    if (!_escClientDicManager.TryGetValue(serviceId, out poolmanagerlist))
+                    if (!_esbClientDicManager.TryGetValue(serviceId, out poolmanagerlist))
                     {
                         takecleint = true;
-                        _escClientDicManager.Add(serviceId, null);
+                        _esbClientDicManager.Add(serviceId, null);
+                        _esbUdpClientDic.Add(serviceId, null);
                     }
                 }
 
@@ -145,42 +147,72 @@ namespace LJC.FrameWork.SOA
                         if (respserviceinfo.Infos != null && respserviceinfo.Infos.Length > 0)
                         {
                             List<ESBClientPoolManager> poollist = new List<ESBClientPoolManager>();
+                            List<ESBUdpClient> udppoollist = new List<ESBUdpClient>();
                             foreach (var info in respserviceinfo.Infos)
                             {
-                                foreach (var ip in info.RedirectTcpIps)
+                                if (info.RedirectUdpIps != null)
                                 {
-                                    try
+                                    foreach (var ip in info.RedirectUdpIps)
                                     {
-                                        var client = new ESBClient(ip, info.RedirectTcpPort, false);
-                                        client.Error += (ex) =>
-                                         {
-                                             if(ex is System.Net.WebException)
-                                             {
-                                                 client.CloseClient();
-                                                 client.Dispose();
-                                                 lock (_escClientDicManager)
-                                                 {
-                                                     _escClientDicManager.Remove(serviceId);
-                                                 }
-                                             }
-                                         };
-                                        if (client.StartClient())
+                                        try
                                         {
-                                            poollist.Add(new ESBClientPoolManager(5, () => client));
+                                            var client = new ESBUdpClient(ip, info.RedirectUdpPort);
+                                            client.Error += UDPClient_Error;
+                                            client.StartClient();
+                                            udppoollist.Add(client);
                                         }
-                                        break;
-                                    }
-                                    catch
-                                    {
+                                        catch
+                                        {
 
+                                        }
+                                    }
+                                }
+
+                                if (udppoollist.Count==0&& info.RedirectTcpIps != null)
+                                {
+                                    foreach (var ip in info.RedirectTcpIps)
+                                    {
+                                        try
+                                        {
+                                            var client = new ESBClient(ip, info.RedirectTcpPort, false);
+                                            client.Error += (ex) =>
+                                             {
+                                                 if (ex is System.Net.WebException)
+                                                 {
+                                                     client.CloseClient();
+                                                     client.Dispose();
+                                                     lock (_esbClientDicManager)
+                                                     {
+                                                         _esbClientDicManager.Remove(serviceId);
+                                                     }
+                                                 }
+                                             };
+                                            if (client.StartClient())
+                                            {
+                                                poollist.Add(new ESBClientPoolManager(5, () => client));
+                                            }
+                                            break;
+                                        }
+                                        catch
+                                        {
+
+                                        }
                                     }
                                 }
                             }
-                            if (poollist != null)
+
+                            if (udppoollist.Count>0)
                             {
-                                lock (_escClientDicManager)
+                                lock (_esbUdpClientDic)
                                 {
-                                    _escClientDicManager[serviceId] = poollist;
+                                    _esbUdpClientDic[serviceId] = udppoollist;
+                                }
+                            }
+                            if (poollist.Count > 0)
+                            {
+                                lock (_esbClientDicManager)
+                                {
+                                    _esbClientDicManager[serviceId] = poollist;
                                 }
                             }
                         }
@@ -188,17 +220,30 @@ namespace LJC.FrameWork.SOA
                 }
             }
 
-            if (poolmanagerlist == null||poolmanagerlist.Count==0)
-            {
-                return DoSOARequest<T>(serviceId, functionId, param);
-            }
-            else
+            if (poolmanagerlist != null)
             {
                 var poolmanager = poolmanagerlist.Count == 1 ? poolmanagerlist[0]
                     : poolmanagerlist[new Random().Next(0, poolmanagerlist.Count)];
 
                 return poolmanager.RandClient().DoRequest<T>(functionId, param);
             }
+            else
+            {
+                List<ESBUdpClient> udpclientlist = null;
+                if (_esbUdpClientDic.TryGetValue(serviceId, out udpclientlist) && udpclientlist.Count > 0)
+                {
+                    return udpclientlist.First().DoRequest<T>(functionId, param);
+                }
+                else
+                {
+                    return DoSOARequest<T>(serviceId, functionId, param);
+                }
+            }
+        }
+
+        static void UDPClient_Error(Exception e)
+        {
+            LogHelper.Instance.Error("UDPSOA请求错误", e);
         }
 
         static void client_Error(Exception e)

@@ -131,6 +131,7 @@ namespace Test
 
         static void Main(string[] args)
         {
+            LJC.FrameWork.SocketApplication.SocketApplicationComm.EnumInterface();
             LJC.FrameWork.SocketApplication.SocketEasyUDP.Client.SessionClient udpclient = new LJC.FrameWork.SocketApplication.SocketEasyUDP.Client.SessionClient("127.0.0.1", 39990);
             udpclient.StartClient();
             udpclient.Login("test", "123456");

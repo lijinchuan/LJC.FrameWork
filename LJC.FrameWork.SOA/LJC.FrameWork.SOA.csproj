@@ -57,6 +57,7 @@
     <Compile Include="ESBService.cs" />
     <Compile Include="ESBServiceInfo.cs" />
     <Compile Include="ESBServer.cs" />
+    <Compile Include="ESBUdpClient.cs" />
     <Compile Include="ESBUDPService.cs" />
     <Compile Include="IService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

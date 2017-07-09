@@ -282,5 +282,14 @@ namespace LJC.FrameWork.SocketApplication
 
             return 0;
         }
+
+        public static void EnumInterface()
+        {
+            System.Net.NetworkInformation.NetworkInterface[] interfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+            foreach (System.Net.NetworkInformation.NetworkInterface ni in interfaces)
+            {
+                Console.WriteLine("网卡名：{0}", ni.Name);
+            }
+        }
     }
 }

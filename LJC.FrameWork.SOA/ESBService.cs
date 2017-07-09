@@ -17,7 +17,7 @@ namespace LJC.FrameWork.SOA
             set;
         }
 
-        private bool SupportUDPServiceRedrect
+        private bool SupportUDPServiceRedirect
         {
             get;
             set;
@@ -32,6 +32,7 @@ namespace LJC.FrameWork.SOA
             this.OnClientReset += ESBService_OnClientReset;
 
             this.SupportTcpServiceRidrect = supportTcpServiceRedirect;
+            this.SupportUDPServiceRedirect = supportUdpServiceRedirect;
         }
 
         public ESBService(int sNo, bool supportTcpServiceRidrect = false)
@@ -183,7 +184,7 @@ namespace LJC.FrameWork.SOA
                 req.RedirectTcpIps = RedirectTcpServiceServer.GetBindIps();
                 req.RedirectTcpPort = RedirectTcpServiceServer.GetBindTcpPort();
             }
-            if (SupportUDPServiceRedrect)
+            if (SupportUDPServiceRedirect)
             {
                 req.RedirectUdpIps = RedirectUpdServiceServer.GetBindIps();
                 req.RedirectUdpPort = RedirectUpdServiceServer.GetBindUdpPort();
@@ -318,7 +319,7 @@ namespace LJC.FrameWork.SOA
                     }
                 }
 
-                if (SupportUDPServiceRedrect && this.RedirectUpdServiceServer == null)
+                if (SupportUDPServiceRedirect && this.RedirectUpdServiceServer == null)
                 {
                     int trytimes = 0;
                     while (true)
