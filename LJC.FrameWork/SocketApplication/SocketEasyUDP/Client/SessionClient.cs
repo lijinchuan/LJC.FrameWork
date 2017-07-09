@@ -17,6 +17,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         public event Action LoginFail;
         public event Action LoginSuccess;
         protected Exception BuzException = null;
+        public bool IsLogin = false;
 
         private Session SessionContext;
 
@@ -36,7 +37,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         #region login事件
         protected virtual void OnLoginSuccess()
         {
-
+            IsLogin = true;
         }
 
         protected virtual void OnLoginFail(string failMsg)

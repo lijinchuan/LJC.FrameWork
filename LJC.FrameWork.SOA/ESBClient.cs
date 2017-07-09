@@ -157,9 +157,31 @@ namespace LJC.FrameWork.SOA
                                         try
                                         {
                                             var client = new ESBUdpClient(ip, info.RedirectUdpPort);
-                                            client.Error += UDPClient_Error;
+                                            client.Error += (ex) =>
+                                            {
+                                                client.Dispose();
+                                                lock (_esbUdpClientDic)
+                                                {
+                                                    _esbUdpClientDic.Remove(serviceId);
+                                                }
+                                            };
                                             client.StartClient();
-                                            udppoollist.Add(client);
+                                            client.Login(null, null);
+                                            int trytimes = 0;
+                                            while (trytimes < 3)
+                                            {
+                                                System.Threading.Thread.Sleep(10);
+                                                if (client.IsLogin)
+                                                {
+                                                    udppoollist.Add(client);
+                                                    break;
+                                                }
+                                                trytimes++;
+                                            }
+                                            if (trytimes == 3)
+                                            {
+                                                throw new TimeoutException();
+                                            }
                                         }
                                         catch
                                         {
