@@ -159,10 +159,13 @@ namespace LJC.FrameWork.SOA
                                             var client = new ESBUdpClient(ip, info.RedirectUdpPort);
                                             client.Error += (ex) =>
                                             {
-                                                client.Dispose();
-                                                lock (_esbUdpClientDic)
+                                                if (ex is System.Net.WebException)
                                                 {
-                                                    _esbUdpClientDic.Remove(serviceId);
+                                                    client.Dispose();
+                                                    lock (_esbUdpClientDic)
+                                                    {
+                                                        _esbUdpClientDic.Remove(serviceId);
+                                                    }
                                                 }
                                             };
                                             client.StartClient();
@@ -252,7 +255,7 @@ namespace LJC.FrameWork.SOA
             else
             {
                 List<ESBUdpClient> udpclientlist = null;
-                if (_esbUdpClientDic.TryGetValue(serviceId, out udpclientlist) && udpclientlist.Count > 0)
+                if (_esbUdpClientDic.TryGetValue(serviceId, out udpclientlist) && udpclientlist != null && udpclientlist.Count > 0)
                 {
                     return udpclientlist.First().DoRequest<T>(functionId, param);
                 }

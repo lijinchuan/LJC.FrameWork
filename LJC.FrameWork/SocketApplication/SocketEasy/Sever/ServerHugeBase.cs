@@ -98,10 +98,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     }
                     else
                     {
-                        foreach(var ip in bindIpArray)
-                        {
-                            socketServer.Bind(new IPEndPoint(IPAddress.Parse(ip), ipPort));
-                        }
+                        //foreach(var ip in bindIpArray)
+                        //{
+                        //    socketServer.Bind(new IPEndPoint(IPAddress.Parse(ip), ipPort));
+                        //}
+
+                        socketServer.Bind(new IPEndPoint(IPAddress.Any, ipPort));
                     }
                 }
                 socketServer.Listen(int.MaxValue);

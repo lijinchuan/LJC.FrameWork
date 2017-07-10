@@ -168,11 +168,6 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            UDPServer udpserver = new UDPServer();
-            udpserver.StartServer();
-            Console.Read();
-            return;
-
             TestEsbservices();
             Console.Read();
             return;

@@ -35,13 +35,15 @@ namespace LJC.FrameWork.SOA
             this.SupportUDPServiceRedirect = supportUdpServiceRedirect;
         }
 
-        public ESBService(int sNo, bool supportTcpServiceRidrect = false)
+        public ESBService(int sNo, bool supportTcpServiceRidrect = false, bool supportUdpServiceRedirect = false)
            : base(ESBConfig.ReadConfig().ESBServer, ESBConfig.ReadConfig().ESBPort)
         {
             this.ServiceNo = sNo;
             this.BeferLogout += this.UnRegisterService;
+            this.OnClientReset += ESBService_OnClientReset;
 
             this.SupportTcpServiceRidrect = supportTcpServiceRidrect;
+            this.SupportUDPServiceRedirect = supportUdpServiceRedirect;
         }
 
         void ESBService_OnClientReset()

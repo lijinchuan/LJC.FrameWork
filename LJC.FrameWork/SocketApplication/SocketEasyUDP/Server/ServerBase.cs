@@ -27,16 +27,19 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                     if (!_isBindIp)
                     {
                         __s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                        __s.UseOnlyOverlappedIO = true;
                         if (_bindingips == null)
                         {
                             __s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Any, _bindport));
                         }
                         else
                         {
-                            foreach (var ip in _bindingips)
-                            {
-                                __s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(ip), _bindport));
-                            }
+                            //foreach (var ip in _bindingips)
+                            //{
+                            //    __s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(ip), _bindport));
+                            //}
+
+                            __s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Any, _bindport));
                         }
                     }
                 }
@@ -63,20 +66,24 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
         public void StartServer()
         {
             BindIps();
-            while (true)
-            {
-                IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-                EndPoint Remote = (EndPoint)sender;
 
-                var buffer = new byte[MAX_PACKAGE_LEN];
-                int len = __s.ReceiveFrom(buffer, ref Remote);
-
-                var mergebuffer = MargeBag(buffer);
-                if (mergebuffer != null)
+            new Action(() =>
                 {
-                    OnSocket(Remote, mergebuffer);
-                }
-            }
+                    while (true)
+                    {
+                        IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
+                        EndPoint Remote = (EndPoint)sender;
+
+                        var buffer = new byte[MAX_PACKAGE_LEN];
+                        int len = __s.ReceiveFrom(buffer, ref Remote);
+
+                        var mergebuffer = MargeBag(buffer);
+                        if (mergebuffer != null)
+                        {
+                            OnSocket(Remote, mergebuffer);
+                        }
+                    }
+                }).BeginInvoke(null, null);
         }
 
         protected virtual void FromApp(Message message,EndPoint endpoint)
