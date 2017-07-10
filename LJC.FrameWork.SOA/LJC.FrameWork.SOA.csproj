@@ -59,6 +59,7 @@
     <Compile Include="ESBServer.cs" />
     <Compile Include="ESBUdpClient.cs" />
     <Compile Include="ESBUDPService.cs" />
+    <Compile Include="IESBClient.cs" />
     <Compile Include="IService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SOAException.cs" />

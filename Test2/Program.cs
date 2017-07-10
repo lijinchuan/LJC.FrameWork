@@ -168,6 +168,14 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+
+            var esbclient1 = new ESBClient("127.0.0.1",30250,false);
+            esbclient1.Error += (ex) =>
+                {
+                    Console.WriteLine(ex.Message);
+                };
+            var boo = esbclient1.StartSession();
+            Console.Read();
             TestEsbservices();
             Console.Read();
             return;

@@ -15,7 +15,7 @@ namespace LJC.FrameWork.SOA
         private static Dictionary<int, List<ESBClientPoolManager>> _esbClientDicManager = new Dictionary<int, List<ESBClientPoolManager>>();
         private static Dictionary<int, List<ESBUdpClient>> _esbUdpClientDic = new Dictionary<int, List<ESBUdpClient>>();
 
-        internal ESBClient(string serverIP, int serverPort,bool startSession=true)
+        public ESBClient(string serverIP, int serverPort,bool startSession=true)
             : base(serverIP, serverPort,startSession)
         {
             
@@ -212,11 +212,11 @@ namespace LJC.FrameWork.SOA
                                                      }
                                                  }
                                              };
-                                            if (client.StartClient())
+                                            if (client.StartSession())
                                             {
                                                 poollist.Add(new ESBClientPoolManager(5, () => client));
+                                                break;
                                             }
-                                            break;
                                         }
                                         catch
                                         {

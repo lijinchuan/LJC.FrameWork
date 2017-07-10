@@ -221,7 +221,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
                 if (autoResetEvent.IsTimeOut)
                 {
-                    throw new Exception(string.Format("请求超时，请求序列号:{0}", reqID));
+                    throw new TimeoutException(string.Format("请求超时，请求序列号:{0}", reqID));
                 }
                 else
                 {

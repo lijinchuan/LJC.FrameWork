@@ -9,6 +9,9 @@ namespace LJC.FrameWork.SOA
 {
     public class ESBUdpClient:LJC.FrameWork.SocketApplication.SocketEasyUDP.Client.SessionClient
     {
+        private int TimeOutTimes = 0;
+        private const int MAXTIMEOUTTIMES = 3;
+
         public ESBUdpClient(string host,int port) : base(host, port)
         {
 
@@ -31,14 +34,32 @@ namespace LJC.FrameWork.SOA
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
             msg.MessageBuffer = EntityBufCore.Serialize(request);
 
-            var resp = SendMessageAnsy<SOARedirectResponse>(msg);
-            if (resp.IsSuccess)
+            try
             {
-                return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(resp.Result);
+                var resp = SendMessageAnsy<SOARedirectResponse>(msg);
+                if (TimeOutTimes > 0)
+                {
+                    TimeOutTimes--;
+                }
+                if (resp.IsSuccess)
+                {
+                    return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(resp.Result);
+                }
+                else
+                {
+                    throw new Exception(resp.ErrMsg);
+                }
             }
-            else
+            catch (TimeoutException ex)
             {
-                throw new Exception(resp.ErrMsg);
+                TimeOutTimes++;
+
+                if (TimeOutTimes > MAXTIMEOUTTIMES)
+                {
+                    throw new System.Net.WebException("一段时间内连续超时，可能出现网络问题");
+                }
+
+                throw ex;
             }
         }
     }
