@@ -121,13 +121,13 @@ namespace LJC.FrameWork.SOA
 
         public static T DoSOARequest2<T>(int serviceId, int functionId, object param)
         {
-            List<ESBClientPoolManager> poolmanagerlist = null;
-            if (!_esbClientDicManager.TryGetValue(serviceId,out poolmanagerlist))
+            List<ESBUdpClient> udpclientlist = null;
+            if (!_esbUdpClientDic.TryGetValue(serviceId, out udpclientlist))
             {
                 bool takecleint = false;
-                lock (_esbClientDicManager)
+                lock (_esbUdpClientDic)
                 {
-                    if (!_esbClientDicManager.TryGetValue(serviceId, out poolmanagerlist))
+                    if (!_esbUdpClientDic.TryGetValue(serviceId, out udpclientlist))
                     {
                         takecleint = true;
                         _esbClientDicManager.Add(serviceId, null);
@@ -245,19 +245,19 @@ namespace LJC.FrameWork.SOA
                 }
             }
 
-            if (poolmanagerlist != null)
+            if (udpclientlist != null && udpclientlist.Count > 0)
             {
-                var poolmanager = poolmanagerlist.Count == 1 ? poolmanagerlist[0]
-                    : poolmanagerlist[new Random().Next(0, poolmanagerlist.Count)];
-
-                return poolmanager.RandClient().DoRequest<T>(functionId, param);
+                return udpclientlist.First().DoRequest<T>(functionId, param);
             }
             else
             {
-                List<ESBUdpClient> udpclientlist = null;
-                if (_esbUdpClientDic.TryGetValue(serviceId, out udpclientlist) && udpclientlist != null && udpclientlist.Count > 0)
+                List<ESBClientPoolManager> poolmanagerlist = null;
+                if (_esbClientDicManager.TryGetValue(serviceId, out poolmanagerlist) && poolmanagerlist != null && poolmanagerlist.Count > 0)
                 {
-                    return udpclientlist.First().DoRequest<T>(functionId, param);
+                    var poolmanager = poolmanagerlist.Count == 1 ? poolmanagerlist[0]
+                    : poolmanagerlist[new Random().Next(0, poolmanagerlist.Count)];
+
+                    return poolmanager.RandClient().DoRequest<T>(functionId, param);
                 }
                 else
                 {

@@ -12,7 +12,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
     {
         private UdpClient _udpClient;
         private System.Net.IPEndPoint _serverPoint = null;
-        protected bool _stop = true;
+        protected volatile bool _stop = true;
 
         public ClientBase(string host,int port)
         {
