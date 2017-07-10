@@ -31,8 +31,15 @@ namespace LJC.FrameWork.SOA
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
             msg.MessageBuffer = EntityBufCore.Serialize(request);
 
-            T result = SendMessageAnsy<T>(msg);
-            return result;
+            var resp = SendMessageAnsy<SOARedirectResponse>(msg);
+            if (resp.IsSuccess)
+            {
+                return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(resp.Result);
+            }
+            else
+            {
+                throw new Exception(resp.ErrMsg);
+            }
         }
     }
 }

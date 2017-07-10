@@ -172,10 +172,7 @@ namespace LJC.FrameWork.SOA
             if (this.ServiceNo < 0)
                 throw new Exception("注册服务失败：服务号不能为负数");
 
-            if (SupportTcpServiceRidrect)
-            {
-                StartRedirectService();
-            }
+            StartRedirectService();
 
             Message msg = new Message((int)SOAMessageType.RegisterService);
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
