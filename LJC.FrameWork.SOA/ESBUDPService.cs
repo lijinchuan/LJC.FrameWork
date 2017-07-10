@@ -64,7 +64,7 @@ namespace LJC.FrameWork.SOA
                     resp.IsSuccess = false;
                     resp.ResponseTime = DateTime.Now;
                     resp.ErrMsg = ex.ToString();
-                    retmsg.SetMessageBody(retmsg);
+                    retmsg.SetMessageBody(resp);
 
                     session.SendMessage(retmsg);
                 }
