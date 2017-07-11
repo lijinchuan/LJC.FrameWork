@@ -168,6 +168,25 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            while (true)
+            {
+                try
+                {
+                    System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                    sw.Start();
+                    var result11 = ESBClient.DoSOARequest2<TradeStatusInfo>(1, 9009, DateTime.Now);
+                    //var list = ESBClient.DoSOARequest2<List<StockBaseInfo>>(LJC.Com.StockService.Contract.Consts.ServiceNo, LJC.Com.StockService.Contract.Consts.FunID_GetAllStockBaseInfo, null);
+                    sw.Stop();
+                    Console.WriteLine(sw.ElapsedMilliseconds);
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }
+            Console.Read();
+            return;
+
             TestEsbservices();
             Console.Read();
             return;

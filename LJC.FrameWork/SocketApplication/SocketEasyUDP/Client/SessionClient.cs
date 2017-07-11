@@ -17,7 +17,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         public event Action LoginFail;
         public event Action LoginSuccess;
         protected Exception BuzException = null;
-        public bool IsLogin = false;
+        public volatile bool IsLogin = false;
 
         private Session SessionContext;
 

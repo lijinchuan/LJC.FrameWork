@@ -56,7 +56,7 @@ namespace LJC.FrameWork.SOA
 
                 if (TimeOutTimes > MAXTIMEOUTTIMES)
                 {
-                    throw new System.Net.WebException("一段时间内连续超时，可能出现网络问题");
+                    OnError(new System.Net.WebException("一段时间内连续超时，可能出现网络问题"));
                 }
 
                 throw ex;

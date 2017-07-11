@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 namespace LJC.FrameWork.SocketEasyUDP.Client
 {
@@ -13,6 +14,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
         private UdpClient _udpClient;
         private System.Net.IPEndPoint _serverPoint = null;
         protected volatile bool _stop = true;
+        private volatile bool _isstartclient = false;
 
         public ClientBase(string host,int port)
         {
@@ -46,6 +48,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                     {
                         try
                         {
+                            _isstartclient = true;
                             var bytes = _udpClient.Receive(ref _serverPoint);
 
                             var margebytes = MargeBag(bytes);
@@ -64,6 +67,15 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                         }
                     }
                 }).BeginInvoke(null, null);
+
+            while (true)
+            {
+                if (_isstartclient)
+                {
+                    break;
+                }
+                Thread.Sleep(10);
+            }
         }
 
         protected virtual void OnMessage(Message message)

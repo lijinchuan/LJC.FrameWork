@@ -173,7 +173,7 @@ namespace LJC.FrameWork.SOA
                                             int trytimes = 0;
                                             while (trytimes < 3)
                                             {
-                                                System.Threading.Thread.Sleep(10);
+                                                System.Threading.Thread.Sleep(100);
                                                 if (client.IsLogin)
                                                 {
                                                     udppoollist.Add(client);
@@ -254,6 +254,7 @@ namespace LJC.FrameWork.SOA
                 List<ESBClientPoolManager> poolmanagerlist = null;
                 if (_esbClientDicManager.TryGetValue(serviceId, out poolmanagerlist) && poolmanagerlist != null && poolmanagerlist.Count > 0)
                 {
+                    Console.WriteLine("直连了");
                     var poolmanager = poolmanagerlist.Count == 1 ? poolmanagerlist[0]
                     : poolmanagerlist[new Random().Next(0, poolmanagerlist.Count)];
 
