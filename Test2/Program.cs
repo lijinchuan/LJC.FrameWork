@@ -168,34 +168,36 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            while (true)
-            {
-                try
-                {
-                    System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-                    sw.Start();
-                    //var result11 = ESBClient.DoSOARequest2<TradeStatusInfo>(1, 9009, DateTime.Now);
-                    var list = ESBClient.DoSOARequest2<List<StockBaseInfo>>(LJC.Com.StockService.Contract.Consts.ServiceNo, LJC.Com.StockService.Contract.Consts.FunID_GetAllStockBaseInfo, null);
-                    sw.Stop();
-                    Console.WriteLine(sw.ElapsedMilliseconds);
+            //while (true)
+            //{
+            //    try
+            //    {
+            //        System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            //        sw.Start();
+            //        //var result11 = ESBClient.DoSOARequest2<TradeStatusInfo>(1, 9009, DateTime.Now);
+            //        var list = ESBClient.DoSOARequest2<List<StockBaseInfo>>(LJC.Com.StockService.Contract.Consts.ServiceNo, LJC.Com.StockService.Contract.Consts.FunID_GetAllStockBaseInfo, null);
+            //        sw.Stop();
+            //        Console.WriteLine(sw.ElapsedMilliseconds);
 
-                    //Thread.Sleep(10);
-                }
-                catch (Exception ex)
-                {
+            //        //Thread.Sleep(10);
+            //    }
+            //    catch (Exception ex)
+            //    {
 
-                }
-            }
-            Console.Read();
-            return;
+            //    }
+            //}
+            //Console.Read();
+            //return;
 
             //TestEsbservices();
             //Console.Read();
             //return;
+
+            ManualResetEventSlim resetslim = new ManualResetEventSlim();
             LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("127.0.0.1", 50000);
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 300000; i++)
+            for (int i = 0; i < 3000; i++)
             {
                 sb.Append(i.ToString());
             }
@@ -205,11 +207,12 @@ namespace Test2
                 };
             testmsg.SetMessageBody(sb.ToString());
             clientbase.StartClient();
+            int sendcnt = 0;
             while (true)
             {
                 clientbase.SendMessage(testmsg, null);
 
-                Thread.Sleep(100);
+                Console.WriteLine("成功:" + ++sendcnt);
             }
             
             Console.Read();

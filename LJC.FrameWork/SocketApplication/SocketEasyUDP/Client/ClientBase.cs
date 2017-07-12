@@ -16,6 +16,8 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
         protected volatile bool _stop = true;
         private volatile bool _isstartclient = false;
 
+        ManualResetEventSlim _sendmsgflag = new ManualResetEventSlim();
+
         public ClientBase(string host,int port)
         {
             _udpClient = new UdpClient();
@@ -26,19 +28,44 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
         }
 
 
-        public override bool SendMessage(SocketApplication.Message msg, EndPoint endpoint)
+        public override bool SendMessage(Message msg, EndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
 
+            int trytimes = 0;
             foreach (var segment in SplitBytes(bytes))
             {
-                lock (_udpClient.Client)
+                trytimes = 0;
+                while (true)
                 {
-                    _udpClient.Send(segment, segment.Length);
+                    lock (_udpClient.Client)
+                    {
+                        _sendmsgflag.Reset();
+                        _udpClient.Send(segment, segment.Length);
+                        if (_sendmsgflag.Wait(10))
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            if (trytimes++ >= 3)
+                            {
+                                throw new TimeoutException();
+                            }
+                        }
+                    }
                 }
             }
 
             return true;
+        }
+
+        protected void SendEcho(int len)
+        {
+            //Message echo = new Message(MessageType.UDPECHO);
+            //var buffer = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(echo);
+            var buffer = BitConverter.GetBytes(len);
+            _udpClient.Send(buffer, buffer.Length);
         }
 
         public void StartClient()
@@ -53,7 +80,15 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                             _isstartclient = true;
                             var bytes = _udpClient.Receive(ref _serverPoint);
 
-                            OnMessage(bytes);
+                            if (bytes.Length > 4)
+                            {
+                                SendEcho(bytes.Length);
+                                OnMessage(bytes);
+                            }
+                            else
+                            {
+                                _sendmsgflag.Set();
+                            }
                         }
                         catch (ObjectDisposedException ex)
                         {

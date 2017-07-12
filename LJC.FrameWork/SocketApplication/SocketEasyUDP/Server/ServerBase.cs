@@ -5,6 +5,7 @@ using System.Text;
 using System.Net.Sockets;
 using LJC.FrameWork.SocketApplication;
 using System.Net;
+using System.Threading;
 
 namespace LJC.FrameWork.SocketEasyUDP.Server
 {
@@ -14,6 +15,8 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
         protected string[] _bindingips = null;
         protected int _bindport = 0;
         private bool _isBindIp = false;
+
+        Dictionary<string, System.Threading.ManualResetEventSlim> _sendMsgLockerSlim = new Dictionary<string, ManualResetEventSlim>();
 
         private object _bindlocker = new object();
 
@@ -64,6 +67,35 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             _bindport = port;
         }
 
+        protected void SendEcho(EndPoint remote,int len)
+        {
+            var buffer = BitConverter.GetBytes(len);
+            __s.SendTo(buffer, remote);
+        }
+
+        System.Threading.ManualResetEventSlim GetSendMsgLocker(IPEndPoint endpoint,bool create=true)
+        {
+            var key = endpoint.Address.ToString() + "_" + endpoint.Port;
+
+            System.Threading.ManualResetEventSlim locker = null;
+            if(!_sendMsgLockerSlim.TryGetValue(key,out locker))
+            {
+                if (create)
+                {
+                    lock (_sendMsgLockerSlim)
+                    {
+                        if (!_sendMsgLockerSlim.TryGetValue(key, out locker))
+                        {
+                            locker = new ManualResetEventSlim();
+                            _sendMsgLockerSlim.Add(key, locker);
+                        }
+                    }
+                }
+            }
+
+            return locker;
+        }
+
         public void StartServer()
         {
             BindIps();
@@ -73,15 +105,24 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                     while (true)
                     {
                         IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-                        EndPoint Remote = (EndPoint)sender;
+                        EndPoint remote = (EndPoint)sender;
 
                         var buffer = new byte[MAX_PACKAGE_LEN];
-                        int len = __s.ReceiveFrom(buffer, ref Remote);
+                        int len = __s.ReceiveFrom(buffer, ref remote);
 
-                        var mergebuffer = MargeBag(buffer);
-                        if (mergebuffer != null)
+                        if (len > 4)
                         {
-                            OnSocket(Remote, mergebuffer);
+                            SendEcho(remote, len);
+
+                            OnSocket(remote, buffer);
+                        }
+                        else
+                        {
+                            var locker = GetSendMsgLocker((IPEndPoint)remote);
+                            if (locker != null)
+                            {
+                                locker.Set();
+                            }
                         }
                     }
                 }).BeginInvoke(null, null);
@@ -95,20 +136,41 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
         {
             System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
                 {
-                    //Console.WriteLine("收到消息:" + bytes.Length);
-                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(bytes);
-                    FromApp(message, (EndPoint)endpoint);
+                    var mergebuffer = MargeBag(bytes);
+                    if (mergebuffer != null)
+                    {
+                        var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
+                        FromApp(message, (EndPoint)endpoint);
+                    }
                 }));
         }
 
         public override bool SendMessage(Message msg, EndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
+            int trytemes = 0;
             foreach (var segment in SplitBytes(bytes))
             {
+                trytemes = 0;
                 lock (__s)
                 {
-                    __s.SendTo(segment, SocketFlags.None, endpoint);
+                    var lockflag = this.GetSendMsgLocker((IPEndPoint)endpoint);
+                    while (true)
+                    {
+                        lockflag.Reset();
+                        __s.SendTo(segment, SocketFlags.None, endpoint);
+                        if (lockflag.Wait(10))
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            if (trytemes++ >= 3)
+                            {
+                                throw new TimeoutException();
+                            }
+                        }
+                    }
                 }
             }
 

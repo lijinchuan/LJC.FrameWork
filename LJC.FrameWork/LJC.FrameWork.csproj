@@ -309,6 +309,7 @@
     <Compile Include="SocketApplication\SocketEasy\Sever\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketEasy\Sever\SeverBase.cs" />
     <Compile Include="SocketApplication\SocketEasy\SocketBase.cs" />
+    <Compile Include="SocketApplication\UDPEchoInfo.cs" />
     <Compile Include="SocketApplication\UDPSession.cs" />
     <Compile Include="Web\HttpUtil.cs" />
     <Compile Include="Web\PageTraceUtil.cs" />

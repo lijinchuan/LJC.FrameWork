@@ -20,28 +20,10 @@ namespace LJC.FrameWork.SocketApplication
             set;
         }
 
-        public System.Threading.ManualResetEventSlim SendMsgFlag = new System.Threading.ManualResetEventSlim();
-
         public override bool SendMessage(Message msg)
         {
-            int trytimes = 0;
-            while (true)
-            {
-                SendMsgFlag.Reset();
-                SessionServer.SendMessage(msg, this.EndPoint);
-                if (SendMsgFlag.Wait(10))
-                {
-                    return true;
-                }
-                else
-                {
-                    trytimes++;
-                    if (trytimes >= 3)
-                    {
-                        throw new TimeoutException();
-                    }
-                }
-            }
+
+            return SessionServer.SendMessage(msg, this.EndPoint);
         }
     }
 }

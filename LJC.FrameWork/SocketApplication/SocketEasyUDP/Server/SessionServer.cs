@@ -93,7 +93,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             responsemsg.SessionTimeOut = headBeatInt * 3;
             responsemsg.LoginFailReson = loginFailMsg;
             LoginSuccessMessage.SetMessageBody(responsemsg);
-            SendMessage(LoginSuccessMessage, session.EndPoint);
+            session.SendMessage(LoginSuccessMessage);
+            //SendMessage(LoginSuccessMessage, session.EndPoint,session.SendMsgFlag);
 
             if (!canLogin)
             {
@@ -144,8 +145,6 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             UDPSession session = null;
             if (_sessiondic.TryGetValue(key, out session))
             {
-                session.SendMsgFlag.Set();
-
                 if (message.IsMessage(MessageType.LOGOUT))
                 {
                     App_LoginOut(message, session);

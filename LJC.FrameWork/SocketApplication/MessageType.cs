@@ -31,5 +31,6 @@ namespace LJC.FrameWork.SocketApplication
         /// 致命错误
         /// </summary>
         FATAL,
+        UDPECHO
     }
 }
