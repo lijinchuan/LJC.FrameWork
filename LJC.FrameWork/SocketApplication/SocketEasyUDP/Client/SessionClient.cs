@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Net;
 using LJC.FrameWork.EntityBuf;
+using System.Threading;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 {
@@ -18,6 +19,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         public event Action LoginSuccess;
         protected Exception BuzException = null;
         public volatile bool IsLogin = false;
+
+        private ManualResetEventSlim SendMsgWaitHandle = new ManualResetEventSlim();
 
         private Session SessionContext;
 
@@ -50,7 +53,24 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             {
                 SessionContext.LastSessionTime = DateTime.Now;
             }
-            return base.SendMessage(msg, endpoint);
+            int trytimes = 0;
+            while (true)
+            {
+                SendMsgWaitHandle.Reset();
+                base.SendMessage(msg, endpoint);
+                if (SendMsgWaitHandle.Wait(10))
+                {
+                    return true;
+                }
+                else
+                {
+                    trytimes++;
+                    if (trytimes >= 3)
+                    {
+                        throw new TimeoutException("发送消息失败，已经超过最大尝试次数");
+                    }
+                }
+            }
         }
 
         public void Login(string uid, string pwd)
@@ -120,6 +140,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         protected sealed override void OnMessage(Message message)
         {
+            SendMsgWaitHandle.Set();
+
             if (message.IsMessage((int)MessageType.LOGIN))
             {
                 LoginResponseMessage loginMsg = message.GetMessageBody<LoginResponseMessage>();

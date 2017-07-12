@@ -144,6 +144,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             UDPSession session = null;
             if (_sessiondic.TryGetValue(key, out session))
             {
+                session.SendMsgFlag.Set();
+
                 if (message.IsMessage(MessageType.LOGOUT))
                 {
                     App_LoginOut(message, session);

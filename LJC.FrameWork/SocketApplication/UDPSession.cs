@@ -19,9 +19,29 @@ namespace LJC.FrameWork.SocketApplication
             get;
             set;
         }
+
+        public System.Threading.ManualResetEventSlim SendMsgFlag = new System.Threading.ManualResetEventSlim();
+
         public override bool SendMessage(Message msg)
         {
-            return SessionServer.SendMessage(msg, this.EndPoint);
+            int trytimes = 0;
+            while (true)
+            {
+                SendMsgFlag.Reset();
+                SessionServer.SendMessage(msg, this.EndPoint);
+                if (SendMsgFlag.Wait(10))
+                {
+                    return true;
+                }
+                else
+                {
+                    trytimes++;
+                    if (trytimes >= 3)
+                    {
+                        throw new TimeoutException();
+                    }
+                }
+            }
         }
     }
 }
