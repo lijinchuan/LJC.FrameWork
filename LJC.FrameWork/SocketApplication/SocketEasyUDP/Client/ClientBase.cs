@@ -20,6 +20,8 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
         {
             _udpClient = new UdpClient();
             _udpClient.Connect(host, port);
+            _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, 1024 * 1000);
+            _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, 1024 * 1000);
             _serverPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(host), port);
         }
 
@@ -51,11 +53,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                             _isstartclient = true;
                             var bytes = _udpClient.Receive(ref _serverPoint);
 
-                            var margebytes = MargeBag(bytes);
-                            if (margebytes != null)
-                            {
-                                OnMessage(margebytes);
-                            }
+                            OnMessage(bytes);
                         }
                         catch (ObjectDisposedException ex)
                         {
@@ -87,8 +85,12 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
         {
             System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
             {
-                var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(data);
-                OnMessage(message);
+                var margebytes = MargeBag(data);
+                if (margebytes != null)
+                {
+                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(margebytes);
+                    OnMessage(message);
+                }
             }));
         }
 

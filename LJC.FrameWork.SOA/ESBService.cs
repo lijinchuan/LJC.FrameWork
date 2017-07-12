@@ -312,7 +312,8 @@ namespace LJC.FrameWork.SOA
                             trytimes++;
                             if (trytimes >= 10)
                             {
-                                OnError(new Exception("启动tcp直连服务端口失败,已尝试" + trytimes + "次", ex));
+                                OnError(new Exception("启动tcp直连服务端口失败,已尝试" + trytimes + "次，端口:" + iport, ex));
+                                break;
                             }
                         }
                     }
@@ -337,7 +338,8 @@ namespace LJC.FrameWork.SOA
                             trytimes++;
                             if (trytimes >= 10)
                             {
-                                OnError(new Exception("启动udp直连服务端口失败,已尝试" + trytimes + "次", ex));
+                                OnError(new Exception("启动udp直连服务端口失败,已尝试" + trytimes + "次，端口:"+iport, ex));
+                                break;
                             }
                         }
                     }

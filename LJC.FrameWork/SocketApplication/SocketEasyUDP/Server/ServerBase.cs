@@ -11,7 +11,6 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
     public class ServerBase:UDPSocketBase
     {
         Socket __s = null;
-        Dictionary<string, Socket> _connectDic = new Dictionary<string, Socket>();
         protected string[] _bindingips = null;
         protected int _bindport = 0;
         private bool _isBindIp = false;
@@ -27,6 +26,8 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                     if (!_isBindIp)
                     {
                         __s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                        __s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, 1024 * 1000);
+                        __s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, 1024 * 1000);
                         __s.UseOnlyOverlappedIO = true;
                         if (_bindingips == null)
                         {

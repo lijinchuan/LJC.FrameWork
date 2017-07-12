@@ -36,7 +36,7 @@ namespace LJC.FrameWork.SOA
 
             try
             {
-                var resp = SendMessageAnsy<SOARedirectResponse>(msg);
+                var resp = SendMessageAnsy<SOARedirectResponse>(msg, timeOut: 5000);
                 if (TimeOutTimes > 0)
                 {
                     TimeOutTimes--;
