@@ -94,6 +94,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
         {
             System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
                 {
+                    //Console.WriteLine("收到消息:" + bytes.Length);
                     var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(bytes);
                     FromApp(message, (EndPoint)endpoint);
                 }));

@@ -47,9 +47,11 @@ namespace LJC.FrameWork.SocketEasyUDP
                 bytesid = Guid.NewGuid().ToByteArray();
             }
 
-            var sendbytes=new byte[MAX_PACKAGE_LEN];
             for (int i = 1; i <= packagelen; i++)
             {
+                int offset = (i - 1) * MAX_PACKAGE_LEN3;
+                var len=Math.Min(bigbytes.Length - offset, MAX_PACKAGE_LEN3);
+                var sendbytes = new byte[len + 24];
                 using (System.IO.MemoryStream ms = new System.IO.MemoryStream(sendbytes))
                 {
                     ms.Write(BitConverter.GetBytes(i), 0, 4);
@@ -60,8 +62,7 @@ namespace LJC.FrameWork.SocketEasyUDP
                         ms.Write(bytesid, 0, bytesid.Length);
                     }
 
-                    int offset = (i - 1) * MAX_PACKAGE_LEN3;
-                    ms.Write(bigbytes, offset, Math.Min(bigbytes.Length - offset, MAX_PACKAGE_LEN3));
+                    ms.Write(bigbytes, offset, len);
 
                     yield return ms.ToArray();
                 }

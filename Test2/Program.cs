@@ -168,32 +168,32 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            while (true)
-            {
-                try
-                {
-                    System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-                    sw.Start();
-                    var result11 = ESBClient.DoSOARequest2<TradeStatusInfo>(1, 9009, DateTime.Now);
-                    //var list = ESBClient.DoSOARequest2<List<StockBaseInfo>>(LJC.Com.StockService.Contract.Consts.ServiceNo, LJC.Com.StockService.Contract.Consts.FunID_GetAllStockBaseInfo, null);
-                    sw.Stop();
-                    Console.WriteLine(sw.ElapsedMilliseconds);
-                }
-                catch (Exception ex)
-                {
+            //while (true)
+            //{
+            //    try
+            //    {
+            //        System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            //        sw.Start();
+            //        var result11 = ESBClient.DoSOARequest2<TradeStatusInfo>(1, 9009, DateTime.Now);
+            //        //var list = ESBClient.DoSOARequest<List<StockBaseInfo>>(LJC.Com.StockService.Contract.Consts.ServiceNo, LJC.Com.StockService.Contract.Consts.FunID_GetAllStockBaseInfo, null);
+            //        sw.Stop();
+            //        Console.WriteLine(sw.ElapsedMilliseconds);
+            //    }
+            //    catch (Exception ex)
+            //    {
 
-                }
-            }
-            Console.Read();
-            return;
+            //    }
+            //}
+            //Console.Read();
+            //return;
 
-            TestEsbservices();
-            Console.Read();
-            return;
+            //TestEsbservices();
+            //Console.Read();
+            //return;
             LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("127.0.0.1", 50000);
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 300; i++)
+            for (int i = 0; i < 300000; i++)
             {
                 sb.Append(i.ToString());
             }

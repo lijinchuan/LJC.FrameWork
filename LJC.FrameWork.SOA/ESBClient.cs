@@ -173,7 +173,7 @@ namespace LJC.FrameWork.SOA
                                             int trytimes = 0;
                                             while (trytimes < 3)
                                             {
-                                                System.Threading.Thread.Sleep(100);
+                                                System.Threading.Thread.Sleep(10);
                                                 if (client.IsLogin)
                                                 {
                                                     udppoollist.Add(client);
