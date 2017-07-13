@@ -10,8 +10,14 @@ namespace LJC.FrameWork.SocketEasyUDP
 {
     public class UDPSocketBase:IDisposable
     {
-        private Dictionary<Guid, byte[][]> TempBagDic = new Dictionary<Guid, byte[][]>();
-        private Dictionary<Guid, DateTime> BagTimestamp = new Dictionary<Guid, DateTime>();
+        private static long _bagid = 0;
+        private static long _segmentid = 0;
+
+        private Dictionary<long, byte[][]> TempBagDic = new Dictionary<long, byte[][]>();
+        private Dictionary<long, DateTime> BagTimestamp = new Dictionary<long, DateTime>();
+
+        protected static int TimeOutTryTimes = 100;
+        protected static int TimeOutMillSec = 100;
 
         private bool _disposed = false;
 
@@ -32,8 +38,8 @@ namespace LJC.FrameWork.SocketEasyUDP
 
         #region 拆包
         protected const int MAX_PACKAGE_LEN = 65507;
-        const double MAX_PACKAGE_LEN2 = 65483;
-        protected const int MAX_PACKAGE_LEN3 = 65483;
+        protected static double MAX_PACKAGE_LEN2 = MAX_PACKAGE_LEN - 24;
+        protected static int MAX_PACKAGE_LEN3 = MAX_PACKAGE_LEN - 24;
 
         protected IEnumerable<byte[]> SplitBytes(byte[] bigbytes)
         {
@@ -42,18 +48,26 @@ namespace LJC.FrameWork.SocketEasyUDP
             int packagelen = (int)Math.Ceiling(bigbytes.Length / MAX_PACKAGE_LEN2);
             byte[] packagelenbytes = BitConverter.GetBytes(packagelen);
 
+            byte[] segmentid = null;
+
             if (packagelen > 1)
             {
-                bytesid = Guid.NewGuid().ToByteArray();
+                var newbagid = System.Threading.Interlocked.Increment(ref _bagid);
+                //bytesid = Guid.NewGuid().ToByteArray();
+                bytesid = BitConverter.GetBytes(newbagid);
             }
 
             for (int i = 1; i <= packagelen; i++)
             {
+                segmentid =BitConverter.GetBytes(System.Threading.Interlocked.Increment(ref _segmentid));
+
                 int offset = (i - 1) * MAX_PACKAGE_LEN3;
                 var len=Math.Min(bigbytes.Length - offset, MAX_PACKAGE_LEN3);
                 var sendbytes = new byte[len + 24];
                 using (System.IO.MemoryStream ms = new System.IO.MemoryStream(sendbytes))
                 {
+                    ms.Write(segmentid, 0, segmentid.Length);
+
                     ms.Write(BitConverter.GetBytes(i), 0, 4);
                     ms.Write(packagelenbytes, 0, 4);
 
@@ -73,7 +87,7 @@ namespace LJC.FrameWork.SocketEasyUDP
         {
             if (baglen == 1)
             {
-                return 8;
+                return 16;
             }
 
             return 24;
@@ -81,23 +95,23 @@ namespace LJC.FrameWork.SocketEasyUDP
 
         protected byte[] MargeBag(byte[] bag)
         {
-            var packageno = BitConverter.ToInt32(bag, 0);
-            var packagelen = BitConverter.ToInt32(bag, 4);
+            var packageno = BitConverter.ToInt32(bag, 8);
+            var packagelen = BitConverter.ToInt32(bag, 12);
             
             if (packagelen > 1)
             {
-                var guid = new Guid(bag.Skip(8).Take(16).ToArray());
+                long bagid = BitConverter.ToInt64(bag,24);
 
                 byte[][] bags=null;
-                if (!TempBagDic.TryGetValue(guid,out bags))
+                if (!TempBagDic.TryGetValue(bagid,out bags))
                 {
                     lock (TempBagDic)
                     {
-                        if (!TempBagDic.TryGetValue(guid, out bags))
+                        if (!TempBagDic.TryGetValue(bagid, out bags))
                         {
                             bags = new byte[packagelen][];
-                            TempBagDic.Add(guid, bags);
-                            BagTimestamp.Add(guid, DateTime.Now);
+                            TempBagDic.Add(bagid, bags);
+                            BagTimestamp.Add(bagid, DateTime.Now);
                         }
                     }
                 }
@@ -121,12 +135,12 @@ namespace LJC.FrameWork.SocketEasyUDP
 
                 lock (TempBagDic)
                 {
-                    TempBagDic.Remove(guid);
+                    TempBagDic.Remove(bagid);
                 }
 
                 lock (BagTimestamp)
                 {
-                    BagTimestamp.Remove(guid);
+                    BagTimestamp.Remove(bagid);
                 }
 
                 using (System.IO.MemoryStream ms = new System.IO.MemoryStream())

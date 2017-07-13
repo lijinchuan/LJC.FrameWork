@@ -16,7 +16,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
         protected volatile bool _stop = true;
         private volatile bool _isstartclient = false;
 
-        ManualResetEventSlim _sendmsgflag = new ManualResetEventSlim();
+        SendMsgManualResetEventSlim _sendmsgflag = new SendMsgManualResetEventSlim();
 
         public ClientBase(string host,int port)
         {
@@ -40,15 +40,22 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                 {
                     lock (_udpClient.Client)
                     {
+                        var segmentid = BitConverter.ToInt64(segment, 0);
+                        _sendmsgflag.SegmentId = segmentid;
                         _sendmsgflag.Reset();
                         _udpClient.Send(segment, segment.Length);
-                        if (_sendmsgflag.Wait(10))
+                        if (_sendmsgflag.Wait(TimeOutMillSec))
                         {
+                            if (trytimes > 2)
+                            {
+                                Console.WriteLine("花费了" + trytimes + "次");
+                                //Thread.Sleep(5000);
+                            }
                             break;
                         }
                         else
                         {
-                            if (trytimes++ >= 3)
+                            if (trytimes++ >= TimeOutTryTimes)
                             {
                                 throw new TimeoutException();
                             }
@@ -60,11 +67,11 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
             return true;
         }
 
-        protected void SendEcho(int len)
+        protected void SendEcho(long segmentid)
         {
             //Message echo = new Message(MessageType.UDPECHO);
             //var buffer = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(echo);
-            var buffer = BitConverter.GetBytes(len);
+            var buffer = BitConverter.GetBytes(segmentid);
             _udpClient.Send(buffer, buffer.Length);
         }
 
@@ -79,15 +86,18 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                         {
                             _isstartclient = true;
                             var bytes = _udpClient.Receive(ref _serverPoint);
-
-                            if (bytes.Length > 4)
+                            var segmentid = BitConverter.ToInt64(bytes, 0);
+                            if (bytes.Length > 8)
                             {
-                                SendEcho(bytes.Length);
+                                SendEcho(segmentid);
                                 OnMessage(bytes);
                             }
                             else
                             {
-                                _sendmsgflag.Set();
+                                if (_sendmsgflag.SegmentId == segmentid)
+                                {
+                                    _sendmsgflag.Set();
+                                }
                             }
                         }
                         catch (ObjectDisposedException ex)

@@ -194,10 +194,11 @@ namespace Test2
             //return;
 
             ManualResetEventSlim resetslim = new ManualResetEventSlim();
+            //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("2.5.175.227", 50000);
             LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("127.0.0.1", 50000);
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 3000; i++)
+            for (int i = 0; i < 300000; i++)
             {
                 sb.Append(i.ToString());
             }
@@ -208,11 +209,14 @@ namespace Test2
             testmsg.SetMessageBody(sb.ToString());
             clientbase.StartClient();
             int sendcnt = 0;
+
+            System.Diagnostics.Stopwatch sw2 = new System.Diagnostics.Stopwatch();
             while (true)
             {
+                sw2.Restart();
                 clientbase.SendMessage(testmsg, null);
-
-                Console.WriteLine("成功:" + ++sendcnt);
+                sw2.Stop();
+                Console.WriteLine("成功:" + ++sendcnt + "," + sw2.ElapsedMilliseconds + "ms");
             }
             
             Console.Read();

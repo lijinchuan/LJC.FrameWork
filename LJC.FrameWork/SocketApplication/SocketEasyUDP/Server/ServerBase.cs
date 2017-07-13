@@ -16,7 +16,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
         protected int _bindport = 0;
         private bool _isBindIp = false;
 
-        Dictionary<string, System.Threading.ManualResetEventSlim> _sendMsgLockerSlim = new Dictionary<string, ManualResetEventSlim>();
+        Dictionary<string, SendMsgManualResetEventSlim> _sendMsgLockerSlim = new Dictionary<string, SendMsgManualResetEventSlim>();
 
         private object _bindlocker = new object();
 
@@ -67,17 +67,17 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             _bindport = port;
         }
 
-        protected void SendEcho(EndPoint remote,int len)
+        protected void SendEcho(EndPoint remote,long segmentid)
         {
-            var buffer = BitConverter.GetBytes(len);
+            var buffer = BitConverter.GetBytes(segmentid);
             __s.SendTo(buffer, remote);
         }
 
-        System.Threading.ManualResetEventSlim GetSendMsgLocker(IPEndPoint endpoint,bool create=true)
+        SendMsgManualResetEventSlim GetSendMsgLocker(IPEndPoint endpoint,bool create=true)
         {
             var key = endpoint.Address.ToString() + "_" + endpoint.Port;
 
-            System.Threading.ManualResetEventSlim locker = null;
+            SendMsgManualResetEventSlim locker = null;
             if(!_sendMsgLockerSlim.TryGetValue(key,out locker))
             {
                 if (create)
@@ -86,7 +86,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                     {
                         if (!_sendMsgLockerSlim.TryGetValue(key, out locker))
                         {
-                            locker = new ManualResetEventSlim();
+                            locker = new SendMsgManualResetEventSlim();
                             _sendMsgLockerSlim.Add(key, locker);
                         }
                     }
@@ -110,9 +110,9 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                         var buffer = new byte[MAX_PACKAGE_LEN];
                         int len = __s.ReceiveFrom(buffer, ref remote);
 
-                        if (len > 4)
+                        if (len > 8)
                         {
-                            SendEcho(remote, len);
+                            SendEcho(remote, BitConverter.ToInt64(buffer, 0));
 
                             OnSocket(remote, buffer);
                         }
@@ -121,7 +121,11 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                             var locker = GetSendMsgLocker((IPEndPoint)remote);
                             if (locker != null)
                             {
-                                locker.Set();
+                                var segmentid = BitConverter.ToInt64(buffer, 0);
+                                if (locker.SegmentId == segmentid)
+                                {
+                                    locker.Set();
+                                }
                             }
                         }
                     }
@@ -157,15 +161,17 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                     var lockflag = this.GetSendMsgLocker((IPEndPoint)endpoint);
                     while (true)
                     {
+                        var segmentid = BitConverter.ToInt64(segment, 0);
+                        lockflag.SegmentId = segmentid;
                         lockflag.Reset();
                         __s.SendTo(segment, SocketFlags.None, endpoint);
-                        if (lockflag.Wait(10))
+                        if (lockflag.Wait(TimeOutMillSec))
                         {
                             break;
                         }
                         else
                         {
-                            if (trytemes++ >= 3)
+                            if (trytemes++ >= TimeOutTryTimes)
                             {
                                 throw new TimeoutException();
                             }
