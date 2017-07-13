@@ -16,8 +16,8 @@ namespace LJC.FrameWork.SocketEasyUDP
         private Dictionary<long, byte[][]> TempBagDic = new Dictionary<long, byte[][]>();
         private Dictionary<long, DateTime> BagTimestamp = new Dictionary<long, DateTime>();
 
-        protected static int TimeOutTryTimes = 100;
-        protected static int TimeOutMillSec = 100;
+        protected static int TimeOutTryTimes = 10;
+        protected static int TimeOutMillSec = 1000;
 
         private bool _disposed = false;
 
