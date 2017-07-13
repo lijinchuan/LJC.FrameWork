@@ -100,7 +100,7 @@ namespace LJC.FrameWork.SocketEasyUDP
             
             if (packagelen > 1)
             {
-                long bagid = BitConverter.ToInt64(bag,24);
+                long bagid = BitConverter.ToInt64(bag,16);
 
                 byte[][] bags=null;
                 if (!TempBagDic.TryGetValue(bagid,out bags))
@@ -156,7 +156,7 @@ namespace LJC.FrameWork.SocketEasyUDP
             }
             else
             {
-                return bag.Skip(8).ToArray();
+                return bag.Skip(16).ToArray();
             }
 
         }
