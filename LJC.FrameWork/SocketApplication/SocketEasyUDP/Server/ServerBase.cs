@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using LJC.FrameWork.SocketApplication;
 using System.Net;
 using System.Threading;
+using LJC.FrameWork.Comm;
 
 namespace LJC.FrameWork.SocketEasyUDP.Server
 {
@@ -15,6 +16,8 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
         protected string[] _bindingips = null;
         protected int _bindport = 0;
         private bool _isBindIp = false;
+
+        static BufferPollManager _buffermanager = new BufferPollManager(1000, MAX_PACKAGE_LEN);
 
         Dictionary<string, SendMsgManualResetEventSlim> _sendMsgLockerSlim = new Dictionary<string, SendMsgManualResetEventSlim>();
 
@@ -31,7 +34,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                         __s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                         __s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, 1024 * 1000);
                         __s.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, 1024 * 1000);
-                        __s.UseOnlyOverlappedIO = true;
+
                         if (_bindingips == null)
                         {
                             __s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Any, _bindport));
@@ -107,24 +110,57 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                         IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
                         EndPoint remote = (EndPoint)sender;
 
-                        var buffer = new byte[MAX_PACKAGE_LEN];
-                        int len = __s.ReceiveFrom(buffer, ref remote);
-
-                        if (len > 8)
+                        int len = 0;
+                        byte[] buffer = null;
+                        int offset = 0;
+                        var bufferindex= _buffermanager.GetBuffer();
+                        if (bufferindex != -1)
                         {
-                            SendEcho(remote, BitConverter.ToInt64(buffer, 0));
-
-                            OnSocket(remote, buffer);
+                            buffer = _buffermanager.Buffer;
+                            offset = _buffermanager.GetOffset(bufferindex);
+                            len = __s.ReceiveFrom(buffer, offset, MAX_PACKAGE_LEN, SocketFlags.None, ref remote);
                         }
                         else
                         {
-                            var locker = GetSendMsgLocker((IPEndPoint)remote);
-                            if (locker != null)
+                            buffer = new byte[MAX_PACKAGE_LEN];
+                            len = __s.ReceiveFrom(buffer, ref remote);
+                        }
+
+                        if (len > 8)
+                        {
+                            var segmentid=BitConverter.ToInt64(buffer, offset);
+                            Console.WriteLine(Environment.TickCount + ":收包:" + len + "，发确认:" + segmentid);
+                            SendEcho(remote, segmentid);
+                            if (bufferindex == -1)
                             {
-                                var segmentid = BitConverter.ToInt64(buffer, 0);
-                                if (locker.SegmentId == segmentid)
+                                OnSocket(remote, buffer);
+                            }
+                            else
+                            {
+                                OnSocket(remote, bufferindex, len);
+                            }
+                        }
+                        else
+                        {
+                            
+                            try
+                            {
+                                var locker = GetSendMsgLocker((IPEndPoint)remote);
+                                if (locker != null)
                                 {
-                                    locker.Set();
+                                    var segmentid = BitConverter.ToInt64(buffer, offset);
+                                    Console.WriteLine(Environment.TickCount + ":收确认:" + segmentid);
+                                    if (locker.SegmentId == segmentid)
+                                    {
+                                        locker.Set();
+                                    }
+                                }
+                            }
+                            finally
+                            {
+                                if (bufferindex != -1)
+                                {
+                                    _buffermanager.RealseBuffer(bufferindex);
                                 }
                             }
                         }
@@ -134,6 +170,33 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
 
         protected virtual void FromApp(Message message,EndPoint endpoint)
         {
+        }
+
+        private void OnSocket(object endpoint, int bufferindex,int len)
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
+            {
+                var bytes = new byte[len];
+                try
+                {
+                    var offset = _buffermanager.GetOffset(bufferindex);
+                    for (int i = 0; i < len; i++)
+                    {
+                        bytes[i] = _buffermanager.Buffer[offset + i];
+                    }
+                }
+                finally
+                {
+                    _buffermanager.RealseBuffer(bufferindex);
+                }
+                var mergebuffer = MargeBag(bytes);
+                if (mergebuffer != null)
+                {
+                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
+                    FromApp(message, (EndPoint)endpoint);
+                }
+               
+            }));
         }
 
         private void OnSocket(object endpoint,byte[] bytes)

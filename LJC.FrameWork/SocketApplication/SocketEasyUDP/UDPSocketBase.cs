@@ -37,7 +37,7 @@ namespace LJC.FrameWork.SocketEasyUDP
         }
 
         #region 拆包
-        protected const int MAX_PACKAGE_LEN = 65507;
+        protected const int MAX_PACKAGE_LEN = 548; //65507 1472 548
         protected static double MAX_PACKAGE_LEN2 = MAX_PACKAGE_LEN - 24;
         protected static int MAX_PACKAGE_LEN3 = MAX_PACKAGE_LEN - 24;
 

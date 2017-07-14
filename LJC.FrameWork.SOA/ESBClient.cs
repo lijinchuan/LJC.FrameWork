@@ -130,7 +130,10 @@ namespace LJC.FrameWork.SOA
                     if (!_esbUdpClientDic.TryGetValue(serviceId, out udpclientlist))
                     {
                         takecleint = true;
-                        _esbClientDicManager.Add(serviceId, null);
+                        if (!_esbClientDicManager.ContainsKey(serviceId))
+                        {
+                            _esbClientDicManager.Add(serviceId, null);
+                        }
                         _esbUdpClientDic.Add(serviceId, null);
                     }
                 }

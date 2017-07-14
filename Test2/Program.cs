@@ -194,11 +194,11 @@ namespace Test2
             //return;
 
             ManualResetEventSlim resetslim = new ManualResetEventSlim();
-            //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("2.5.176.91", 50000);
-            LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
+            LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("2.5.176.91", 50000);
+            //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 300000; i++)
+            for (int i = 0; i < 3000; i++)
             {
                 sb.Append(i.ToString());
             }
@@ -211,7 +211,7 @@ namespace Test2
             int sendcnt = 0;
 
             System.Diagnostics.Stopwatch sw2 = new System.Diagnostics.Stopwatch();
-            while (true)
+            for (int i = 0; i < 1; i++)
             {
                 sw2.Restart();
                 clientbase.SendMessage(testmsg, null);
