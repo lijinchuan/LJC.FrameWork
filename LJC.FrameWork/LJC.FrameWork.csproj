@@ -283,7 +283,10 @@
     <Compile Include="SocketApplication\LoginRequestMessage.cs" />
     <Compile Include="SocketApplication\LoginResponseMessage.cs" />
     <Compile Include="SocketApplication\Message.cs" />
+    <Compile Include="SocketApplication\SocketEasyUDP\Client\ClientBase2.cs" />
     <Compile Include="SocketApplication\SocketEasyUDP\SendMsgManualResetEventSlim.cs" />
+    <Compile Include="SocketApplication\SocketEasyUDP\Server\ServerBase2.cs" />
+    <Compile Include="SocketApplication\SocketEasyUDP\UDPRevResultMessage.cs" />
     <Compile Include="SocketApplication\SocketSTD\MessageApp.cs" />
     <Compile Include="SocketApplication\MessageType.cs" />
     <Compile Include="SocketApplication\Session.cs" />

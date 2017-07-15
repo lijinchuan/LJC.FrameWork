@@ -1,3 +1,0 @@
-D:\Work\learn\LJC.FrameWork\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\bin\Release\LumiSoft.Net.dll
-D:\Work\learn\LJC.FrameWork\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\bin\Release\LumiSoft.Net.xml
-D:\Work\learn\LJC.FrameWork\LJC.FrameWork\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\obj\Release\LumiSoft.Net.dll
