@@ -141,7 +141,7 @@ namespace Test
             //}
             //Console.Read();
 
-            LJC.FrameWork.SocketEasyUDP.Server.ServerBase serverbase = new LJC.FrameWork.SocketEasyUDP.Server.ServerBase(50000);
+            LJC.FrameWork.SocketApplication.SocketEasyUDP.Server.ServerBase2 serverbase =new LJC.FrameWork.SocketApplication.SocketEasyUDP.Server.ServerBase2(50000);
             serverbase.StartServer();
 
             Console.WriteLine("服务启动...");

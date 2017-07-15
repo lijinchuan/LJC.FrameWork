@@ -1,16 +1,15 @@
-﻿using System;
+﻿using LJC.FrameWork.Comm;
+using LJC.FrameWork.SocketEasyUDP;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Net.Sockets;
-using LJC.FrameWork.SocketApplication;
 using System.Net;
-using System.Threading;
-using LJC.FrameWork.Comm;
+using System.Net.Sockets;
+using System.Text;
 
-namespace LJC.FrameWork.SocketEasyUDP.Server
+namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 {
-    public class ServerBase:UDPSocketBase
+    public class ServerBase2 : UDPSocketBase
     {
         Socket __s = null;
         protected string[] _bindingips = null;
@@ -53,7 +52,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             }
         }
 
-        public ServerBase(int port)
+        public ServerBase2(int port)
         {
             //__s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //__s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Any, port));
@@ -61,7 +60,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             _bindport = port;
         }
 
-        public ServerBase(string[] ips, int port)
+        public ServerBase2(string[] ips, int port)
         {
             //__s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //__s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(ip), port));
@@ -70,18 +69,18 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             _bindport = port;
         }
 
-        protected void SendEcho(EndPoint remote,long segmentid)
+        protected void SendEcho(EndPoint remote, long bagid)
         {
-            var buffer = BitConverter.GetBytes(segmentid);
+            var buffer = BitConverter.GetBytes(bagid);
             __s.SendTo(buffer, remote);
         }
 
-        SendMsgManualResetEventSlim GetSendMsgLocker(IPEndPoint endpoint,bool create=true)
+        SendMsgManualResetEventSlim GetSendMsgLocker(IPEndPoint endpoint, bool create = true)
         {
             var key = endpoint.Address.ToString() + "_" + endpoint.Port;
 
             SendMsgManualResetEventSlim locker = null;
-            if(!_sendMsgLockerSlim.TryGetValue(key,out locker))
+            if (!_sendMsgLockerSlim.TryGetValue(key, out locker))
             {
                 if (create)
                 {
@@ -104,75 +103,75 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
             BindIps();
 
             new Action(() =>
+            {
+                while (true)
                 {
-                    while (true)
+                    IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
+                    EndPoint remote = (EndPoint)sender;
+
+                    int len = 0;
+                    byte[] buffer = null;
+                    int offset = 0;
+                    var bufferindex = _buffermanager.GetBuffer();
+                    if (bufferindex != -1)
                     {
-                        IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-                        EndPoint remote = (EndPoint)sender;
+                        buffer = _buffermanager.Buffer;
+                        offset = _buffermanager.GetOffset(bufferindex);
+                        len = __s.ReceiveFrom(buffer, offset, MAX_PACKAGE_LEN, SocketFlags.None, ref remote);
+                    }
+                    else
+                    {
+                        buffer = new byte[MAX_PACKAGE_LEN];
+                        len = __s.ReceiveFrom(buffer, ref remote);
+                    }
 
-                        int len = 0;
-                        byte[] buffer = null;
-                        int offset = 0;
-                        var bufferindex= _buffermanager.GetBuffer();
-                        if (bufferindex != -1)
+                    if (len > 8)
+                    {
+                        //var segmentid = BitConverter.ToInt64(buffer, offset);
+                        //Console.WriteLine(Environment.TickCount + ":收包:" + len + "，发确认:" + segmentid);
+                        //SendEcho(remote, segmentid);
+                        if (bufferindex == -1)
                         {
-                            buffer = _buffermanager.Buffer;
-                            offset = _buffermanager.GetOffset(bufferindex);
-                            len = __s.ReceiveFrom(buffer, offset, MAX_PACKAGE_LEN, SocketFlags.None, ref remote);
+                            OnSocket(remote, buffer);
                         }
                         else
                         {
-                            buffer = new byte[MAX_PACKAGE_LEN];
-                            len = __s.ReceiveFrom(buffer, ref remote);
+                            OnSocket(remote, bufferindex, len);
                         }
+                    }
+                    else
+                    {
 
-                        if (len > 8)
+                        try
                         {
-                            var segmentid=BitConverter.ToInt64(buffer, offset);
-                            //Console.WriteLine(Environment.TickCount + ":收包:" + len + "，发确认:" + segmentid);
-                            SendEcho(remote, segmentid);
-                            if (bufferindex == -1)
+                            var locker = GetSendMsgLocker((IPEndPoint)remote);
+                            if (locker != null)
                             {
-                                OnSocket(remote, buffer);
-                            }
-                            else
-                            {
-                                OnSocket(remote, bufferindex, len);
+                                var bagid = BitConverter.ToInt64(buffer, offset);
+                                //Console.WriteLine(Environment.TickCount + ":收确认:" + segmentid);
+                                if (locker.BagId == bagid)
+                                {
+                                    locker.Set();
+                                }
                             }
                         }
-                        else
+                        finally
                         {
-                            
-                            try
+                            if (bufferindex != -1)
                             {
-                                var locker = GetSendMsgLocker((IPEndPoint)remote);
-                                if (locker != null)
-                                {
-                                    var segmentid = BitConverter.ToInt64(buffer, offset);
-                                    //Console.WriteLine(Environment.TickCount + ":收确认:" + segmentid);
-                                    if (locker.SegmentId == segmentid)
-                                    {
-                                        locker.Set();
-                                    }
-                                }
-                            }
-                            finally
-                            {
-                                if (bufferindex != -1)
-                                {
-                                    _buffermanager.RealseBuffer(bufferindex);
-                                }
+                                _buffermanager.RealseBuffer(bufferindex);
                             }
                         }
                     }
-                }).BeginInvoke(null, null);
+                }
+            }).BeginInvoke(null, null);
         }
 
-        protected virtual void FromApp(Message message,EndPoint endpoint)
+        protected virtual void FromApp(Message message, EndPoint endpoint)
         {
         }
 
-        private void OnSocket(object endpoint, int bufferindex,int len)
+        private void OnSocket(object endpoint, int bufferindex, int len)
         {
             System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
             {
@@ -192,55 +191,46 @@ namespace LJC.FrameWork.SocketEasyUDP.Server
                 var mergebuffer = MargeBag(bytes);
                 if (mergebuffer != null)
                 {
+                    var bagid = GetBagId(bytes);
+                    SendEcho((EndPoint)endpoint, bagid);
                     var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
                     FromApp(message, (EndPoint)endpoint);
                 }
-               
+
             }));
         }
 
-        private void OnSocket(object endpoint,byte[] bytes)
+        private void OnSocket(object endpoint, byte[] bytes)
         {
             System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
+            {
+                var mergebuffer = MargeBag(bytes);
+                if (mergebuffer != null)
                 {
-                    var mergebuffer = MargeBag(bytes);
-                    if (mergebuffer != null)
-                    {
-                        var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
-                        FromApp(message, (EndPoint)endpoint);
-                    }
-                }));
+                    var bagid = GetBagId(bytes);
+                    SendEcho((EndPoint)endpoint, bagid);
+                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
+                    FromApp(message, (EndPoint)endpoint);
+                }
+            }));
         }
 
         public override bool SendMessage(Message msg, EndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
-            int trytemes = 0;
-            foreach (var segment in SplitBytes(bytes))
+            var segments = SplitBytes(bytes).ToArray();
+            var bagid = GetBagId(segments.First());
+            lock (__s)
             {
-                trytemes = 0;
-                lock (__s)
+                var lockflag = this.GetSendMsgLocker((IPEndPoint)endpoint);
+                lockflag.BagId = bagid;
+                lockflag.Reset();
+                for (var i = 0; i < segments.Length; i++)
                 {
-                    var lockflag = this.GetSendMsgLocker((IPEndPoint)endpoint);
-                    while (true)
-                    {
-                        var segmentid = BitConverter.ToInt64(segment, 0);
-                        lockflag.SegmentId = segmentid;
-                        lockflag.Reset();
-                        __s.SendTo(segment, SocketFlags.None, endpoint);
-                        if (lockflag.Wait(TimeOutMillSec))
-                        {
-                            break;
-                        }
-                        else
-                        {
-                            if (trytemes++ >= TimeOutTryTimes)
-                            {
-                                throw new TimeoutException();
-                            }
-                        }
-                    }
+                    var segment = segments[i];
+                    __s.SendTo(segment, SocketFlags.None, endpoint);
                 }
+                lockflag.Wait(10000);
             }
 
             return true;

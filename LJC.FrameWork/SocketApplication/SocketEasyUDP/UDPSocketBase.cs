@@ -37,9 +37,15 @@ namespace LJC.FrameWork.SocketEasyUDP
         }
 
         #region 拆包
-        protected const int MAX_PACKAGE_LEN = 548; //65507 1472 548
+        protected const int MAX_PACKAGE_LEN = 65507; //65507 1472 548
         protected static double MAX_PACKAGE_LEN2 = MAX_PACKAGE_LEN - 24;
         protected static int MAX_PACKAGE_LEN3 = MAX_PACKAGE_LEN - 24;
+
+        protected long GetBagId(byte[] bytes)
+        {
+            var bagid = BitConverter.ToInt64(bytes, 16);
+            return bagid;
+        }
 
         protected IEnumerable<byte[]> SplitBytes(byte[] bigbytes)
         {
@@ -50,12 +56,9 @@ namespace LJC.FrameWork.SocketEasyUDP
 
             byte[] segmentid = null;
 
-            if (packagelen > 1)
-            {
-                var newbagid = System.Threading.Interlocked.Increment(ref _bagid);
-                //bytesid = Guid.NewGuid().ToByteArray();
-                bytesid = BitConverter.GetBytes(newbagid);
-            }
+            var newbagid = System.Threading.Interlocked.Increment(ref _bagid);
+            //bytesid = Guid.NewGuid().ToByteArray();
+            bytesid = BitConverter.GetBytes(newbagid);
 
             for (int i = 1; i <= packagelen; i++)
             {
@@ -85,11 +88,6 @@ namespace LJC.FrameWork.SocketEasyUDP
 
         private int GetBagOffset(int bagno, int baglen)
         {
-            if (baglen == 1)
-            {
-                return 16;
-            }
-
             return 24;
         }
 
@@ -156,7 +154,7 @@ namespace LJC.FrameWork.SocketEasyUDP
             }
             else
             {
-                return bag.Skip(16).ToArray();
+                return bag.Skip(24).ToArray();
             }
 
         }

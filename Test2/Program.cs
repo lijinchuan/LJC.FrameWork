@@ -194,11 +194,11 @@ namespace Test2
             //return;
 
             ManualResetEventSlim resetslim = new ManualResetEventSlim();
-            LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("2.5.176.91", 50000);
+            ClientBase2 clientbase =new ClientBase2("192.168.0.102", 50000);
             //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 3000; i++)
+            for (int i = 0; i < 3000000; i++)
             {
                 sb.Append(i.ToString());
             }

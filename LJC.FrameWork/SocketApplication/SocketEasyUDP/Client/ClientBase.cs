@@ -44,7 +44,7 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                         _sendmsgflag.SegmentId = segmentid;
                         _sendmsgflag.Reset();
                         _udpClient.Send(segment, segment.Length);
-                        Console.WriteLine(Environment.TickCount + ":发包：" + segmentid);
+                        //Console.WriteLine(Environment.TickCount + ":发包：" + segmentid);
                         if (_sendmsgflag.Wait(TimeOutMillSec))
                         {
                             if (trytimes > 1)
@@ -91,12 +91,12 @@ namespace LJC.FrameWork.SocketEasyUDP.Client
                             if (bytes.Length > 8)
                             {
                                 SendEcho(segmentid);
-                                Console.WriteLine(Environment.TickCount + ":收包，发确认");
+                                //Console.WriteLine(Environment.TickCount + ":收包，发确认");
                                 OnMessage(bytes);
                             }
                             else
                             {
-                                Console.WriteLine(Environment.TickCount + ":收确认:" + segmentid);
+                                //Console.WriteLine(Environment.TickCount + ":收确认:" + segmentid);
                                 if (_sendmsgflag.SegmentId == segmentid)
                                 {
                                     _sendmsgflag.Set();

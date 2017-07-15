@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 
-namespace LJC.FrameWork.SocketApplication
+namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
 {
-    public class SendMsgManualResetEventSlim : ManualResetEventSlim
+    public class UDPRevResultMessage
     {
         public long BagId
         {
@@ -14,7 +13,13 @@ namespace LJC.FrameWork.SocketApplication
             set;
         }
 
-        public long SegmentId
+        public int[] Miss
+        {
+            get;
+            set;
+        }
+
+        public bool IsReved
         {
             get;
             set;
