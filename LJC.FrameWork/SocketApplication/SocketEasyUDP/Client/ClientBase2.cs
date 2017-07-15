@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 {
-    public class ClientBase2: UDPSocketBase
+    public class ClientBase2: UDPSocketBase2
     {
         private UdpClient _udpClient;
         private System.Net.IPEndPoint _serverPoint = null;
@@ -17,6 +17,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         private volatile bool _isstartclient = false;
 
         SendMsgManualResetEventSlim _sendmsgflag = new SendMsgManualResetEventSlim();
+        Dictionary<long, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<long, PipelineManualResetEventSlim>();
 
         public ClientBase2(string host, int port)
         {
@@ -42,7 +43,15 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                     var segment = segments[i];
                     _udpClient.Send(segment, segment.Length);
                 }
-                return  _sendmsgflag.Wait(10000);
+                _sendmsgflag.Wait(10000);
+                if (!_sendmsgflag.IsTimeOut)
+                {
+                    return true;
+                }
+                else
+                {
+                    throw new TimeoutException();
+                }
             }
         }
 
@@ -68,8 +77,6 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                         var bagid = BitConverter.ToInt64(bytes, 0);
                         if (bytes.Length > 8)
                         {
-                            SendEcho(bagid);
-                            Console.WriteLine(Environment.TickCount + ":收包，发确认");
                             OnMessage(bytes);
                         }
                         else
@@ -106,6 +113,25 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         {
         }
 
+        private void CreateMessagePipeline(PipelineManualResetEventSlim slim, long bagid)
+        {
+            new Action(() =>
+            {
+                slim.Reset();
+                slim.Wait(10000);
+
+                if (!slim.IsTimeOut)
+                {
+                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
+                    OnMessage(message);
+                }
+                else
+                {
+                    Console.Write("接收超时:" + bagid);
+                }
+
+            }).BeginInvoke(null, null);
+        }
 
         private void OnMessage(byte[] data)
         {
@@ -114,8 +140,43 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 var margebytes = MargeBag(data);
                 if (margebytes != null)
                 {
-                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(margebytes);
-                    OnMessage(message);
+                    var bagid = GetBagId(data);
+                    SendEcho(bagid);
+                    if (data.Length == margebytes.Length)
+                    {
+                        var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(margebytes);
+                        OnMessage(message);
+                    }
+                    else
+                    {
+                        //发送管道通知
+                        PipelineManualResetEventSlim slim = null;
+                        //通知管道
+                        if (_pipelineSlimDic.TryGetValue(bagid, out slim))
+                        {
+                            slim.MsgBuffer = margebytes;
+                            slim.Set();
+                        }
+                    }
+                }
+                else
+                {
+                    //创建管道
+                    var bagid = GetBagId(data);
+                    PipelineManualResetEventSlim slim = null;
+                    if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
+                    {
+                        lock (_pipelineSlimDic)
+                        {
+                            if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
+                            {
+                                slim = new PipelineManualResetEventSlim();
+                                slim.BagId = bagid;
+                                _pipelineSlimDic.Add(bagid, slim);
+                                CreateMessagePipeline(slim, bagid);
+                            }
+                        }
+                    }
                 }
             }));
         }

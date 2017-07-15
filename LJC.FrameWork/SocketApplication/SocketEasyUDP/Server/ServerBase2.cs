@@ -9,7 +9,7 @@ using System.Text;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 {
-    public class ServerBase2 : UDPSocketBase
+    public class ServerBase2 : UDPSocketBase2
     {
         Socket __s = null;
         protected string[] _bindingips = null;
@@ -19,6 +19,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
         static BufferPollManager _buffermanager = new BufferPollManager(1000, MAX_PACKAGE_LEN);
 
         Dictionary<string, SendMsgManualResetEventSlim> _sendMsgLockerSlim = new Dictionary<string, SendMsgManualResetEventSlim>();
+        Dictionary<long, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<long, PipelineManualResetEventSlim>();
 
         private object _bindlocker = new object();
 
@@ -75,27 +76,24 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             __s.SendTo(buffer, remote);
         }
 
-        SendMsgManualResetEventSlim GetSendMsgLocker(IPEndPoint endpoint, bool create = true)
+        private void CreateMessagePipeline(EndPoint endpoint, PipelineManualResetEventSlim slim, long bagid)
         {
-            var key = endpoint.Address.ToString() + "_" + endpoint.Port;
-
-            SendMsgManualResetEventSlim locker = null;
-            if (!_sendMsgLockerSlim.TryGetValue(key, out locker))
+            new Action(() =>
             {
-                if (create)
-                {
-                    lock (_sendMsgLockerSlim)
-                    {
-                        if (!_sendMsgLockerSlim.TryGetValue(key, out locker))
-                        {
-                            locker = new SendMsgManualResetEventSlim();
-                            _sendMsgLockerSlim.Add(key, locker);
-                        }
-                    }
-                }
-            }
+                slim.Reset();
+                slim.Wait(10000);
 
-            return locker;
+                if (!slim.IsTimeOut)
+                {
+                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
+                    FromApp(message, (EndPoint)endpoint);
+                }
+                else
+                {
+                    Console.Write("接收超时:"+bagid);
+                }
+
+            }).BeginInvoke(null, null);
         }
 
         public void StartServer()
@@ -113,35 +111,24 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     byte[] buffer = null;
                     int offset = 0;
                     var bufferindex = _buffermanager.GetBuffer();
+                    if (bufferindex == -1)
+                    {
+                        throw new Exception("没有可用的接收缓存");
+                    }
+
                     if (bufferindex != -1)
                     {
                         buffer = _buffermanager.Buffer;
                         offset = _buffermanager.GetOffset(bufferindex);
                         len = __s.ReceiveFrom(buffer, offset, MAX_PACKAGE_LEN, SocketFlags.None, ref remote);
                     }
-                    else
-                    {
-                        buffer = new byte[MAX_PACKAGE_LEN];
-                        len = __s.ReceiveFrom(buffer, ref remote);
-                    }
 
                     if (len > 8)
                     {
-                        //var segmentid = BitConverter.ToInt64(buffer, offset);
-                        //Console.WriteLine(Environment.TickCount + ":收包:" + len + "，发确认:" + segmentid);
-                        //SendEcho(remote, segmentid);
-                        if (bufferindex == -1)
-                        {
-                            OnSocket(remote, buffer);
-                        }
-                        else
-                        {
-                            OnSocket(remote, bufferindex, len);
-                        }
+                        OnSocket(remote, bufferindex, len);
                     }
                     else
                     {
-
                         try
                         {
                             var locker = GetSendMsgLocker((IPEndPoint)remote);
@@ -157,10 +144,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                         }
                         finally
                         {
-                            if (bufferindex != -1)
-                            {
-                                _buffermanager.RealseBuffer(bufferindex);
-                            }
+                            _buffermanager.RealseBuffer(bufferindex);
                         }
                     }
                 }
@@ -192,27 +176,69 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 if (mergebuffer != null)
                 {
                     var bagid = GetBagId(bytes);
+                    Console.WriteLine("收包:"+bagid);
                     SendEcho((EndPoint)endpoint, bagid);
-                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
-                    FromApp(message, (EndPoint)endpoint);
+
+                    if (mergebuffer.Length == bytes.Length)
+                    {
+                        var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
+                        FromApp(message, (EndPoint)endpoint);
+                    }
+                    else
+                    {
+                        PipelineManualResetEventSlim slim = null;
+                        //通知管道
+                        if(_pipelineSlimDic.TryGetValue(bagid,out slim))
+                        {
+                            slim.MsgBuffer = mergebuffer;
+                            slim.Set();
+                        }
+                    }
+                }
+                else
+                {
+                    //创建管道
+                    var bagid = GetBagId(bytes);
+                    PipelineManualResetEventSlim slim = null;
+                    if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
+                    {
+                        lock (_pipelineSlimDic)
+                        {
+                            if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
+                            {
+                                slim = new PipelineManualResetEventSlim();
+                                slim.BagId = bagid;
+                                CreateMessagePipeline((EndPoint)endpoint, slim, bagid);
+                                _pipelineSlimDic.Add(bagid, slim);
+                            }
+                        }
+                    }
                 }
 
             }));
         }
 
-        private void OnSocket(object endpoint, byte[] bytes)
+        SendMsgManualResetEventSlim GetSendMsgLocker(IPEndPoint endpoint, bool create = true)
         {
-            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
+            var key = endpoint.Address.ToString() + "_" + endpoint.Port;
+
+            SendMsgManualResetEventSlim locker = null;
+            if (!_sendMsgLockerSlim.TryGetValue(key, out locker))
             {
-                var mergebuffer = MargeBag(bytes);
-                if (mergebuffer != null)
+                if (create)
                 {
-                    var bagid = GetBagId(bytes);
-                    SendEcho((EndPoint)endpoint, bagid);
-                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
-                    FromApp(message, (EndPoint)endpoint);
+                    lock (_sendMsgLockerSlim)
+                    {
+                        if (!_sendMsgLockerSlim.TryGetValue(key, out locker))
+                        {
+                            locker = new SendMsgManualResetEventSlim();
+                            _sendMsgLockerSlim.Add(key, locker);
+                        }
+                    }
                 }
-            }));
+            }
+
+            return locker;
         }
 
         public override bool SendMessage(Message msg, EndPoint endpoint)
@@ -231,9 +257,15 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     __s.SendTo(segment, SocketFlags.None, endpoint);
                 }
                 lockflag.Wait(10000);
+                if (!lockflag.IsTimeOut)
+                {
+                    return true;
+                }
+                else
+                {
+                    throw new TimeoutException();
+                }
             }
-
-            return true;
         }
 
 

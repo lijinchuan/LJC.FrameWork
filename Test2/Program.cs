@@ -198,7 +198,7 @@ namespace Test2
             //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 3000000; i++)
+            for (int i = 0; i < 300000; i++)
             {
                 sb.Append(i.ToString());
             }
@@ -211,12 +211,19 @@ namespace Test2
             int sendcnt = 0;
 
             System.Diagnostics.Stopwatch sw2 = new System.Diagnostics.Stopwatch();
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 100; i++)
             {
-                sw2.Restart();
-                clientbase.SendMessage(testmsg, null);
-                sw2.Stop();
-                Console.WriteLine("成功:" + ++sendcnt + "," + sw2.ElapsedMilliseconds + "ms");
+                try
+                {
+                    sw2.Restart();
+                    clientbase.SendMessage(testmsg, null);
+                    sw2.Stop();
+                    Console.WriteLine("成功:" + ++sendcnt + "," + sw2.ElapsedMilliseconds + "ms");
+                }
+                catch
+                {
+                    Console.WriteLine("发失败");
+                }
             }
             
             Console.Read();

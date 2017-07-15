@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace LJC.FrameWork.SocketApplication
+namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
 {
-    public class SendMsgManualResetEventSlim : ManualResetEventSlim
+    public class PipelineManualResetEventSlim: ManualResetEventSlim
     {
         public long BagId
         {
@@ -14,7 +14,7 @@ namespace LJC.FrameWork.SocketApplication
             set;
         }
 
-        public long SegmentId
+        public byte[] MsgBuffer
         {
             get;
             set;
