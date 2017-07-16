@@ -11,7 +11,10 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
         private static long _bagid = 0;
         private static long _segmentid = 0;
 
-        private Dictionary<long, byte[][]> TempBagDic = new Dictionary<long, byte[][]>();
+        /// <summary>
+        /// 这里有问题，如果是服务端，并不能保证唯一性
+        /// </summary>
+        private Dictionary<string, byte[][]> TempBagDic = new Dictionary<string, byte[][]>();
 
         protected static int TimeOutTryTimes = 10;
         protected static int TimeOutMillSec = 1000;
@@ -171,6 +174,14 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
                 return bag.Skip(24).ToArray();
             }
 
+        }
+
+        protected void ClearTempBag(long bagid)
+        {
+            lock (TempBagDic)
+            {
+                TempBagDic.Remove(bagid);
+            }
         }
         #endregion
 

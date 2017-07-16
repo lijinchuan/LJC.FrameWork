@@ -96,7 +96,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 try
                 {
                     SendMessageNoSure(question, endpoint);
-                    wait.WaitOne(1000);
+                    wait.WaitOne(100);
                     if (!wait.IsTimeOut)
                     {
                         _resetevent.Remove(bagid);
@@ -122,7 +122,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 while (true)
                 {
                     slim.Reset();
-                    slim.Wait(10000);
+                    slim.Wait(30000);
 
                     if (!slim.IsTimeOut)
                     {
@@ -135,6 +135,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                         trytimes++;
                         if (trytimes >= TimeOutTryTimes)
                         {
+                            ClearTempBag(bagid);
                             throw new TimeoutException();
                         }
                     }
@@ -349,7 +350,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                         __s.SendTo(segment, SocketFlags.None, endpoint);
                         sended[i] = 1;
                     }
-                    lockflag.Wait(10000);
+                    lockflag.Wait(3000);
                     if (!lockflag.IsTimeOut)
                     {
                         LogManager.LogHelper.Instance.Info("发消息:" + bagid + "成功");

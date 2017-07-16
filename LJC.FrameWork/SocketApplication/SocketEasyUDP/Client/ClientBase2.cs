@@ -48,7 +48,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 try
                 {
                     SendMessageNoSure(question, endpoint);
-                    wait.WaitOne(1000);
+                    wait.WaitOne(100);
                     if (!wait.IsTimeOut)
                     {
                         _resetevent.Remove(bagid);
@@ -101,7 +101,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                         _udpClient.Send(segment, segment.Length);
                         sended[i] = 1;
                     }
-                    _sendmsgflag.Wait(3000);
+                    _sendmsgflag.Wait(1000);
                     if (!_sendmsgflag.IsTimeOut)
                     {
                         LogManager.LogHelper.Instance.Info("发消息:" + bagid + "成功");
@@ -227,7 +227,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             new Action(() =>
             {
                 slim.Reset();
-                slim.Wait(10000);
+                slim.Wait(30000);
 
                 if (!slim.IsTimeOut)
                 {
@@ -236,7 +236,9 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 }
                 else
                 {
+                    ClearTempBag(bagid);
                     Console.Write("接收超时:" + bagid);
+                    OnError(new TimeoutException("接收超时"));
                 }
 
             }).BeginInvoke(null, null);
