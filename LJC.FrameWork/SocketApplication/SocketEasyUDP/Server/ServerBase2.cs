@@ -20,6 +20,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 
         Dictionary<string, SendMsgManualResetEventSlim> _sendMsgLockerSlim = new Dictionary<string, SendMsgManualResetEventSlim>();
         Dictionary<long, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<long, PipelineManualResetEventSlim>();
+        Dictionary<long, AutoReSetEventResult> _resetevent = new Dictionary<long, AutoReSetEventResult>();
 
         private object _bindlocker = new object();
 
@@ -76,21 +77,67 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             __s.SendTo(buffer, remote);
         }
 
+        private UDPRevResultMessage QuestionBag(long bagid,EndPoint endpoint)
+        {
+            int trytimes = 0;
+            Message question = new Message(MessageType.UDPQUERYBAG);
+            question.SetMessageBody(new UDPRevResultMessage
+            {
+                BagId = bagid
+            });
+
+            var wait = new AutoReSetEventResult(string.Empty);
+            _resetevent.Add(bagid, wait);
+
+            while (true)
+            {
+                wait.IsTimeOut = true;
+                wait.Reset();
+                try
+                {
+                    SendMessageNoSure(question, endpoint);
+                    wait.WaitOne(1000);
+                    if (!wait.IsTimeOut)
+                    {
+                        _resetevent.Remove(bagid);
+                        return (UDPRevResultMessage)wait.WaitResult;
+                    }
+                }
+                catch (TimeoutException ex)
+                {
+                    trytimes++;
+                    if (trytimes >= 10)
+                    {
+                        throw ex;
+                    }
+                }
+            }
+        }
+
         private void CreateMessagePipeline(EndPoint endpoint, PipelineManualResetEventSlim slim, long bagid)
         {
             new Action(() =>
             {
-                slim.Reset();
-                slim.Wait(10000);
+                int trytimes = 0;
+                while (true)
+                {
+                    slim.Reset();
+                    slim.Wait(10000);
 
-                if (!slim.IsTimeOut)
-                {
-                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
-                    FromApp(message, (EndPoint)endpoint);
-                }
-                else
-                {
-                    Console.Write("接收超时:"+bagid);
+                    if (!slim.IsTimeOut)
+                    {
+                        var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
+                        FromApp(message, (EndPoint)endpoint);
+                        break;
+                    }
+                    else
+                    {
+                        trytimes++;
+                        if (trytimes >= TimeOutTryTimes)
+                        {
+                            throw new TimeoutException();
+                        }
+                    }
                 }
 
             }).BeginInvoke(null, null);
@@ -153,6 +200,28 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 
         protected virtual void FromApp(Message message, EndPoint endpoint)
         {
+            if (message.IsMessage(MessageType.UDPQUERYBAG))
+            {
+                UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
+
+                var respmsg = new Message(MessageType.UDPANSWERBAG);
+                revmsg.Miss = GetMissSegment(revmsg.BagId).ToArray();
+                revmsg.IsReved = revmsg.Miss != null && revmsg.Miss.Length == 0;
+                respmsg.SetMessageBody(revmsg);
+
+                SendMessage(respmsg,endpoint);
+            }
+            else if (message.IsMessage(MessageType.UDPANSWERBAG))
+            {
+                UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
+                AutoReSetEventResult wait = null;
+                if (_resetevent.TryGetValue(revmsg.BagId,out wait))
+                {
+                    wait.WaitResult = revmsg;
+                    wait.IsTimeOut = false;
+                    wait.Set();
+                }
+            }
         }
 
         private void OnSocket(object endpoint, int bufferindex, int len)
@@ -179,7 +248,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     Console.WriteLine("收包:"+bagid);
                     SendEcho((EndPoint)endpoint, bagid);
 
-                    if (mergebuffer.Length == bytes.Length)
+                    if (mergebuffer.Length <= bytes.Length)
                     {
                         var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
                         FromApp(message, (EndPoint)endpoint);
@@ -241,29 +310,82 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             return locker;
         }
 
-        public override bool SendMessage(Message msg, EndPoint endpoint)
+        public void SendMessageNoSure(Message msg,EndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
             var segments = SplitBytes(bytes).ToArray();
-            var bagid = GetBagId(segments.First());
             lock (__s)
             {
-                var lockflag = this.GetSendMsgLocker((IPEndPoint)endpoint);
-                lockflag.BagId = bagid;
-                lockflag.Reset();
                 for (var i = 0; i < segments.Length; i++)
                 {
                     var segment = segments[i];
                     __s.SendTo(segment, SocketFlags.None, endpoint);
                 }
-                lockflag.Wait(10000);
-                if (!lockflag.IsTimeOut)
+            }
+        }
+
+        public override bool SendMessage(Message msg, EndPoint endpoint)
+        {
+            var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
+            var segments = SplitBytes(bytes).ToArray();
+            var bagid = GetBagId(segments.First());
+            int[] sended = segments.Select(p => 0).ToArray();
+            int trytimes = 0;
+            LogManager.LogHelper.Instance.Info("发消息:" + bagid + ",长度:" + bytes.Length);
+            while (true)
+            {
+                lock (__s)
                 {
+                    var lockflag = this.GetSendMsgLocker((IPEndPoint)endpoint);
+                    lockflag.BagId = bagid;
+                    lockflag.Reset();
+                    for (var i = 0; i < segments.Length; i++)
+                    {
+                        if (sended[i] != 0)
+                        {
+                            continue;
+                        }
+                        var segment = segments[i];
+                        __s.SendTo(segment, SocketFlags.None, endpoint);
+                        sended[i] = 1;
+                    }
+                    lockflag.Wait(10000);
+                    if (!lockflag.IsTimeOut)
+                    {
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "成功");
+                        return true;
+                    }
+                }
+
+                if (trytimes++ >= TimeOutTryTimes)
+                {
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "超时，重试次数:" + trytimes);
+                    throw new TimeoutException();
+                }
+
+                LogManager.LogHelper.Instance.Info("发消息:" + bagid + "需要重试,请求重发包");
+                var revmsg = QuestionBag(bagid, endpoint);
+                if (revmsg.IsReved)
+                {
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完成");
                     return true;
                 }
-                else
+
+                if (revmsg.Miss != null && revmsg.Miss.Length > 0)
                 {
-                    throw new TimeoutException();
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回缺少包数量："+revmsg.Miss.Length);
+                    foreach (var i in revmsg.Miss)
+                    {
+                        sended[i] = 0;
+                    }
+                }
+                else if (revmsg.Miss == null)
+                {
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完全没收到");
+                    for (int i = 0; i < sended.Length; i++)
+                    {
+                        sended[i] = 0;
+                    }
                 }
             }
         }

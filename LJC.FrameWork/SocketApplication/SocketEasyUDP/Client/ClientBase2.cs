@@ -18,6 +18,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         SendMsgManualResetEventSlim _sendmsgflag = new SendMsgManualResetEventSlim();
         Dictionary<long, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<long, PipelineManualResetEventSlim>();
+        Dictionary<long, AutoReSetEventResult> _resetevent = new Dictionary<long, AutoReSetEventResult>();
 
         public ClientBase2(string host, int port)
         {
@@ -28,29 +29,115 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             _serverPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(host), port);
         }
 
+        private UDPRevResultMessage QuestionBag(long bagid, EndPoint endpoint)
+        {
+            int trytimes = 0;
+            Message question = new Message(MessageType.UDPQUERYBAG);
+            question.SetMessageBody(new UDPRevResultMessage
+            {
+                BagId = bagid
+            });
+
+            var wait = new AutoReSetEventResult(string.Empty);
+            _resetevent.Add(bagid, wait);
+
+            while (true)
+            {
+                wait.IsTimeOut = true;
+                wait.Reset();
+                try
+                {
+                    SendMessageNoSure(question, endpoint);
+                    wait.WaitOne(1000);
+                    if (!wait.IsTimeOut)
+                    {
+                        _resetevent.Remove(bagid);
+                        return (UDPRevResultMessage)wait.WaitResult;
+                    }
+                }
+                catch (TimeoutException ex)
+                {
+                    trytimes++;
+                    if (trytimes >= 10)
+                    {
+                        throw ex;
+                    }
+                }
+            }
+        }
+
+        public void SendMessageNoSure(Message msg, EndPoint endpoint)
+        {
+            var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
+            var segments = SplitBytes(bytes).ToArray();
+            for (var i = 0; i < segments.Length; i++)
+            {
+                var segment = segments[i];
+                _udpClient.Send(segment, segment.Length);
+            }
+        }
 
         public override bool SendMessage(Message msg, EndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
             var segments = SplitBytes(bytes).ToArray();
             var bagid = GetBagId(segments.First());
-            lock (_udpClient.Client)
+            int[] sended = segments.Select(p => 0).ToArray();
+            int trytimes = 0;
+            LogManager.LogHelper.Instance.Info("发消息:" + bagid + ",长度:" + bytes.Length);
+            while (true)
             {
-                _sendmsgflag.BagId = bagid;
-                _sendmsgflag.Reset();
-                for (var i = 0; i < segments.Length; i++)
+                lock (_udpClient.Client)
                 {
-                    var segment = segments[i];
-                    _udpClient.Send(segment, segment.Length);
+                    _sendmsgflag.BagId = bagid;
+                    _sendmsgflag.Reset();
+                    for (var i = 0; i < segments.Length; i++)
+                    {
+                        if (sended[i] != 0)
+                        {
+                            continue;
+                        }
+                        var segment = segments[i];
+                        _udpClient.Send(segment, segment.Length);
+                        sended[i] = 1;
+                    }
+                    _sendmsgflag.Wait(3000);
+                    if (!_sendmsgflag.IsTimeOut)
+                    {
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "成功");
+                        return true;
+                    }
                 }
-                _sendmsgflag.Wait(10000);
-                if (!_sendmsgflag.IsTimeOut)
+
+                if (trytimes++ >= TimeOutTryTimes)
                 {
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "超时，重试次数:" + trytimes);
+                    throw new TimeoutException();
+                }
+
+                LogManager.LogHelper.Instance.Info("发消息:" + bagid + "需要重试,请求重发包");
+                var revmsg = QuestionBag(bagid, endpoint);
+                if (revmsg.IsReved)
+                {
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完成");
                     return true;
                 }
-                else
+
+                if (revmsg.Miss != null && revmsg.Miss.Length > 0)
                 {
-                    throw new TimeoutException();
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回缺少包数量：" + revmsg.Miss.Length);
+                    foreach (var i in revmsg.Miss)
+                    {
+                        sended[i] = 0;
+                    }
+                }
+                else if (revmsg.Miss == null)
+                {
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完全没收到");
+                    for (int i = 0; i < sended.Length; i++)
+                    {
+                        sended[i] = 0;
+                    }
                 }
             }
         }
@@ -111,6 +198,28 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         protected virtual void OnMessage(Message message)
         {
+            if (message.IsMessage(MessageType.UDPQUERYBAG))
+            {
+                UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
+
+                var respmsg = new Message(MessageType.UDPANSWERBAG);
+                revmsg.Miss = GetMissSegment(revmsg.BagId).ToArray();
+                revmsg.IsReved = revmsg.Miss != null && revmsg.Miss.Length == 0;
+                respmsg.SetMessageBody(revmsg);
+
+                SendMessage(respmsg,null);
+            }
+            else if (message.IsMessage(MessageType.UDPANSWERBAG))
+            {
+                UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
+                AutoReSetEventResult wait = null;
+                if (_resetevent.TryGetValue(revmsg.BagId, out wait))
+                {
+                    wait.WaitResult = revmsg;
+                    wait.IsTimeOut = false;
+                    wait.Set();
+                }
+            }
         }
 
         private void CreateMessagePipeline(PipelineManualResetEventSlim slim, long bagid)
@@ -142,7 +251,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 {
                     var bagid = GetBagId(data);
                     SendEcho(bagid);
-                    if (data.Length == margebytes.Length)
+                    if (data.Length >= margebytes.Length)
                     {
                         var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(margebytes);
                         OnMessage(message);

@@ -33,6 +33,28 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
             }
         }
 
+        protected int[] GetMissSegment(long bagid)
+        {
+            byte[][] bagarray = null;
+            List<int> list = new List<int>();
+            if(TempBagDic.TryGetValue(bagid,out bagarray))
+            {
+                for(int i=0;i<bagarray.Length;i++)
+                {
+                    if (bagarray[i] == null)
+                    {
+                        list.Add(i);
+                    }
+                }
+
+                return list.ToArray();
+            }
+            else
+            {
+                return null;
+            }
+        }
+
         #region 拆包
         protected const int MAX_PACKAGE_LEN = 65507; //65507 1472 548
         protected static double MAX_PACKAGE_LEN2 = MAX_PACKAGE_LEN - 24;

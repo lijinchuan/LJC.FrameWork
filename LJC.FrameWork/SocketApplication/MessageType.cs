@@ -31,6 +31,14 @@ namespace LJC.FrameWork.SocketApplication
         /// 致命错误
         /// </summary>
         FATAL,
-        UDPECHO
+        UDPECHO,
+        /// <summary>
+        /// UPD询问包数据
+        /// </summary>
+        UDPQUERYBAG,
+        /// <summary>
+        /// UPD回应查询包数据
+        /// </summary>
+        UDPANSWERBAG,
     }
 }

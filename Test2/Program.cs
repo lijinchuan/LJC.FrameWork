@@ -193,8 +193,8 @@ namespace Test2
             //Console.Read();
             //return;
 
-            ManualResetEventSlim resetslim = new ManualResetEventSlim();
             ClientBase2 clientbase =new ClientBase2("192.168.0.102", 50000);
+            //ClientBase2 clientbase = new ClientBase2("127.0.0.1", 50000);
             //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
 
             StringBuilder sb = new StringBuilder();
