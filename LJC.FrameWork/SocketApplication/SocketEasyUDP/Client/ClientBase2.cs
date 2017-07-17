@@ -203,7 +203,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
 
                 var respmsg = new Message(MessageType.UDPANSWERBAG);
-                revmsg.Miss = GetMissSegment(revmsg.BagId, null).ToArray();
+                revmsg.Miss = GetMissSegment(revmsg.BagId, null);
                 revmsg.IsReved = revmsg.Miss != null && revmsg.Miss.Length == 0;
                 respmsg.SetMessageBody(revmsg);
 
