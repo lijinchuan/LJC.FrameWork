@@ -203,7 +203,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
 
                 var respmsg = new Message(MessageType.UDPANSWERBAG);
-                revmsg.Miss = GetMissSegment(revmsg.BagId).ToArray();
+                revmsg.Miss = GetMissSegment(revmsg.BagId, null).ToArray();
                 revmsg.IsReved = revmsg.Miss != null && revmsg.Miss.Length == 0;
                 respmsg.SetMessageBody(revmsg);
 
@@ -236,7 +236,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 }
                 else
                 {
-                    ClearTempBag(bagid);
+                    ClearTempBag(bagid,null);
                     Console.Write("接收超时:" + bagid);
                     OnError(new TimeoutException("接收超时"));
                 }
@@ -248,7 +248,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         {
             System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
             {
-                var margebytes = MargeBag(data);
+                var margebytes = MargeBag(data,null);
                 if (margebytes != null)
                 {
                     var bagid = GetBagId(data);

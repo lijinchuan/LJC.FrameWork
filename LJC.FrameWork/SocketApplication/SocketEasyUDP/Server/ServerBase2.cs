@@ -114,7 +114,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             }
         }
 
-        private void CreateMessagePipeline(EndPoint endpoint, PipelineManualResetEventSlim slim, long bagid)
+        private void CreateMessagePipeline(IPEndPoint endpoint, PipelineManualResetEventSlim slim, long bagid)
         {
             new Action(() =>
             {
@@ -127,7 +127,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     if (!slim.IsTimeOut)
                     {
                         var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
-                        FromApp(message, (EndPoint)endpoint);
+                        FromApp(message, endpoint);
                         break;
                     }
                     else
@@ -135,7 +135,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                         trytimes++;
                         if (trytimes >= TimeOutTryTimes)
                         {
-                            ClearTempBag(bagid);
+                            ClearTempBag(bagid, endpoint);
                             throw new TimeoutException();
                         }
                     }
@@ -199,14 +199,14 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             }).BeginInvoke(null, null);
         }
 
-        protected virtual void FromApp(Message message, EndPoint endpoint)
+        protected virtual void FromApp(Message message, IPEndPoint endpoint)
         {
             if (message.IsMessage(MessageType.UDPQUERYBAG))
             {
                 UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
 
                 var respmsg = new Message(MessageType.UDPANSWERBAG);
-                revmsg.Miss = GetMissSegment(revmsg.BagId).ToArray();
+                revmsg.Miss = GetMissSegment(revmsg.BagId,endpoint).ToArray();
                 revmsg.IsReved = revmsg.Miss != null && revmsg.Miss.Length == 0;
                 respmsg.SetMessageBody(revmsg);
 
@@ -242,7 +242,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 {
                     _buffermanager.RealseBuffer(bufferindex);
                 }
-                var mergebuffer = MargeBag(bytes);
+                var mergebuffer = MargeBag(bytes, (IPEndPoint)endpoint);
                 if (mergebuffer != null)
                 {
                     var bagid = GetBagId(bytes);
@@ -252,7 +252,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     if (mergebuffer.Length <= bytes.Length)
                     {
                         var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
-                        FromApp(message, (EndPoint)endpoint);
+                        FromApp(message, (IPEndPoint)endpoint);
                     }
                     else
                     {
@@ -278,7 +278,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                             {
                                 slim = new PipelineManualResetEventSlim();
                                 slim.BagId = bagid;
-                                CreateMessagePipeline((EndPoint)endpoint, slim, bagid);
+                                CreateMessagePipeline((IPEndPoint)endpoint, slim, bagid);
                                 _pipelineSlimDic.Add(bagid, slim);
                             }
                         }

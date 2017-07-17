@@ -36,13 +36,30 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
             }
         }
 
-        protected int[] GetMissSegment(long bagid)
+        protected string GetBagKey(long bagid, IPEndPoint endpoint)
+        {
+            string key = string.Empty;
+            if (endpoint == null)
+            {
+                key = bagid.ToString();
+            }
+            else
+            {
+                key = string.Format("{0}:{1}:{2}", endpoint.Address.ToString(), endpoint.Port, bagid);
+            }
+
+            return key;
+        }
+
+        protected int[] GetMissSegment(long bagid,IPEndPoint endpoint)
         {
             byte[][] bagarray = null;
             List<int> list = new List<int>();
-            if(TempBagDic.TryGetValue(bagid,out bagarray))
+
+
+            if (TempBagDic.TryGetValue(GetBagKey(bagid, endpoint), out bagarray))
             {
-                for(int i=0;i<bagarray.Length;i++)
+                for (int i = 0; i < bagarray.Length; i++)
                 {
                     if (bagarray[i] == null)
                     {
@@ -113,7 +130,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
             return 24;
         }
 
-        protected byte[] MargeBag(byte[] bag)
+        protected byte[] MargeBag(byte[] bag,IPEndPoint endpoint)
         {
             var packageno = BitConverter.ToInt32(bag, 8);
             var packagelen = BitConverter.ToInt32(bag, 12);
@@ -121,16 +138,16 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
             if (packagelen > 1)
             {
                 long bagid = BitConverter.ToInt64(bag, 16);
-
+                string key = GetBagKey(bagid, endpoint);
                 byte[][] bags = null;
-                if (!TempBagDic.TryGetValue(bagid, out bags))
+                if (!TempBagDic.TryGetValue(GetBagKey(bagid,endpoint), out bags))
                 {
                     lock (TempBagDic)
                     {
-                        if (!TempBagDic.TryGetValue(bagid, out bags))
+                        if (!TempBagDic.TryGetValue(key, out bags))
                         {
                             bags = new byte[packagelen][];
-                            TempBagDic.Add(bagid, bags);
+                            TempBagDic.Add(key, bags);
 
                         }
                     }
@@ -155,7 +172,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
 
                 lock (TempBagDic)
                 {
-                    TempBagDic.Remove(bagid);
+                    TempBagDic.Remove(key);
                 }
 
                 using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
@@ -176,11 +193,11 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
 
         }
 
-        protected void ClearTempBag(long bagid)
+        protected void ClearTempBag(long bagid,IPEndPoint endpoint)
         {
             lock (TempBagDic)
             {
-                TempBagDic.Remove(bagid);
+                TempBagDic.Remove(GetBagKey(bagid, endpoint));
             }
         }
         #endregion
