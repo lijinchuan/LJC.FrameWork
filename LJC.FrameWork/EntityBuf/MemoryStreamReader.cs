@@ -85,11 +85,44 @@ namespace LJC.FrameWork.EntityBuf
             int len = ReadInt32();
             if (len == -1)
                 return null;
-            Int16[] ret=new short[len];
+            Int16[] ret = new Int16[len];
             for (int i = 0; i < len; i++)
             {
                 ret[i] = ReadInt16();
             }
+            return ret;
+        }
+
+        public UInt16[] ReadUInt16Array()
+        {
+            int len = ReadInt32();
+            if (len == -1)
+                return null;
+            UInt16[] ret = new UInt16[len];
+            for (int i = 0; i < len; i++)
+            {
+                ret[i] = ReadUInt16();
+            }
+            return ret;
+        }
+
+        public UInt16 ReadUInt16()
+        {
+            var flag = (UShrotTypeEnum)_reader.ReadByte();
+            if (flag == UShrotTypeEnum.Zero)
+            {
+                return default(UInt16);
+            }
+            UInt16 ret;
+            if ((flag & UShrotTypeEnum.ByteVal) == UShrotTypeEnum.ByteVal)
+            {
+                ret = _reader.ReadByte();
+            }
+            else
+            {
+                ret = _reader.ReadUInt16();
+            }
+
             return ret;
         }
 

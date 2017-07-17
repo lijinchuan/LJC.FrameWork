@@ -40,5 +40,9 @@ namespace LJC.FrameWork.SocketApplication
         /// UPD回应查询包数据
         /// </summary>
         UDPANSWERBAG,
+        /// <summary>
+        /// 设置MTU参数
+        /// </summary>
+        UPDSETMTU,
     }
 }

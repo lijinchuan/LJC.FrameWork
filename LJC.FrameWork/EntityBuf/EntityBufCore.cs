@@ -49,6 +49,7 @@ namespace LJC.FrameWork.EntityBuf
                     ebtype.EntityType = EntityType.SHORT;
                     ebtype.DefaultValue = default(short);
                     break;
+                case "UInt16":
                 case "Ushort":
                     ebtype.EntityType = EntityType.USHORT;
                     ebtype.DefaultValue = default(ushort);
@@ -297,6 +298,16 @@ namespace LJC.FrameWork.EntityBuf
                     else
                     {
                         msWriter.WriteInt16((Int16)val);
+                    }
+                    break;
+                case EntityType.USHORT:
+                    if (isArray)
+                    {
+                        msWriter.WriteUInt16Array((UInt16[])val);
+                    }
+                    else
+                    {
+                        msWriter.WriteUInt16((UInt16)val);
                     }
                     break;
                 case EntityType.INT32:
@@ -709,6 +720,15 @@ namespace LJC.FrameWork.EntityBuf
                     else
                     {
                         return msReader.ReadInt16();
+                    }
+                case EntityType.USHORT:
+                    if (isArray)
+                    {
+                        return msReader.ReadUInt16Array();
+                    }
+                    else
+                    {
+                        return msReader.ReadUInt16();
                     }
                 case EntityType.INT32:
                     if (isArray)

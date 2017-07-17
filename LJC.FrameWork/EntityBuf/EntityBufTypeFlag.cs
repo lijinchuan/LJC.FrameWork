@@ -104,4 +104,11 @@ namespace LJC.FrameWork.EntityBuf
         ByteVal=2,
         Minus=128,
     }
+
+    public enum UShrotTypeEnum : byte
+    {
+        DEFAULT=0,
+        Zero = 1,
+        ByteVal = 2,
+    }
 }

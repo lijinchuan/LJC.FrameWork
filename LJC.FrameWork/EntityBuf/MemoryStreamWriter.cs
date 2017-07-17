@@ -195,6 +195,50 @@ namespace LJC.FrameWork.EntityBuf
             }
         }
 
+        public void WriteUInt16(UInt16 num)
+        {
+            CheckBufferPoll(3);
+
+            if (num == 0)
+            {
+                _ms.WriteByte((byte)UShrotTypeEnum.Zero);
+                return;
+            }
+
+            UShrotTypeEnum flag = UShrotTypeEnum.DEFAULT;
+
+            byte[] bytes;
+            if (num <= byte.MaxValue)
+            {
+                flag |= UShrotTypeEnum.ByteVal;
+                bytes = new byte[] { (byte)num };
+            }
+            else
+            {
+                bytes = BitConverter.GetBytes(num);
+            }
+            _ms.WriteByte((byte)flag);
+            _ms.Write(bytes, 0, bytes.Length);
+        }
+
+        public void WriteUInt16Array(UInt16[] numArray)
+        {
+            CheckBufferPoll(numArray == null ? 1 : 4);
+
+            if (numArray == null)
+            {
+                _ms.Write(bytesNull, 0, 4);
+                return;
+            }
+
+            int len = numArray.Length;
+            WriteInt32(len);
+            foreach (UInt16 i in numArray)
+            {
+                WriteUInt16(i);
+            }
+        }
+
         public void WriteInt32(Int32 num)
         {
             CheckBufferPoll(5);

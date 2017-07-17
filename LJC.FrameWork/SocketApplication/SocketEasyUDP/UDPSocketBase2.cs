@@ -11,10 +11,11 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
         private static long _bagid = 0;
         private static long _segmentid = 0;
 
-        /// <summary>
-        /// 这里有问题，如果是服务端，并不能保证唯一性
-        /// </summary>
+        protected const ushort MTU_MAX = 65507; //65507 1472 548
+        protected const ushort MTU_MIN = 548;
+
         private Dictionary<string, byte[][]> TempBagDic = new Dictionary<string, byte[][]>();
+        private Dictionary<string, DateTime> BagRemovedDic = new Dictionary<string, DateTime>();
 
         protected static int TimeOutTryTimes = 10;
         protected static int TimeOutMillSec = 1000;
@@ -23,7 +24,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
 
         public event Action<Exception> Error = null;
 
-        public virtual bool SendMessage(Message msg, EndPoint endpoint)
+        public virtual bool SendMessage(Message msg, IPEndPoint endpoint)
         {
             throw new NotImplementedException();
         }
@@ -51,19 +52,27 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
             return key;
         }
 
-        protected int[] GetMissSegment(long bagid,IPEndPoint endpoint)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bagid"></param>
+        /// <param name="endpoint"></param>
+        /// <returns>完全未收到null,已被移除[],其它未收到</returns>
+        protected int[] GetMissSegment(long bagid,IPEndPoint endpoint,out bool reved)
         {
             byte[][] bagarray = null;
             List<int> list = new List<int>();
+            reved = true;
+            var bagkey = GetBagKey(bagid, endpoint);
 
-
-            if (TempBagDic.TryGetValue(GetBagKey(bagid, endpoint), out bagarray))
+            if (TempBagDic.TryGetValue(bagkey, out bagarray))
             {
                 for (int i = 0; i < bagarray.Length; i++)
                 {
                     if (bagarray[i] == null)
                     {
                         list.Add(i);
+                        reved = false;
                     }
                 }
 
@@ -71,14 +80,15 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
             }
             else
             {
+                if (!BagRemovedDic.ContainsKey(bagkey))
+                {
+                    reved = false;
+                }
                 return null;
             }
         }
 
         #region 拆包
-        protected const int MAX_PACKAGE_LEN = 65507; //65507 1472 548
-        protected static double MAX_PACKAGE_LEN2 = MAX_PACKAGE_LEN - 24;
-        protected static int MAX_PACKAGE_LEN3 = MAX_PACKAGE_LEN - 24;
 
         protected long GetBagId(byte[] bytes)
         {
@@ -86,11 +96,11 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
             return bagid;
         }
 
-        protected IEnumerable<byte[]> SplitBytes(byte[] bigbytes)
+        protected IEnumerable<byte[]> SplitBytes(byte[] bigbytes,ushort maxPackageLen)
         {
             int byteslen = bigbytes.Length;
             byte[] bytesid = null;
-            int packagelen = (int)Math.Ceiling(bigbytes.Length / MAX_PACKAGE_LEN2);
+            int packagelen = (int)Math.Ceiling(bigbytes.Length / (double)(maxPackageLen-24));
             byte[] packagelenbytes = BitConverter.GetBytes(packagelen);
 
             byte[] segmentid = null;
@@ -103,8 +113,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
             {
                 segmentid = BitConverter.GetBytes(System.Threading.Interlocked.Increment(ref _segmentid));
 
-                int offset = (i - 1) * MAX_PACKAGE_LEN3;
-                var len = Math.Min(bigbytes.Length - offset, MAX_PACKAGE_LEN3);
+                int offset = (i - 1) * (maxPackageLen - 24);
+                var len = Math.Min(bigbytes.Length - offset, maxPackageLen - 24);
                 var sendbytes = new byte[len + 24];
                 using (System.IO.MemoryStream ms = new System.IO.MemoryStream(sendbytes))
                 {
@@ -193,11 +203,17 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
 
         }
 
-        protected void ClearTempBag(long bagid,IPEndPoint endpoint)
+        protected void ClearTempBag(long bagid, IPEndPoint endpoint)
         {
+            var key = GetBagKey(bagid, endpoint);
             lock (TempBagDic)
             {
-                TempBagDic.Remove(GetBagKey(bagid, endpoint));
+                TempBagDic.Remove(key);
+            }
+
+            lock (BagRemovedDic)
+            {
+                BagRemovedDic.Add(key, DateTime.Now);
             }
         }
         #endregion

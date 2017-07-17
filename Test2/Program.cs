@@ -195,10 +195,12 @@ namespace Test2
 
             //ClientBase2 clientbase =new ClientBase2("192.168.0.100", 50000);
             ClientBase2 clientbase = new ClientBase2("127.0.0.1", 50000);
+            //ClientBase2 clientbase = new ClientBase2("2.5.176.91", 50000);
             //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
+            //ClientBase2 clientbase = new ClientBase2("106.14.193.150", 50000);
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 3000; i++)
+            for (int i = 0; i < 300; i++)
             {
                 sb.Append(i.ToString());
             }
@@ -208,6 +210,16 @@ namespace Test2
                 };
             testmsg.SetMessageBody(sb.ToString());
             clientbase.StartClient();
+
+            if (clientbase.SetMTU(65535))
+            {
+                Console.WriteLine("mtu设置成功");
+            }
+            else
+            {
+                Console.WriteLine("mtu设置失败");
+            }
+
             int sendcnt = 0;
 
             System.Diagnostics.Stopwatch sw2 = new System.Diagnostics.Stopwatch();

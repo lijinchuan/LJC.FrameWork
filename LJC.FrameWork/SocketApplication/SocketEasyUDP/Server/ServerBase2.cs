@@ -16,11 +16,14 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
         protected int _bindport = 0;
         private bool _isBindIp = false;
 
+        protected const ushort MAX_PACKAGE_LEN = 65507; //65507 1472 548
+
         static BufferPollManager _buffermanager = new BufferPollManager(1000, MAX_PACKAGE_LEN);
 
         Dictionary<string, SendMsgManualResetEventSlim> _sendMsgLockerSlim = new Dictionary<string, SendMsgManualResetEventSlim>();
         Dictionary<long, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<long, PipelineManualResetEventSlim>();
         Dictionary<long, AutoReSetEventResult> _resetevent = new Dictionary<long, AutoReSetEventResult>();
+        Dictionary<string, ushort> _MTUDic = new Dictionary<string, ushort>();
 
         private object _bindlocker = new object();
 
@@ -77,7 +80,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             __s.SendTo(buffer, remote);
         }
 
-        private UDPRevResultMessage QuestionBag(long bagid,EndPoint endpoint)
+        private UDPRevResultMessage QuestionBag(long bagid,IPEndPoint endpoint)
         {
             int trytimes = 0;
             Message question = new Message(MessageType.UDPQUERYBAG);
@@ -206,8 +209,9 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
 
                 var respmsg = new Message(MessageType.UDPANSWERBAG);
-                revmsg.Miss = GetMissSegment(revmsg.BagId,endpoint);
-                revmsg.IsReved = revmsg.Miss != null && revmsg.Miss.Length == 0;
+                bool isreved = false;
+                revmsg.Miss = GetMissSegment(revmsg.BagId,endpoint,out isreved);
+                revmsg.IsReved = isreved;
                 respmsg.SetMessageBody(revmsg);
 
                 SendMessage(respmsg,endpoint);
@@ -221,6 +225,31 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     wait.WaitResult = revmsg;
                     wait.IsTimeOut = false;
                     wait.Set();
+                }
+            }
+            else if (message.IsMessage(MessageType.UPDSETMTU))
+            {
+                var mtu = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPSetMTUMessage>(message.MessageBuffer).MTU;
+                if (mtu < MTU_MIN)
+                {
+                    mtu = MTU_MIN;
+                }
+                if (mtu > MTU_MAX)
+                {
+                    mtu = MTU_MAX;
+                }
+                
+                lock (_MTUDic)
+                {
+                    var key=endpoint.Address.ToString();
+                    if (_MTUDic.ContainsKey(key))
+                    {
+                        _MTUDic[key] = mtu;
+                    }
+                    else
+                    {
+                        _MTUDic.Add(key, mtu);
+                    }
                 }
             }
         }
@@ -311,10 +340,21 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             return locker;
         }
 
-        public void SendMessageNoSure(Message msg,EndPoint endpoint)
+        public ushort GetClientMTU(IPEndPoint endpoint)
+        {
+            var key = endpoint.Address.ToString();
+            ushort mtu=0;
+            if (_MTUDic.TryGetValue(key, out mtu))
+            {
+                return mtu;
+            }
+            return MAX_PACKAGE_LEN;
+        }
+
+        public void SendMessageNoSure(Message msg,IPEndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
-            var segments = SplitBytes(bytes).ToArray();
+            var segments = SplitBytes(bytes,GetClientMTU(endpoint)).ToArray();
             lock (__s)
             {
                 for (var i = 0; i < segments.Length; i++)
@@ -325,10 +365,10 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             }
         }
 
-        public override bool SendMessage(Message msg, EndPoint endpoint)
+        public override bool SendMessage(Message msg, IPEndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
-            var segments = SplitBytes(bytes).ToArray();
+            var segments = SplitBytes(bytes, GetClientMTU(endpoint)).ToArray();
             var bagid = GetBagId(segments.First());
             int[] sended = segments.Select(p => 0).ToArray();
             int trytimes = 0;

@@ -16,6 +16,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         protected volatile bool _stop = true;
         private volatile bool _isstartclient = false;
 
+        protected ushort _max_package_len = 1207; //65507 1472 548
+
         SendMsgManualResetEventSlim _sendmsgflag = new SendMsgManualResetEventSlim();
         Dictionary<long, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<long, PipelineManualResetEventSlim>();
         Dictionary<long, AutoReSetEventResult> _resetevent = new Dictionary<long, AutoReSetEventResult>();
@@ -27,6 +29,35 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, 1024 * 1000);
             _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, 1024 * 1000);
             _serverPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(host), port);
+        }
+
+        public bool SetMTU(ushort mtu)
+        {
+            if (mtu < MTU_MIN)
+            {
+                mtu = MTU_MIN;
+            }
+            if (mtu > MTU_MAX)
+            {
+                mtu = MTU_MAX;
+            }
+            _max_package_len = mtu;
+            return SendMTU();
+        }
+
+        public bool SendMTU()
+        {
+            Message msg = new Message(MessageType.UPDSETMTU);
+            msg.SetMessageBody(new UDPSetMTUMessage
+            {
+                MTU = _max_package_len
+            });
+            if (!SendMessage(msg, null))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private UDPRevResultMessage QuestionBag(long bagid, EndPoint endpoint)
@@ -69,7 +100,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         public void SendMessageNoSure(Message msg, EndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
-            var segments = SplitBytes(bytes).ToArray();
+            var segments = SplitBytes(bytes, _max_package_len).ToArray();
             for (var i = 0; i < segments.Length; i++)
             {
                 var segment = segments[i];
@@ -77,10 +108,10 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             }
         }
 
-        public override bool SendMessage(Message msg, EndPoint endpoint)
+        public override bool SendMessage(Message msg, IPEndPoint endpoint)
         {
             var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
-            var segments = SplitBytes(bytes).ToArray();
+            var segments = SplitBytes(bytes, _max_package_len).ToArray();
             var bagid = GetBagId(segments.First());
             int[] sended = segments.Select(p => 0).ToArray();
             int trytimes = 0;
@@ -203,8 +234,9 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
 
                 var respmsg = new Message(MessageType.UDPANSWERBAG);
-                revmsg.Miss = GetMissSegment(revmsg.BagId, null);
-                revmsg.IsReved = revmsg.Miss != null && revmsg.Miss.Length == 0;
+                bool isreved = false;
+                revmsg.Miss = GetMissSegment(revmsg.BagId, null,out isreved);
+                revmsg.IsReved = isreved;
                 respmsg.SetMessageBody(revmsg);
 
                 SendMessage(respmsg,null);
