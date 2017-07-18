@@ -1,5 +1,4 @@
-﻿using LJC.FrameWork.SocketEasyUDP.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +8,7 @@ using System.Threading;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 {
-    public class SessionClient: ClientBase
+    public class SessionClient: ClientBase2
     {
         private System.Threading.Timer _heartbeatTimer = null;
         private string uid = string.Empty, pwd = string.Empty;
@@ -45,7 +44,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         {
         }
 
-        public sealed override bool SendMessage(Message msg, EndPoint endpoint)
+        public sealed override bool SendMessage(Message msg, IPEndPoint endpoint)
         {
             if (SessionContext != null)
             {

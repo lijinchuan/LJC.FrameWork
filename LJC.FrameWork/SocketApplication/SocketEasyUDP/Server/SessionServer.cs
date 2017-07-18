@@ -1,5 +1,4 @@
-﻿using LJC.FrameWork.SocketEasyUDP.Server;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +7,7 @@ using LJC.FrameWork.Comm;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 {
-    public class SessionServer: ServerBase
+    public class SessionServer: ServerBase2
     {
         private Dictionary<string, UDPSession> _sessiondic = new Dictionary<string, UDPSession>();
         private Dictionary<string, AutoReSetEventResult> watingEvents = new Dictionary<string, AutoReSetEventResult>();
@@ -138,7 +137,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 
         }
 
-        protected sealed override void FromApp(Message message, EndPoint endpoint)
+        protected sealed override void FromApp(Message message, IPEndPoint endpoint)
         {
             var ipendpoint = ((IPEndPoint)endpoint);
             string key = string.Format("{0}_{1}", ipendpoint.Address.ToString(), ipendpoint.Port);

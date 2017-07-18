@@ -305,9 +305,6 @@
     <Compile Include="SocketApplication\SocketEasyUDP\Server\SessionServer.cs" />
     <Compile Include="SocketApplication\SocketEnvironment.cs" />
     <Compile Include="SocketApplication\SocketSessionDataException.cs" />
-    <Compile Include="SocketApplication\SocketEasyUDP\Client\ClientBase.cs" />
-    <Compile Include="SocketApplication\SocketEasyUDP\Server\ServerBase.cs" />
-    <Compile Include="SocketApplication\SocketEasyUDP\UDPSocketBase.cs" />
     <Compile Include="SocketApplication\SocketEasy\Client\ClientHugeBase.cs" />
     <Compile Include="SocketApplication\SocketEasy\Client\ClientBase.cs" />
     <Compile Include="SocketApplication\SocketEasy\Client\SessionClient.cs" />
