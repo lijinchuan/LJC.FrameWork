@@ -6,7 +6,7 @@ using System.Text;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
 {
-    public class UDPSocketBase2 : IDisposable
+    public class UDPSocketBase : IDisposable
     {
         private static long _bagid = 0;
         private static long _segmentid = 0;
@@ -254,7 +254,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
             Dispose(true);
         }
 
-        ~UDPSocketBase2()
+        ~UDPSocketBase()
         {
             Dispose(false);
         }

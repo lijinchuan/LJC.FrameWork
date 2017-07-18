@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 {
-    public class ClientBase2: UDPSocketBase2
+    public class ClientBase: UDPSocketBase
     {
         private UdpClient _udpClient;
         private System.Net.IPEndPoint _serverPoint = null;
@@ -21,7 +21,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         Dictionary<long, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<long, PipelineManualResetEventSlim>();
         Dictionary<long, AutoReSetEventResult> _resetevent = new Dictionary<long, AutoReSetEventResult>();
 
-        public ClientBase2(string host, int port)
+        public ClientBase(string host, int port)
         {
             _udpClient = new UdpClient();
             _udpClient.Connect(host, port);

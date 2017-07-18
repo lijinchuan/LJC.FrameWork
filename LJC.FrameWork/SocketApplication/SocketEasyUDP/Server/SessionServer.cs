@@ -7,7 +7,7 @@ using LJC.FrameWork.Comm;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 {
-    public class SessionServer: ServerBase2
+    public class SessionServer: ServerBase
     {
         private Dictionary<string, UDPSession> _sessiondic = new Dictionary<string, UDPSession>();
         private Dictionary<string, AutoReSetEventResult> watingEvents = new Dictionary<string, AutoReSetEventResult>();

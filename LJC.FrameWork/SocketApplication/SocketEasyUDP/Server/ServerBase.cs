@@ -8,7 +8,7 @@ using System.Text;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 {
-    public class ServerBase2 : UDPSocketBase2
+    public class ServerBase : UDPSocketBase
     {
         Socket __s = null;
         protected string[] _bindingips = null;
@@ -56,7 +56,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             }
         }
 
-        public ServerBase2(int port)
+        public ServerBase(int port)
         {
             //__s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //__s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Any, port));
@@ -64,7 +64,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             _bindport = port;
         }
 
-        public ServerBase2(string[] ips, int port)
+        public ServerBase(string[] ips, int port)
         {
             //__s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //__s.Bind(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(ip), port));

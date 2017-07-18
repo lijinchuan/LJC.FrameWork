@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 {
-    public class SessionClient: ClientBase2
+    public class SessionClient: ClientBase
     {
         private System.Threading.Timer _heartbeatTimer = null;
         private string uid = string.Empty, pwd = string.Empty;
