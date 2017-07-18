@@ -44,5 +44,10 @@ namespace LJC.FrameWork.SocketApplication
         /// 设置MTU参数
         /// </summary>
         UPDSETMTU,
+        /// <summary>
+        /// 发送文件
+        /// </summary>
+        SENDFILE,
+        SENDFILEECHO,
     }
 }

@@ -120,6 +120,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         protected sealed override void OnMessage(Message message)
         {
+            base.OnMessage(message);
+
             if (message.IsMessage((int)MessageType.LOGIN))
             {
                 LoginResponseMessage loginMsg = message.GetMessageBody<LoginResponseMessage>();
@@ -165,7 +167,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             {
                 ReciveMessage(message);
             }
-            base.OnMessage(message);
+            
         }
 
         protected void ReciveMessage(Message message)
@@ -229,6 +231,37 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                     return result;
                 }
             }
+        }
+
+        public bool SendFile(string localfile)
+        {
+            int count=1024*1000;
+            string filename = System.IO.Path.GetFileName(localfile);
+            byte[] buffer = new byte[count];
+            using (System.IO.FileStream fs = new System.IO.FileStream(localfile, System.IO.FileMode.Open))
+            {
+                while (true)
+                {
+                    var len = fs.Read(buffer, 0, count);
+                    if (len > 0)
+                    {
+                        SendFileMessage filemsg = new SendFileMessage() { FileBytes = len < count ? buffer.Take(len).ToArray() : buffer, FileName = filename };
+                        Message msg = new Message(MessageType.SENDFILE);
+                        msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                        msg.SetMessageBody(filemsg);
+                        if (!SendMessageAnsy<SendFileECHOMessage>(msg).IsSuccess)
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return true;
         }
 
         protected override void DisposeManagedResource()

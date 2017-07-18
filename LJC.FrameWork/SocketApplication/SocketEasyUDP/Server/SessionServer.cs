@@ -134,11 +134,34 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 
         protected virtual void FromSessionMessage(Message message,UDPSession session)
         {
+            if (message.IsMessage(MessageType.SENDFILE))
+            {
+                var sendfilemsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<SendFileMessage>(message.MessageBuffer);
+                var dir=AppDomain.CurrentDomain.BaseDirectory+"\\file\\";
+                if (!System.IO.Directory.Exists(dir))
+                {
+                    System.IO.Directory.CreateDirectory(dir);
+                }
+                using (System.IO.FileStream fs = new System.IO.FileStream(dir + sendfilemsg.FileName, System.IO.FileMode.OpenOrCreate))
+                {
+                    fs.Position = fs.Length;
+                    fs.Write(sendfilemsg.FileBytes, 0, sendfilemsg.FileBytes.Length);
+                }
 
+                Message sendfileecho = new Message(MessageType.SENDFILEECHO);
+                sendfileecho.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                sendfileecho.SetMessageBody(new SendFileECHOMessage
+                {
+                    IsSuccess = true
+                });
+                SendMessage(sendfileecho, session.EndPoint);
+            }
         }
 
         protected sealed override void FromApp(Message message, IPEndPoint endpoint)
         {
+            base.FromApp(message, endpoint);
+
             var ipendpoint = ((IPEndPoint)endpoint);
             string key = string.Format("{0}_{1}", ipendpoint.Address.ToString(), ipendpoint.Port);
             UDPSession session = null;
@@ -175,7 +198,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     return;
                 }
             }
-            base.FromApp(message, endpoint);
+            
         }
     }
 }
