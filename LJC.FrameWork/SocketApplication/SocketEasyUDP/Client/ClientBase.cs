@@ -226,7 +226,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             }
         }
 
-        protected virtual void OnMessage(Message message)
+        private void DispatchMessage(Message message)
         {
             if (message.IsMessage(MessageType.UDPQUERYBAG))
             {
@@ -234,11 +234,11 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
                 var respmsg = new Message(MessageType.UDPANSWERBAG);
                 bool isreved = false;
-                revmsg.Miss = GetMissSegment(revmsg.BagId, null,out isreved);
+                revmsg.Miss = GetMissSegment(revmsg.BagId, null, out isreved);
                 revmsg.IsReved = isreved;
                 respmsg.SetMessageBody(revmsg);
 
-                SendMessage(respmsg,null);
+                SendMessage(respmsg, null);
             }
             else if (message.IsMessage(MessageType.UDPANSWERBAG))
             {
@@ -251,6 +251,15 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                     wait.Set();
                 }
             }
+            else
+            {
+                OnMessage(message);
+            }
+        }
+
+        protected virtual void OnMessage(Message message)
+        {
+            
         }
 
         private void CreateMessagePipeline(PipelineManualResetEventSlim slim, long bagid)
@@ -263,7 +272,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 if (!slim.IsTimeOut)
                 {
                     var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
-                    OnMessage(message);
+                    DispatchMessage(message);
                 }
                 else
                 {
@@ -287,7 +296,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                     if (data.Length >= margebytes.Length)
                     {
                         var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(margebytes);
-                        OnMessage(message);
+                        DispatchMessage(message);
                     }
                     else
                     {

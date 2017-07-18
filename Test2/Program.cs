@@ -168,6 +168,14 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            while (true)
+            {
+                var stk = "601901.SH";
+                var result20 = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<LJC.Com.StockService.Contract.StockRealQuote>(120, LJC.Com.StockService.Contract.Consts.FunID_GetRealQuote, stk);
+
+                Thread.Sleep(1000);
+            }
+
             //while (true)
             //{
             //    try
@@ -194,7 +202,7 @@ namespace Test2
             //return;
 
             //ClientBase2 clientbase =new ClientBase2("192.168.0.100", 50000);
-            ClientBase2 clientbase = new ClientBase2("127.0.0.1", 50000);
+            SessionClient clientbase = new SessionClient("127.0.0.1", 50000);
             //ClientBase2 clientbase = new ClientBase2("2.5.176.91", 50000);
             //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
             //ClientBase2 clientbase = new ClientBase2("106.14.193.150", 50000);
