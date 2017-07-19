@@ -199,9 +199,6 @@ namespace Test2
             //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
             SessionClient clientbase = new SessionClient("106.14.193.150", 19000);
             clientbase.StartClient();
-
-            clientbase.Login(string.Empty, string.Empty);
-
             if (clientbase.SetMTU(1272))
             {
                 Console.WriteLine("mtu设置成功");
@@ -210,11 +207,14 @@ namespace Test2
             {
                 Console.WriteLine("mtu设置失败");
             }
+
+            clientbase.Login(string.Empty, string.Empty);
+
             clientbase.LoginSuccess += () =>
                 {
                     System.Diagnostics.Stopwatch sw20 = new System.Diagnostics.Stopwatch();
                     sw20.Start();
-                    if (clientbase.SendFile(@"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\queuefile.rar"))
+                    if (clientbase.SendFile(@"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\bug\3.txt"))
                     {
                         sw20.Stop();
                         Console.Write("上传成功:" + sw20.ElapsedMilliseconds);
@@ -241,19 +241,13 @@ namespace Test2
             int sendcnt = 0;
 
             System.Diagnostics.Stopwatch sw2 = new System.Diagnostics.Stopwatch();
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 5; i++)
             {
-                try
-                {
-                    sw2.Restart();
-                    clientbase.SendMessage(testmsg, null);
-                    sw2.Stop();
-                    Console.WriteLine("成功:" + ++sendcnt + "," + sw2.ElapsedMilliseconds + "ms");
-                }
-                catch
-                {
-                    Console.WriteLine("发失败");
-                }
+                sw2.Restart();
+                clientbase.SendMessage(testmsg, null);
+                sw2.Stop();
+                Console.WriteLine("成功:" + ++sendcnt + "," + sw2.ElapsedMilliseconds + "ms");
+
             }
             
             Console.Read();
