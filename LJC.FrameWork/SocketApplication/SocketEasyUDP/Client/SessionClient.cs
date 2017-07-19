@@ -86,7 +86,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
                 Message msg = new Message(MessageType.HEARTBEAT);
 
-                SendMessage(msg,null);
+                //SendMessage(msg,null);
+                SendMessageNoSure(msg, null);
             }
             catch (Exception exp)
             {
@@ -233,13 +234,15 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             }
         }
 
-        public bool SendFile(string localfile)
+        public bool SendFile(string localfile,int sendsplitcount,Action<double> process)
         {
-            int count=1024*1000;
+            int count = sendsplitcount <= 0 ? 1024 * 100 : sendsplitcount;
             string filename = System.IO.Path.GetFileName(localfile);
             byte[] buffer = new byte[count];
             using (System.IO.FileStream fs = new System.IO.FileStream(localfile, System.IO.FileMode.Open))
             {
+                var total = fs.Length;
+                var sendbytes = 0;
                 while (true)
                 {
                     var len = fs.Read(buffer, 0, count);
@@ -253,9 +256,18 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                         {
                             return false;
                         }
+                        sendbytes += len;
+                        if (process != null)
+                        {
+                            process(Math.Round((sendbytes*1.0 / total), 4));
+                        }
                     }
                     else
                     {
+                        if (process != null)
+                        {
+                            process(1);
+                        }
                         break;
                     }
                 }

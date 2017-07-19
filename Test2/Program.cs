@@ -194,19 +194,23 @@ namespace Test2
             //return;
 
             //ClientBase2 clientbase =new ClientBase2("192.168.0.100", 50000);
-            //SessionClient clientbase = new SessionClient("127.0.0.1", 19000);
+            SessionClient clientbase = new SessionClient("127.0.0.1", 19000);
             //ClientBase2 clientbase = new ClientBase2("2.5.176.91", 50000);
             //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
-            SessionClient clientbase = new SessionClient("106.14.193.150", 19000);
+            //SessionClient clientbase = new SessionClient("106.14.193.150", 19000);
             clientbase.StartClient();
-            if (clientbase.SetMTU(1272))
+            if (clientbase.ClearTempData())
             {
-                Console.WriteLine("mtu设置成功");
+                Console.WriteLine("清理成功");
             }
-            else
-            {
-                Console.WriteLine("mtu设置失败");
-            }
+            //if (clientbase.SetMTU(1272))
+            //{
+            //    Console.WriteLine("mtu设置成功");
+            //}
+            //else
+            //{
+            //    Console.WriteLine("mtu设置失败");
+            //}
 
             clientbase.Login(string.Empty, string.Empty);
 
@@ -214,7 +218,7 @@ namespace Test2
                 {
                     System.Diagnostics.Stopwatch sw20 = new System.Diagnostics.Stopwatch();
                     sw20.Start();
-                    if (clientbase.SendFile(@"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\bug\3.txt"))
+                    if (clientbase.SendFile(@"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\Release\Framework.Logging.V2.API.dll", 1024 * 1000, (q) => Console.WriteLine("上传进度:" + q * 100 + "%")))
                     {
                         sw20.Stop();
                         Console.Write("上传成功:" + sw20.ElapsedMilliseconds);

@@ -95,6 +95,10 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                         _resetevent.Remove(bagid);
                         return (UDPRevResultMessage)wait.WaitResult;
                     }
+                    else
+                    {
+                        throw new TimeoutException();
+                    }
                 }
                 catch (TimeoutException ex)
                 {
@@ -125,7 +129,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             var bagid = GetBagId(segments.First());
             int[] sended = segments.Select(p => 0).ToArray();
             int trytimes = 0;
-            LogManager.LogHelper.Instance.Info("发消息:" + bagid + ",长度:" + bytes.Length);
+            Console.WriteLine("发消息:" + bagid + ",长度:" + bytes.Length);
             while (true)
             {
                 lock (_udpClient.Client)
@@ -142,6 +146,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                         _udpClient.Send(segment, segment.Length);
                         sended[i] = 1;
                     }
+                    Console.WriteLine("等待信号");
                     _sendmsgflag.Wait(1000);
                     if (!_sendmsgflag.IsTimeOut)
                     {

@@ -20,11 +20,17 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
         static BufferPollManager _buffermanager = new BufferPollManager(1000, MAX_PACKAGE_LEN);
 
         Dictionary<string, SendMsgManualResetEventSlim> _sendMsgLockerSlim = new Dictionary<string, SendMsgManualResetEventSlim>();
-        Dictionary<long, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<long, PipelineManualResetEventSlim>();
-        Dictionary<long, AutoReSetEventResult> _resetevent = new Dictionary<long, AutoReSetEventResult>();
+        Dictionary<string, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<string, PipelineManualResetEventSlim>();
+        Dictionary<string, AutoReSetEventResult> _resetevent = new Dictionary<string, AutoReSetEventResult>();
         Dictionary<string, ushort> _MTUDic = new Dictionary<string, ushort>();
 
         private object _bindlocker = new object();
+
+        static ServerBase()
+        {
+            System.Threading.ThreadPool.SetMinThreads(2000, 2000);
+            //System.Threading.ThreadPool.SetMaxThreads(2000, 2000);
+        }
 
         private void BindIps()
         {
@@ -88,31 +94,42 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 BagId = bagid
             });
 
+            string key = string.Format("{0}:{1}:{2}", endpoint.Address.ToString(), endpoint.Port, bagid);
             var wait = new AutoReSetEventResult(string.Empty);
-            _resetevent.Add(bagid, wait);
+            _resetevent.Add(key, wait);
 
-            while (true)
+            try
             {
-                wait.IsTimeOut = true;
-                wait.Reset();
-                try
+                while (true)
                 {
-                    SendMessageNoSure(question, endpoint);
-                    wait.WaitOne(100);
-                    if (!wait.IsTimeOut)
+                    wait.IsTimeOut = true;
+                    wait.Reset();
+                    try
                     {
-                        _resetevent.Remove(bagid);
-                        return (UDPRevResultMessage)wait.WaitResult;
+                        SendMessageNoSure(question, endpoint);
+                        wait.WaitOne(100);
+                        if (!wait.IsTimeOut)
+                        {
+                            return (UDPRevResultMessage)wait.WaitResult;
+                        }
+                        else
+                        {
+                            throw new TimeoutException();
+                        }
+                    }
+                    catch (TimeoutException ex)
+                    {
+                        trytimes++;
+                        if (trytimes >= 10)
+                        {
+                            throw ex;
+                        }
                     }
                 }
-                catch (TimeoutException ex)
-                {
-                    trytimes++;
-                    if (trytimes >= 10)
-                    {
-                        throw ex;
-                    }
-                }
+            }
+            finally
+            {
+                _resetevent.Remove(key);
             }
         }
 
@@ -121,26 +138,33 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             new Action(() =>
             {
                 int trytimes = 0;
-                while (true)
+                try
                 {
-                    slim.Reset();
-                    slim.Wait(30000);
+                    while (true)
+                    {
+                        slim.Reset();
+                        slim.Wait(30000);
 
-                    if (!slim.IsTimeOut)
-                    {
-                        var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
-                        DispatchMessage(message, endpoint);
-                        break;
-                    }
-                    else
-                    {
-                        trytimes++;
-                        if (trytimes >= TimeOutTryTimes)
+                        if (!slim.IsTimeOut)
                         {
-                            ClearTempBag(bagid, endpoint);
-                            throw new TimeoutException();
+                            var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
+                            DispatchMessage(message, endpoint);
+                            break;
+                        }
+                        else
+                        {
+                            trytimes++;
+                            if (trytimes >= TimeOutTryTimes)
+                            {
+                                throw new TimeoutException();
+                            }
                         }
                     }
+                }
+                finally
+                {
+                    _pipelineSlimDic.Remove(string.Format("{0}:{1}:{2}", endpoint.Address.ToString(), endpoint.Port, bagid));
+                    ClearTempBag(bagid, endpoint);
                 }
 
             }).BeginInvoke(null, null);
@@ -219,7 +243,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             {
                 UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
                 AutoReSetEventResult wait = null;
-                if (_resetevent.TryGetValue(revmsg.BagId, out wait))
+                string key = string.Format("{0}:{1}:{2}", endpoint.Address.ToString(), endpoint.Port, revmsg.BagId);
+                if (_resetevent.TryGetValue(key, out wait))
                 {
                     wait.WaitResult = revmsg;
                     wait.IsTimeOut = false;
@@ -283,10 +308,13 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 {
                     _buffermanager.RealseBuffer(bufferindex);
                 }
+                var ipendpoint = (IPEndPoint)endpoint;
+                var bagid = GetBagId(bytes);
+                string pipelinekey = string.Format("{0}:{1}:{2}", ipendpoint.Address.ToString(), ipendpoint.Port, bagid);
                 var mergebuffer = MargeBag(bytes, (IPEndPoint)endpoint);
                 if (mergebuffer != null)
                 {
-                    var bagid = GetBagId(bytes);
+                    
                     Console.WriteLine("收包:"+bagid);
                     SendEcho((EndPoint)endpoint, bagid);
 
@@ -299,28 +327,28 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     {
                         PipelineManualResetEventSlim slim = null;
                         //通知管道
-                        if(_pipelineSlimDic.TryGetValue(bagid,out slim))
+                        if (_pipelineSlimDic.TryGetValue(pipelinekey, out slim))
                         {
                             slim.MsgBuffer = mergebuffer;
                             slim.Set();
+                            _pipelineSlimDic.Remove(pipelinekey);
                         }
                     }
                 }
                 else
                 {
                     //创建管道
-                    var bagid = GetBagId(bytes);
                     PipelineManualResetEventSlim slim = null;
-                    if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
+                    if (!_pipelineSlimDic.TryGetValue(pipelinekey, out slim))
                     {
                         lock (_pipelineSlimDic)
                         {
-                            if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
+                            if (!_pipelineSlimDic.TryGetValue(pipelinekey, out slim))
                             {
                                 slim = new PipelineManualResetEventSlim();
                                 slim.BagId = bagid;
                                 CreateMessagePipeline((IPEndPoint)endpoint, slim, bagid);
-                                _pipelineSlimDic.Add(bagid, slim);
+                                _pipelineSlimDic.Add(pipelinekey, slim);
                             }
                         }
                     }
