@@ -133,7 +133,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             }
         }
 
-        private void CreateMessagePipeline(IPEndPoint endpoint, PipelineManualResetEventSlim slim, long bagid)
+        private void CreateMessagePipeline(IPEndPoint endpoint, PipelineManualResetEventSlim slim, long bagid,string pipelinekey)
         {
             new Action(() =>
             {
@@ -163,7 +163,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 }
                 finally
                 {
-                    _pipelineSlimDic.Remove(string.Format("{0}:{1}:{2}", endpoint.Address.ToString(), endpoint.Port, bagid));
+                    _pipelineSlimDic.Remove(pipelinekey);
                     ClearTempBag(bagid, endpoint);
                 }
 
@@ -331,7 +331,6 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                         {
                             slim.MsgBuffer = mergebuffer;
                             slim.Set();
-                            _pipelineSlimDic.Remove(pipelinekey);
                         }
                     }
                 }
@@ -347,7 +346,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                             {
                                 slim = new PipelineManualResetEventSlim();
                                 slim.BagId = bagid;
-                                CreateMessagePipeline((IPEndPoint)endpoint, slim, bagid);
+                                CreateMessagePipeline((IPEndPoint)endpoint, slim, bagid, pipelinekey);
                                 _pipelineSlimDic.Add(pipelinekey, slim);
                             }
                         }

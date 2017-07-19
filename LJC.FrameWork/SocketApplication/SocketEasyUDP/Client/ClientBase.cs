@@ -282,19 +282,27 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         {
             new Action(() =>
             {
-                slim.Reset();
-                slim.Wait(30000);
+                try
+                {
+                    slim.Reset();
+                    slim.Wait(30000);
 
-                if (!slim.IsTimeOut)
-                {
-                    var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
-                    DispatchMessage(message);
+                    if (!slim.IsTimeOut)
+                    {
+                        var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
+                        DispatchMessage(message);
+                    }
+                    else
+                    {
+                        
+                        Console.Write("接收超时:" + bagid);
+                        OnError(new TimeoutException("接收超时"));
+                    }
                 }
-                else
+                finally
                 {
-                    ClearTempBag(bagid,null);
-                    Console.Write("接收超时:" + bagid);
-                    OnError(new TimeoutException("接收超时"));
+                    ClearTempBag(bagid, null);
+                    _pipelineSlimDic.Remove(bagid);
                 }
 
             }).BeginInvoke(null, null);
