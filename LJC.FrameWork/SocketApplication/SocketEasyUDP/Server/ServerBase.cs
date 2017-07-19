@@ -129,7 +129,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     if (!slim.IsTimeOut)
                     {
                         var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(slim.MsgBuffer);
-                        FromApp(message, endpoint);
+                        DispatchMessage(message, endpoint);
                         break;
                     }
                     else
@@ -201,7 +201,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
             }).BeginInvoke(null, null);
         }
 
-        protected virtual void FromApp(Message message, IPEndPoint endpoint)
+        private void DispatchMessage(Message message, IPEndPoint endpoint)
         {
             if (message.IsMessage(MessageType.UDPQUERYBAG))
             {
@@ -209,17 +209,17 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 
                 var respmsg = new Message(MessageType.UDPANSWERBAG);
                 bool isreved = false;
-                revmsg.Miss = GetMissSegment(revmsg.BagId,endpoint,out isreved);
+                revmsg.Miss = GetMissSegment(revmsg.BagId, endpoint, out isreved);
                 revmsg.IsReved = isreved;
                 respmsg.SetMessageBody(revmsg);
 
-                SendMessage(respmsg,endpoint);
+                SendMessage(respmsg, endpoint);
             }
             else if (message.IsMessage(MessageType.UDPANSWERBAG))
             {
                 UDPRevResultMessage revmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<UDPRevResultMessage>(message.MessageBuffer);
                 AutoReSetEventResult wait = null;
-                if (_resetevent.TryGetValue(revmsg.BagId,out wait))
+                if (_resetevent.TryGetValue(revmsg.BagId, out wait))
                 {
                     wait.WaitResult = revmsg;
                     wait.IsTimeOut = false;
@@ -237,10 +237,10 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 {
                     mtu = MTU_MAX;
                 }
-                
+
                 lock (_MTUDic)
                 {
-                    var key=endpoint.Address.ToString();
+                    var key = endpoint.Address.ToString();
                     if (_MTUDic.ContainsKey(key))
                     {
                         _MTUDic[key] = mtu;
@@ -251,6 +251,15 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     }
                 }
             }
+            else
+            {
+                FromApp(message, endpoint);
+            }
+        }
+
+        protected virtual void FromApp(Message message, IPEndPoint endpoint)
+        {
+            
         }
 
         private void OnSocket(object endpoint, int bufferindex, int len)
@@ -280,7 +289,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     if (mergebuffer.Length <= bytes.Length)
                     {
                         var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(mergebuffer);
-                        FromApp(message, (IPEndPoint)endpoint);
+                        DispatchMessage(message, (IPEndPoint)endpoint);
                     }
                     else
                     {
