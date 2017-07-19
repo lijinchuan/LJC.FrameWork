@@ -194,13 +194,40 @@ namespace Test2
             //return;
 
             //ClientBase2 clientbase =new ClientBase2("192.168.0.100", 50000);
-            ClientBase2 clientbase = new ClientBase2("127.0.0.1", 50000);
+            //SessionClient clientbase = new SessionClient("127.0.0.1", 19000);
             //ClientBase2 clientbase = new ClientBase2("2.5.176.91", 50000);
             //LJC.FrameWork.SocketEasyUDP.Client.ClientBase clientbase = new LJC.FrameWork.SocketEasyUDP.Client.ClientBase("172.31.56.129", 50000);
-            //ClientBase2 clientbase = new ClientBase2("106.14.193.150", 50000);
+            SessionClient clientbase = new SessionClient("106.14.193.150", 19000);
+            clientbase.StartClient();
+
+            clientbase.Login(string.Empty, string.Empty);
+
+            if (clientbase.SetMTU(1272))
+            {
+                Console.WriteLine("mtu设置成功");
+            }
+            else
+            {
+                Console.WriteLine("mtu设置失败");
+            }
+            clientbase.LoginSuccess += () =>
+                {
+                    System.Diagnostics.Stopwatch sw20 = new System.Diagnostics.Stopwatch();
+                    sw20.Start();
+                    if (clientbase.SendFile(@"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\queuefile.rar"))
+                    {
+                        sw20.Stop();
+                        Console.Write("上传成功:" + sw20.ElapsedMilliseconds);
+                    }
+            
+                };
+            
+           
+
+            Console.Read();
 
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 300; i++)
+            for (int i = 0; i < 30000; i++)
             {
                 sb.Append(i.ToString());
             }
@@ -209,16 +236,7 @@ namespace Test2
                     MessageHeader = new MessageHeader() { MessageType = (int)MessageType.LOGIN }
                 };
             testmsg.SetMessageBody(sb.ToString());
-            clientbase.StartClient();
-
-            if (clientbase.SetMTU(65535))
-            {
-                Console.WriteLine("mtu设置成功");
-            }
-            else
-            {
-                Console.WriteLine("mtu设置失败");
-            }
+            
 
             int sendcnt = 0;
 
