@@ -251,6 +251,10 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                     }
                 }
             }
+            else if (message.IsMessage(MessageType.UDPCLEARBAGID))
+            {
+                ClearTempData(endpoint);
+            }
             else
             {
                 FromApp(message, endpoint);

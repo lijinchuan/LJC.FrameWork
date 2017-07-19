@@ -59,6 +59,17 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             return true;
         }
 
+        public bool ClearTempData()
+        {
+            Message msg = new Message(MessageType.UDPCLEARBAGID);
+            if (!SendMessage(msg, null))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         private UDPRevResultMessage QuestionBag(long bagid, EndPoint endpoint)
         {
             int trytimes = 0;

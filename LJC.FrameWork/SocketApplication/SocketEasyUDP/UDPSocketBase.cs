@@ -216,6 +216,42 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP
                 BagRemovedDic.Add(key, DateTime.Now);
             }
         }
+
+        protected void ClearTempData(IPEndPoint endpoint)
+        {
+            List<string> keys = null;
+            lock (TempBagDic)
+            {
+                keys = TempBagDic.Keys.ToList();
+            }
+            var prefix = string.Format("{0}:{1}", endpoint.Address.ToString(), endpoint.Port);
+            foreach (var key in keys)
+            {
+                if (key.StartsWith(prefix))
+                {
+                    lock (TempBagDic)
+                    {
+                        TempBagDic.Remove(key);
+                    }
+                }
+            }
+
+            lock (BagRemovedDic)
+            {
+                keys = BagRemovedDic.Keys.ToList();
+            }
+
+            foreach (var key in keys)
+            {
+                if (key.StartsWith(prefix))
+                {
+                    lock (BagRemovedDic)
+                    {
+                        BagRemovedDic.Remove(key);
+                    }
+                }
+            }
+        }
         #endregion
 
         #region 资源清理

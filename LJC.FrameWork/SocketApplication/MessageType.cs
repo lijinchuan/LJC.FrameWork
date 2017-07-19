@@ -49,5 +49,9 @@ namespace LJC.FrameWork.SocketApplication
         /// </summary>
         SENDFILE,
         SENDFILEECHO,
+        /// <summary>
+        /// 清理bagid
+        /// </summary>
+        UDPCLEARBAGID,
     }
 }
