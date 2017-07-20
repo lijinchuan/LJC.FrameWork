@@ -218,7 +218,7 @@ namespace Test2
                 {
                     System.Diagnostics.Stopwatch sw20 = new System.Diagnostics.Stopwatch();
                     sw20.Start();
-                    if (clientbase.SendFile(@"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\Release\Framework.Logging.V2.API.dll", 1024 * 1000, (q) => Console.WriteLine("上传进度:" + q * 100 + "%")))
+                    if (clientbase.SendFile(@"E:\Work\learn\Git\LJC.FrameWork\Test2\bin\Release\Framework.Logging.V2.API.dll",null, 1024 * 1000, (q) => Console.WriteLine("上传进度:" + q * 100 + "%")))
                     {
                         sw20.Stop();
                         Console.Write("上传成功:" + sw20.ElapsedMilliseconds);
