@@ -18,7 +18,6 @@ namespace LJC.FrameWork.SOA
         public ESBClient(string serverIP, int serverPort,bool startSession=true)
             : base(serverIP, serverPort,startSession)
         {
-            
         }
 
         internal ESBClient()
@@ -288,6 +287,27 @@ namespace LJC.FrameWork.SOA
         static void client_Error(Exception e)
         {
             LogHelper.Instance.Error("SOA请求错误", e);
+        }
+
+        public static void Close()
+        {
+            _clientmanager.Dispose();
+
+            foreach (var man in _esbClientDicManager)
+            {
+                foreach (var m in man.Value)
+                {
+                    m.Dispose();
+                }
+            }
+
+            foreach(var item in _esbUdpClientDic)
+            {
+                foreach(var c in item.Value)
+                {
+                    c.Dispose();
+                }
+            }
         }
     }
 }

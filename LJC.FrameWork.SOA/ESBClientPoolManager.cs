@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LJC.FrameWork.SOA
 {
-    public class ESBClientPoolManager
+    public class ESBClientPoolManager:IDisposable
     {
         private ESBClient[] Clients = null;
 
@@ -23,6 +23,17 @@ namespace LJC.FrameWork.SOA
                 client.Error += client_Error;
                 client.StartClient();
                 Clients[i] = client;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (Clients != null)
+            {
+                foreach(var client in Clients)
+                {
+                    client.Dispose();
+                }
             }
         }
 

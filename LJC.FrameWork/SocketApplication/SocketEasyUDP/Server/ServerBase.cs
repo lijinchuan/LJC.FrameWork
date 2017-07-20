@@ -28,6 +28,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 
         static ServerBase()
         {
+            System.Threading.ThreadPool.SetMinThreads(1000, 1000);
         }
 
         private void BindIps()

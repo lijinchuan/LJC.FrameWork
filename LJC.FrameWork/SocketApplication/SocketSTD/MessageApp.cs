@@ -30,6 +30,8 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         protected int ipPort;
         private DateTime lastReStartClientTime;
         protected bool isStartServer = false;
+        private Thread listeningThread = null;
+
         /// <summary>
         /// 断线重连时间间隔
         /// </summary>
@@ -157,8 +159,8 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
                 if (!isStartServer)
                 {
-                    Thread thread = new Thread(Listening);
-                    thread.Start();
+                    listeningThread = new Thread(Listening);
+                    listeningThread.Start();
                 }
 
                 isStartServer = true;
@@ -229,10 +231,10 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     throw e;
                 }
 
-                if (!isStartClient)
+                if (!isStartClient && listeningThread == null)
                 {
-                    Thread threadClient = new Thread(Receiving);
-                    threadClient.Start();
+                    listeningThread = new Thread(Receiving);
+                    listeningThread.Start();
                 }
 
                 isStartClient = true;
@@ -583,6 +585,11 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             {
                 udpMCClient.DropMulticastGroup(SocketApplicationComm.MCAST_ADDR);
                 udpMCClient.Close();
+            }
+
+            if (listeningThread != null)
+            {
+                listeningThread.Abort();
             }
 
             stop = true;
