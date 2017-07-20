@@ -27,6 +27,16 @@ namespace LJC.FrameWork.SOA
             
         }
 
+        public string GetESBServer()
+        {
+            return this.ipString;
+        }
+
+        public int GetESBPort()
+        {
+            return this.ipPort;
+        }
+
         private SessionMessageApp clientSession
         {
             get;
