@@ -21,6 +21,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         Dictionary<long, PipelineManualResetEventSlim> _pipelineSlimDic = new Dictionary<long, PipelineManualResetEventSlim>();
         Dictionary<long, AutoReSetEventResult> _resetevent = new Dictionary<long, AutoReSetEventResult>();
 
+        private Thread _revicethread = null;
+
         public ClientBase(string host, int port)
         {
             _udpClient = new UdpClient();
@@ -124,67 +126,75 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         public override bool SendMessage(Message msg, IPEndPoint endpoint)
         {
-            var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
-            var segments = SplitBytes(bytes, _max_package_len).ToArray();
-            var bagid = GetBagId(segments.First());
-            int[] sended = segments.Select(p => 0).ToArray();
-            int trytimes = 0;
-            Console.WriteLine("发消息:" + bagid + ",长度:" + bytes.Length);
-            while (true)
+            try
             {
-                lock (_udpClient.Client)
+                var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
+                var segments = SplitBytes(bytes, _max_package_len).ToArray();
+                var bagid = GetBagId(segments.First());
+                int[] sended = segments.Select(p => 0).ToArray();
+                int trytimes = 0;
+                Console.WriteLine("发消息:" + bagid + ",长度:" + bytes.Length);
+                while (true)
                 {
-                    _sendmsgflag.BagId = bagid;
-                    _sendmsgflag.Reset();
-                    for (var i = 0; i < segments.Length; i++)
+                    lock (_udpClient.Client)
                     {
-                        if (sended[i] != 0)
+                        _sendmsgflag.BagId = bagid;
+                        _sendmsgflag.Reset();
+                        for (var i = 0; i < segments.Length; i++)
                         {
-                            continue;
+                            if (sended[i] != 0)
+                            {
+                                continue;
+                            }
+                            var segment = segments[i];
+                            _udpClient.Send(segment, segment.Length);
+                            sended[i] = 1;
                         }
-                        var segment = segments[i];
-                        _udpClient.Send(segment, segment.Length);
-                        sended[i] = 1;
+                        Console.WriteLine("等待信号");
+                        _sendmsgflag.Wait(1000);
+                        if (!_sendmsgflag.IsTimeOut)
+                        {
+                            LogManager.LogHelper.Instance.Info("发消息:" + bagid + "成功");
+                            return true;
+                        }
                     }
-                    Console.WriteLine("等待信号");
-                    _sendmsgflag.Wait(1000);
-                    if (!_sendmsgflag.IsTimeOut)
+
+                    if (trytimes++ >= TimeOutTryTimes)
                     {
-                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "成功");
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "超时，重试次数:" + trytimes);
+                        throw new TimeoutException();
+                    }
+
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "需要重试,请求重发包");
+                    var revmsg = QuestionBag(bagid, endpoint);
+                    if (revmsg.IsReved)
+                    {
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完成");
                         return true;
                     }
-                }
 
-                if (trytimes++ >= TimeOutTryTimes)
-                {
-                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "超时，重试次数:" + trytimes);
-                    throw new TimeoutException();
-                }
-
-                LogManager.LogHelper.Instance.Info("发消息:" + bagid + "需要重试,请求重发包");
-                var revmsg = QuestionBag(bagid, endpoint);
-                if (revmsg.IsReved)
-                {
-                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完成");
-                    return true;
-                }
-
-                if (revmsg.Miss != null && revmsg.Miss.Length > 0)
-                {
-                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回缺少包数量：" + revmsg.Miss.Length);
-                    foreach (var i in revmsg.Miss)
+                    if (revmsg.Miss != null && revmsg.Miss.Length > 0)
                     {
-                        sended[i] = 0;
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回缺少包数量：" + revmsg.Miss.Length);
+                        foreach (var i in revmsg.Miss)
+                        {
+                            sended[i] = 0;
+                        }
+                    }
+                    else if (revmsg.Miss == null)
+                    {
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完全没收到");
+                        for (int i = 0; i < sended.Length; i++)
+                        {
+                            sended[i] = 0;
+                        }
                     }
                 }
-                else if (revmsg.Miss == null)
-                {
-                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完全没收到");
-                    for (int i = 0; i < sended.Length; i++)
-                    {
-                        sended[i] = 0;
-                    }
-                }
+            }
+            catch (Exception ex)
+            {
+                OnError(ex);
+                return false;
             }
         }
 
@@ -199,38 +209,44 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         public void StartClient()
         {
             _stop = false;
-            new Action(() =>
+
+            if (this._revicethread == null)
             {
-                while (!_stop)
+                this._revicethread = new Thread(new ThreadStart(()=>
                 {
-                    try
+                    while (!_stop)
                     {
-                        _isstartclient = true;
-                        var bytes = _udpClient.Receive(ref _serverPoint);
-                        var bagid = BitConverter.ToInt64(bytes, 0);
-                        if (bytes.Length > 8)
+                        try
                         {
-                            OnMessage(bytes);
-                        }
-                        else
-                        {
-                            Console.WriteLine(Environment.TickCount + ":收确认:" + bagid);
-                            if (_sendmsgflag.BagId == bagid)
+                            _isstartclient = true;
+                            var bytes = _udpClient.Receive(ref _serverPoint);
+                            var bagid = BitConverter.ToInt64(bytes, 0);
+                            if (bytes.Length > 8)
                             {
-                                _sendmsgflag.Set();
+                                OnMessage(bytes);
+                            }
+                            else
+                            {
+                                Console.WriteLine(Environment.TickCount + ":收确认:" + bagid);
+                                if (_sendmsgflag.BagId == bagid)
+                                {
+                                    _sendmsgflag.Set();
+                                }
                             }
                         }
+                        catch (ObjectDisposedException ex)
+                        {
+                            OnError(ex);
+                        }
+                        catch (Exception ex)
+                        {
+                            OnError(ex);
+                        }
                     }
-                    catch (ObjectDisposedException ex)
-                    {
-                        OnError(ex);
-                    }
-                    catch (Exception ex)
-                    {
-                        OnError(ex);
-                    }
-                }
-            }).BeginInvoke(null, null);
+                }));
+
+                this._revicethread.Start();
+            }
 
             while (true)
             {
@@ -363,6 +379,10 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         protected override void DisposeUnManagedResource()
         {
+            if (this._revicethread != null)
+            {
+                this._revicethread.Abort();
+            }
             if (_udpClient != null)
             {
                 _udpClient.Client.Dispose();

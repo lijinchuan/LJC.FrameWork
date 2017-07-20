@@ -404,67 +404,75 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 
         public override bool SendMessage(Message msg, IPEndPoint endpoint)
         {
-            var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
-            var segments = SplitBytes(bytes, GetClientMTU(endpoint)).ToArray();
-            var bagid = GetBagId(segments.First());
-            int[] sended = segments.Select(p => 0).ToArray();
-            int trytimes = 0;
-            LogManager.LogHelper.Instance.Info("发消息:" + bagid + ",长度:" + bytes.Length);
-            while (true)
+            try
             {
-                lock (__s)
+                var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
+                var segments = SplitBytes(bytes, GetClientMTU(endpoint)).ToArray();
+                var bagid = GetBagId(segments.First());
+                int[] sended = segments.Select(p => 0).ToArray();
+                int trytimes = 0;
+                LogManager.LogHelper.Instance.Info("发消息:" + bagid + ",长度:" + bytes.Length);
+                while (true)
                 {
-                    var lockflag = this.GetSendMsgLocker((IPEndPoint)endpoint);
-                    lockflag.BagId = bagid;
-                    lockflag.Reset();
-                    for (var i = 0; i < segments.Length; i++)
+                    lock (__s)
                     {
-                        if (sended[i] != 0)
+                        var lockflag = this.GetSendMsgLocker((IPEndPoint)endpoint);
+                        lockflag.BagId = bagid;
+                        lockflag.Reset();
+                        for (var i = 0; i < segments.Length; i++)
                         {
-                            continue;
+                            if (sended[i] != 0)
+                            {
+                                continue;
+                            }
+                            var segment = segments[i];
+                            __s.SendTo(segment, SocketFlags.None, endpoint);
+                            sended[i] = 1;
                         }
-                        var segment = segments[i];
-                        __s.SendTo(segment, SocketFlags.None, endpoint);
-                        sended[i] = 1;
+                        lockflag.Wait(3000);
+                        if (!lockflag.IsTimeOut)
+                        {
+                            LogManager.LogHelper.Instance.Info("发消息:" + bagid + "成功");
+                            return true;
+                        }
                     }
-                    lockflag.Wait(3000);
-                    if (!lockflag.IsTimeOut)
+
+                    if (trytimes++ >= TimeOutTryTimes)
                     {
-                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "成功");
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "超时，重试次数:" + trytimes);
+                        throw new TimeoutException();
+                    }
+
+                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "需要重试,请求重发包");
+                    var revmsg = QuestionBag(bagid, endpoint);
+                    if (revmsg.IsReved)
+                    {
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完成");
                         return true;
                     }
-                }
 
-                if (trytimes++ >= TimeOutTryTimes)
-                {
-                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "超时，重试次数:" + trytimes);
-                    throw new TimeoutException();
-                }
-
-                LogManager.LogHelper.Instance.Info("发消息:" + bagid + "需要重试,请求重发包");
-                var revmsg = QuestionBag(bagid, endpoint);
-                if (revmsg.IsReved)
-                {
-                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完成");
-                    return true;
-                }
-
-                if (revmsg.Miss != null && revmsg.Miss.Length > 0)
-                {
-                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回缺少包数量："+revmsg.Miss.Length);
-                    foreach (var i in revmsg.Miss)
+                    if (revmsg.Miss != null && revmsg.Miss.Length > 0)
                     {
-                        sended[i] = 0;
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回缺少包数量：" + revmsg.Miss.Length);
+                        foreach (var i in revmsg.Miss)
+                        {
+                            sended[i] = 0;
+                        }
+                    }
+                    else if (revmsg.Miss == null)
+                    {
+                        LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完全没收到");
+                        for (int i = 0; i < sended.Length; i++)
+                        {
+                            sended[i] = 0;
+                        }
                     }
                 }
-                else if (revmsg.Miss == null)
-                {
-                    LogManager.LogHelper.Instance.Info("发消息:" + bagid + "请求重发包，返回完全没收到");
-                    for (int i = 0; i < sended.Length; i++)
-                    {
-                        sended[i] = 0;
-                    }
-                }
+            }
+            catch (Exception ex)
+            {
+                OnError(ex);
+                return false;
             }
         }
 
