@@ -182,6 +182,7 @@ namespace LJC.FrameWork.SOA
                             lock (LockObj)
                             {
                                 ServiceContainer.Remove(serviceInfo);
+                                serviceInfo.Session.Close();
                             }
                             serviceInfo = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo)).LastOrDefault();
                             if(serviceInfo==null)
@@ -213,8 +214,8 @@ namespace LJC.FrameWork.SOA
 
                         if (serviceInfo.Session.SendMessage(msg))
                         {
-                            LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2}",
-                                msgTransactionID, request.ServiceNo, request.FuncId));
+                            //LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2}",
+                            //    msgTransactionID, request.ServiceNo, request.FuncId));
                             return;
                         }
                         else
@@ -235,6 +236,8 @@ namespace LJC.FrameWork.SOA
                     }
                     catch (Exception ex)
                     {
+                        OnError(ex);
+
                         resp.IsSuccess = false;
                         resp.ErrMsg = ex.Message;
                     }
@@ -245,8 +248,8 @@ namespace LJC.FrameWork.SOA
                     msgRet.SetMessageBody(resp);
                     session.Socket.SendMessge(msgRet);
 
-                    LogHelper.Instance.Error(string.Format("SOA请求失败,服务可能未注册,请求序列号:{0},服务号:{1},功能号:{2},耗时:{3}",
-                        msgTransactionID, request.ServiceNo, request.FuncId,DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒"));
+                    //LogHelper.Instance.Error(string.Format("SOA请求失败,服务可能未注册,请求序列号:{0},服务号:{1},功能号:{2},耗时:{3}",
+                    //    msgTransactionID, request.ServiceNo, request.FuncId,DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒"));
                 }
             }
         }
