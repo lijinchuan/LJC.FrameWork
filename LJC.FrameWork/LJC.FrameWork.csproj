@@ -327,6 +327,7 @@
   <ItemGroup>
     <Content Include="Comm\ReadMe.txt" />
     <Content Include="readme.txt" />
+    <Content Include="SocketApplication\SocketEasyUDP\ReadMe.txt" />
     <Content Include="Web\PerformanceMonitorModule.txt" />
   </ItemGroup>
   <ItemGroup>

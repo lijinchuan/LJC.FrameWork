@@ -365,6 +365,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         {
             if (_udpClient != null)
             {
+                _udpClient.Client.Dispose();
                 _udpClient.Close();
             }
 

@@ -1,0 +1,1 @@
+﻿测试MTU的命令：ping -l 1472 -f www.baidu.com
