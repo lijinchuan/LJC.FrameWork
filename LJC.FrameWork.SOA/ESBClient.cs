@@ -189,12 +189,14 @@ namespace LJC.FrameWork.SOA
                                                 if (client.IsLogin)
                                                 {
                                                     udppoollist.Add(client);
+                                                    LogHelper.Instance.Debug(string.Format("创建udp客户端成功:{0},端口{1}", ip, info.RedirectUdpPort));
                                                     break;
                                                 }
                                                 trytimes++;
                                             }
                                             if (trytimes == 3)
                                             {
+                                                LogHelper.Instance.Debug(string.Format("创建udp客户端失败:{0},端口{1}", ip, info.RedirectUdpPort));
                                                 throw new TimeoutException();
                                             }
                                         }
@@ -227,12 +229,13 @@ namespace LJC.FrameWork.SOA
                                             if (client.StartSession())
                                             {
                                                 poollist.Add(new ESBClientPoolManager(5, () => client));
+                                                LogHelper.Instance.Debug(string.Format("创建tcp客户端成功:{0},端口{1}", ip, info.RedirectTcpPort));
                                                 break;
                                             }
                                         }
                                         catch
                                         {
-
+                                            LogHelper.Instance.Debug(string.Format("创建tcp客户端失败:{0},端口{1}", ip, info.RedirectTcpPort));
                                         }
                                     }
                                 }
@@ -267,6 +270,7 @@ namespace LJC.FrameWork.SOA
                 if (_esbClientDicManager.TryGetValue(serviceId, out poolmanagerlist) && poolmanagerlist != null && poolmanagerlist.Count > 0)
                 {
                     Console.WriteLine("直连了");
+                    LogHelper.Instance.Debug("直连");
                     var poolmanager = poolmanagerlist.Count == 1 ? poolmanagerlist[0]
                     : poolmanagerlist[new Random().Next(0, poolmanagerlist.Count)];
 
