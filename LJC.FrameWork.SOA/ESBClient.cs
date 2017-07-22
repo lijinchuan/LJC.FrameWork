@@ -130,7 +130,7 @@ namespace LJC.FrameWork.SOA
 
         private static int OrderIp(string ip)
         {
-            if (ip.StartsWith("192."))
+            if (ip.StartsWith("192.168."))
             {
                 return 0;
             }
