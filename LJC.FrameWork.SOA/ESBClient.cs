@@ -128,6 +128,26 @@ namespace LJC.FrameWork.SOA
             return result;
         }
 
+        private static int OrderIp(string ip)
+        {
+            if (ip.StartsWith("192."))
+            {
+                return 0;
+            }
+
+            if (ip.StartsWith("172."))
+            {
+                return 1;
+            }
+
+            if (ip.StartsWith("10."))
+            {
+                return 2;
+            }
+
+            return 3;
+        }
+
         public static T DoSOARequest2<T>(int serviceId, int functionId, object param)
         {
             List<ESBUdpClient> udpclientlist = null;
@@ -164,7 +184,7 @@ namespace LJC.FrameWork.SOA
                             {
                                 if (info.RedirectUdpIps != null)
                                 {
-                                    foreach (var ip in info.RedirectUdpIps)
+                                    foreach (var ip in info.RedirectUdpIps.OrderBy(p=>OrderIp(p)))
                                     {
                                         try
                                         {
@@ -209,7 +229,7 @@ namespace LJC.FrameWork.SOA
 
                                 if (udppoollist.Count==0&& info.RedirectTcpIps != null)
                                 {
-                                    foreach (var ip in info.RedirectTcpIps)
+                                    foreach (var ip in info.RedirectTcpIps.OrderBy(p => OrderIp(p)))
                                     {
                                         try
                                         {
