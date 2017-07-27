@@ -224,10 +224,14 @@ namespace LJC.FrameWork.WebApi
                     {
                         foreach (var method in tp.GetMethods())
                         {
+                            if (method.IsStatic)
+                            {
+                                continue;
+                            }
                             var apimethod = (APIMethod)method.GetCustomAttributes(typeof(APIMethod), true).FirstOrDefault();
                             if (apimethod != null)
                             {
-                                string methodname = method.Name.ToLower();
+                                string methodname = string.IsNullOrWhiteSpace(apimethod.Aliname) ? method.Name.ToLower() : apimethod.Aliname.ToLower();
                                 if ("json".Equals(methodname))
                                 {
                                     throw new Exception("json不能用于api方法名");
