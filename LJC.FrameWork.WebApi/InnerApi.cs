@@ -23,8 +23,8 @@ namespace LJC.FrameWork.WebApi
                 {
                     continue;
                 }
-                
-                sb.AppendFormat("<li><a href='{0}/api/{1}/json' target='_blank'>{1}</a></li>",baseUrl, api.Key);
+
+                sb.AppendFormat("<li><a href='{0}/api/{1}/json' target='_blank'>{1}</a>&nbsp;&nbsp;<span style=\"color:#a0a0a0;font-size:12px;font-style:italic;\">{2}</span></li>", baseUrl, api.Key, api.Value.ApiMethodProp.Function);
             }
             sb.AppendFormat("</body></ul>");
 
