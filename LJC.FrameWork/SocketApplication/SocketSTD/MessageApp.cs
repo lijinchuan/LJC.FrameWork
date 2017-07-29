@@ -372,16 +372,22 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
         private void Receiving()
         {
+            int errertimes = 0;
             while (!stop/* && socketClient.Connected*/)
             {
                 try
                 {
                     var buffer = ReceivingNext(socketClient);
+                    errertimes = 0;
                     ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), buffer);
                 }
                 catch (SocketException e)
                 {
                     if (e.ErrorCode == (int)SocketError.ConnectionAborted)
+                    {
+                        break;
+                    }
+                    if (++errertimes >= 10)
                     {
                         break;
                     }

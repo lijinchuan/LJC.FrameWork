@@ -424,6 +424,10 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     hasdataerror = true;
                     OnError(ex);
                 }
+                catch (Exception ex)
+                {
+                    OnError(ex);
+                }
                 finally
                 {
                     if (!hasdataerror)
