@@ -234,15 +234,27 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             }
         }
 
-        public bool SendFile(string localfile,string rename,int sendsplitcount,Action<double> process)
+        public bool SendFile(string localfile,string rename,int sendsplitcount,Action<double> process,bool resend=false)
         {
             int count = sendsplitcount <= 0 ? 1024 * 100 : sendsplitcount;
             string filename = string.IsNullOrWhiteSpace(rename) ? System.IO.Path.GetFileName(localfile) : rename;
+            var sendbytes = 0L;
+            if (resend)
+            {
+                Message msg = new Message(MessageType.SENDFILRESENDCHECK);
+                msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                msg.SetMessageBody(new SendFileCheckRequestMessage { FileName = filename });
+                sendbytes= SendMessageAnsy<SendFileCheckResponseMessage>(msg).FileLength;
+            }
+            
             byte[] buffer = new byte[count];
             using (System.IO.FileStream fs = new System.IO.FileStream(localfile, System.IO.FileMode.Open))
             {
                 var total = fs.Length;
-                var sendbytes = 0;
+                if (sendbytes > 0)
+                {
+                    fs.Position = sendbytes;
+                }
                 while (true)
                 {
                     var len = fs.Read(buffer, 0, count);

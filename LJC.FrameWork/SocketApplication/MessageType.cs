@@ -53,5 +53,9 @@ namespace LJC.FrameWork.SocketApplication
         /// 清理bagid
         /// </summary>
         UDPCLEARBAGID,
+        /// <summary>
+        /// 断点续传检查
+        /// </summary>
+        SENDFILRESENDCHECK,
     }
 }

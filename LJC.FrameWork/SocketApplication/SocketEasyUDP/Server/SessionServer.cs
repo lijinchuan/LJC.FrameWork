@@ -156,6 +156,21 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
                 });
                 SendMessage(sendfileecho, session.EndPoint);
             }
+            else if (message.IsMessage(MessageType.SENDFILRESENDCHECK))
+            {
+                var request = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<SendFileCheckRequestMessage>(message.MessageBuffer);
+                var dir = AppDomain.CurrentDomain.BaseDirectory + "\\file\\";
+                var fileinofo = new System.IO.FileInfo(dir + request.FileName);
+                var len = 0L;
+                if (fileinofo.Exists)
+                {
+                    len = fileinofo.Length;
+                }
+                Message response = new Message(MessageType.SENDFILRESENDCHECK);
+                response.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                response.SetMessageBody(new SendFileCheckResponseMessage { FileLength = len, FileName = request.FileName });
+                SendMessage(response, session.EndPoint);
+            }
         }
 
         protected sealed override void FromApp(Message message, IPEndPoint endpoint)
