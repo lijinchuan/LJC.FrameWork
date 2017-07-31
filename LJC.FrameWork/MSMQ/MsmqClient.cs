@@ -153,6 +153,7 @@ namespace LJC.FrameWork.MSMQ
                     msg.Label = new MsmqLable { Lable = labletxt }.ToJson();
                     yield return msg;
                 }
+                yield break;
             }
 
             MsmqLable lable = new MsmqLable();
