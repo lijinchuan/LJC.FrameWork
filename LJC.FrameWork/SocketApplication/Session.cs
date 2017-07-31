@@ -93,6 +93,12 @@ namespace LJC.FrameWork.SocketApplication
             internal set;
         }
 
+        public int Port
+        {
+            get;
+            internal set;
+        }
+
         /// <summary>
         /// 会话超时
         /// </summary>

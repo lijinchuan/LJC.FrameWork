@@ -124,6 +124,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     IPEndPoint endPoint = (IPEndPoint)socket.RemoteEndPoint;
                     Session appSocket = new Session();
                     appSocket.IPAddress = endPoint.Address.ToString();
+                    appSocket.Port = endPoint.Port;
                     appSocket.IsValid = true;
                     appSocket.SessionID = SocketApplicationComm.GetSeqNum();
                     appSocket.Socket = socket;

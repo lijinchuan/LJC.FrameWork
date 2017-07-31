@@ -269,7 +269,7 @@ namespace LJC.FrameWork.SOA
 
                     lock (LockObj)
                     {
-                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress) && p.ServiceNo.Equals(req.ServiceNo));
+                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo));
 
                         ServiceContainer.Add(new ESBServiceInfo
                         {
@@ -308,7 +308,7 @@ namespace LJC.FrameWork.SOA
                     var req = message.GetMessageBody<UnRegisterServiceRequest>();
                     lock (LockObj)
                     {
-                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress) && p.ServiceNo.Equals(req.ServiceNo));
+                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress)&&p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo));
                     }
                     msg.SetMessageBody(new UnRegisterServiceResponse
                     {
