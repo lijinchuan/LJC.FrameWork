@@ -218,7 +218,7 @@ namespace LJC.FrameWork.Data.Mongo
             return list;
         }
 
-        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, int pageindex, int pagesize, MongoSortWarpper<T> sorts, MongoFieldSelecter<T> fieldselecter, out long total) where T : new()
+        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, int pageindex, int pagesize, MongoFieldSelecter<T> fieldselecter, MongoSortWarpper<T> sorts, out long total) where T : new()
         {
             return Find<T>(connectionName, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, fieldselecter == null ? null : fieldselecter.GetFields(), (MongoSortWarpper)sorts, out total);
         }
