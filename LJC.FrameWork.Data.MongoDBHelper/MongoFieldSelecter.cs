@@ -22,7 +22,7 @@ namespace LJC.FrameWork.Data.Mongo
             return this;
         }
 
-        public string[] GetFields()
+        internal string[] GetFields()
         {
             return _fields.ToArray();
         }
