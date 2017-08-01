@@ -385,13 +385,14 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 {
                     if (e.ErrorCode == (int)SocketError.ConnectionAborted)
                     {
+                        OnError(e);
                         break;
                     }
                     if (++errertimes >= 10)
                     {
+                        OnError(e);
                         break;
                     }
-                    OnError(e);
                     Thread.Sleep(1000);
                 }
                 catch (Exception e)
