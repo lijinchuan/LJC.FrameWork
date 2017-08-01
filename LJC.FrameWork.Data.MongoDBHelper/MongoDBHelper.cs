@@ -184,21 +184,29 @@ namespace LJC.FrameWork.Data.Mongo
             return true;
         }
 
-        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, int pageindex, int pagesize, MongoSortWarpper sorts, out long total)
+        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, int pageindex, int pagesize, string[] fields,MongoSortWarpper sorts, out long total)
         {
             var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
             var mongocollection = GetCollecion<T>(connectionName, database, collection);
             var mongosortby = (sorts == null || sorts.MongoSortBy == SortBy.Null) ? SortBy.Null : sorts.MongoSortBy;
             int skip = (pageindex - 1) * pagesize;
-            List<T> list = null;
+            
+            MongoCursor<T> mongocursor = null;
             if (mongosortby != SortBy.Null)
             {
-                list = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize).SetSortOrder(mongosortby).ToList();
+                mongocursor = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize).SetSortOrder(mongosortby);
             }
             else
             {
-                list = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize).ToList();
+                mongocursor = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize);
             }
+
+            if (fields != null && fields.Length > 0)
+            {
+                mongocursor = mongocursor.SetFields(fields);
+            }
+
+            List<T> list = mongocursor.ToList();
             if (list.Count < pagesize && list.Count > 0)
             {
                 total = skip + list.Count;
@@ -210,9 +218,9 @@ namespace LJC.FrameWork.Data.Mongo
             return list;
         }
 
-        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, int pageindex, int pagesize, MongoSortWarpper<T> sorts, out long total) where T : new()
+        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, int pageindex, int pagesize, MongoSortWarpper<T> sorts, MongoFieldSelecter<T> fieldselecter, out long total) where T : new()
         {
-            return Find<T>(connectionName, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, (MongoSortWarpper)sorts, out total);
+            return Find<T>(connectionName, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, fieldselecter == null ? null : fieldselecter.GetFields(), (MongoSortWarpper)sorts, out total);
         }
 
         public static T FindOneByIdAs<T>(string connectionName, string database, string collection, string id)
