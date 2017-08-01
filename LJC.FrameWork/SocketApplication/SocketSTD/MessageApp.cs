@@ -249,6 +249,8 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             catch (Exception e)
             {
                 //OnError(e);
+                LogManager.LogHelper.Instance.Error("StartClient error", e);
+
                 return false;
             }
         }
