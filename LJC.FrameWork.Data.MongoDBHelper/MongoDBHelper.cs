@@ -226,7 +226,7 @@ namespace LJC.FrameWork.Data.Mongo
         public static T FindOneByIdAs<T>(string connectionName, string database, string collection, string id)
         {
             var _id = new MongoDB.Bson.ObjectId(id);
-            return FindOne<T>(connectionName, database, collection, new MongoQueryWarpper().EQ("_id", _id));
+            return FindOne<T>(connectionName, database, collection, new MongoQueryWarpper().EQ("_id", _id), null, null);
         }
 
         public static T FindAndModify<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates, MongoSortWarpper sorts, bool returnNew, bool upsert)
@@ -310,18 +310,33 @@ namespace LJC.FrameWork.Data.Mongo
             return FindAll<T>(connectionName, database, collection, (MongoSortWarpper)sorts);
         }
 
-        public static T FindOne<T>(string connectionName, string database, string collection, MongoQueryWarpper querys)
+        public static T FindOne<T>(string connectionName, string database, string collection, MongoQueryWarpper querys,string[] fields, MongoSortWarpper sorts)
         {
             var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
             var mongocollection = GetCollecion<T>(connectionName, database, collection);
 
-            var one = mongocollection.FindOneAs<T>(mongoquery);
-            return one;
+            var cur = mongocollection.FindAs<T>(mongoquery);
+            if (fields != null && fields.Length > 0)
+            {
+                cur = cur.SetFields(fields);
+            }
+            if (sorts != null)
+            {
+                cur = cur.SetSortOrder(sorts.MongoSortBy);
+            }
+
+            var list = cur.SetLimit(1).ToList();
+            if (list == null || list.Count == 0)
+            {
+                return default(T);
+            }
+
+            return list[0];
         }
 
-        public static T FindOne<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys) where T : new()
+        public static T FindOne<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, MongoFieldSelecter<T> fields, MongoSortWarpper sorts) where T : new()
         {
-            return FindOne<T>(connectionName, database, collection, (MongoQueryWarpper)querys);
+            return FindOne<T>(connectionName, database, collection, (MongoQueryWarpper)querys, fields == null ? null : fields.GetFields(), sorts);
         }
 
         public static bool Update<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, MongoUpdateWarpper updates,MongoUpdateFlagsWarpper flgs=null)
