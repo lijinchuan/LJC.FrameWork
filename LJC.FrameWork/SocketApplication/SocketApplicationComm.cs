@@ -74,7 +74,7 @@ namespace LJC.FrameWork.SocketApplication
         {
             try
             {
-                if (s == null || !s.Connected)
+                if (s == null)
                 {
                     return false;
                 }
@@ -161,8 +161,8 @@ namespace LJC.FrameWork.SocketApplication
             }
             catch (Exception ex)
             {
-                LogManager.LogHelper.Instance.Error("发送消息失败:" + message.MessageHeader.TransactionID, ex);
-                return false;
+                ex.Data.Add("TransactionID", message.MessageHeader.TransactionID);
+                throw ex;
             }
         }
 

@@ -12,7 +12,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 {
     public class MessageApp : IDisposable
     {
-        protected Socket socketClient;
+        protected volatile Socket socketClient;
         protected Socket socketServer;
         /// <summary>
         /// 用来收发广播组播
@@ -28,14 +28,13 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         protected bool errorResume = true;
         protected string ipString;
         protected int ipPort;
-        private DateTime lastReStartClientTime;
         protected bool isStartServer = false;
         private Thread listeningThread = null;
 
         /// <summary>
-        /// 断线重连时间间隔
+        /// 是否正在启动客户端
         /// </summary>
-        private int reConnectClientTimeInterval = 5000;
+        private bool _isStartingClient = false;
 
         public event Action OnClientReset;
 
@@ -196,8 +195,11 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 if (socketClient != null && socketClient.Connected)
                     return true;
 
-                if (DateTime.Now.Subtract(lastReStartClientTime).TotalMilliseconds <= reConnectClientTimeInterval)
+                if (_isStartingClient)
+                {
                     return false;
+                }
+                _isStartingClient = true;
 
                 bool isResetClient = false;
                 if (socketClient != null)
@@ -227,7 +229,6 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 }
                 catch (Exception e)
                 {
-                    lastReStartClientTime = DateTime.Now;
                     throw e;
                 }
 
@@ -252,6 +253,10 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 LogManager.LogHelper.Instance.Error("StartClient error", e);
 
                 return false;
+            }
+            finally
+            {
+                _isStartingClient = false;
             }
         }
 
@@ -374,27 +379,16 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
         private void Receiving()
         {
-            int errertimes = 0;
             while (!stop/* && socketClient.Connected*/)
             {
                 try
                 {
                     var buffer = ReceivingNext(socketClient);
-                    errertimes = 0;
                     ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), buffer);
                 }
                 catch (SocketException e)
                 {
-                    if (e.ErrorCode == (int)SocketError.ConnectionAborted)
-                    {
-                        OnError(e);
-                        break;
-                    }
-                    if (++errertimes >= 10)
-                    {
-                        OnError(e);
-                        break;
-                    }
+                    OnError(e);
                     Thread.Sleep(1000);
                 }
                 catch (Exception e)
