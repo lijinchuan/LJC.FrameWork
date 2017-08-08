@@ -224,6 +224,13 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 if (DateTime.Now.Subtract(SessionContext.LastSessionTime).TotalSeconds < 10)
                     return;
 
+                if (stop)
+                {
+                    timer.Stop();
+                    timer.Close();
+                    return;
+                }
+
                 if (SessionContext.IsTimeOut() && isFirstTimeOut)
                 {
                     isFirstTimeOut = false;

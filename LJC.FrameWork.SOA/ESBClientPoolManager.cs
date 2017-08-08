@@ -21,7 +21,7 @@ namespace LJC.FrameWork.SOA
             {
                 var client = getClient == null ? new ESBClient() : getClient();
                 client.Error += client_Error;
-                client.StartClient();
+                client.Login(null, null);
                 Clients[i] = client;
             }
         }

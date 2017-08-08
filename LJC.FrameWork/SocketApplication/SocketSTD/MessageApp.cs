@@ -562,46 +562,56 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
         #endregion
 
+        private void Dispose(bool disposed)
+        {
+            if (disposed)
+            {
+                if (BeforRelease != null)
+                {
+                    BeforRelease();
+                }
+
+                if (socketServer != null)
+                {
+                    socketServer.Close();
+                }
+
+                if (socketClient != null)
+                {
+                    socketClient.Close();
+                }
+
+                if (udpBCSocket != null)
+                {
+                    udpBCSocket.Close();
+                }
+
+                if (udpMCClient != null)
+                {
+                    udpMCClient.DropMulticastGroup(SocketApplicationComm.MCAST_ADDR);
+                    udpMCClient.Close();
+                }
+
+                if (listeningThread != null)
+                {
+                    listeningThread.Abort();
+                }
+
+                stop = true;
+                isStartClient = false;
+
+                GC.SuppressFinalize(this);
+            }
+        }
+
         public void Dispose()
         {
-            if (BeforRelease != null)
-            {
-                BeforRelease();
-            }
-
-            if (socketServer != null)
-            {
-                socketServer.Close();
-            }
-
-            if (socketClient != null)
-            {
-                socketClient.Close();
-            }
-
-            if (udpBCSocket != null)
-            {
-                udpBCSocket.Close();
-            }
-
-            if (udpMCClient != null)
-            {
-                udpMCClient.DropMulticastGroup(SocketApplicationComm.MCAST_ADDR);
-                udpMCClient.Close();
-            }
-
-            if (listeningThread != null)
-            {
-                listeningThread.Abort();
-            }
-
-            stop = true;
-            isStartClient = false;
+            Dispose(true);
         }
 
         ~MessageApp()
         {
-            Dispose();
+            Dispose(false);
         }
     }
 }
