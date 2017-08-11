@@ -190,16 +190,16 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
         public bool StartClient()
         {
+            if (_isStartingClient)
+            {
+                return false;
+            }
+            _isStartingClient = true;
+
             try
             {
                 if (socketClient != null && socketClient.Connected)
                     return true;
-
-                if (_isStartingClient)
-                {
-                    return false;
-                }
-                _isStartingClient = true;
 
                 bool isResetClient = false;
                 if (socketClient != null)
@@ -476,7 +476,14 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
             if (socketClient != null &&errorResume&& !socketClient.Connected)
             {
+                e.Data.Add("checksocket", "需要发起重连");
                 new Action(() => StartClient()).BeginInvoke(null, null);
+            }
+            else
+            {
+                e.Data.Add("errorResume", errorResume);
+                e.Data.Add("socketClient.Connected", socketClient.Connected);
+                e.Data.Add("checksocket", "不需要发起重连");
             }
 
             if (Error != null)
