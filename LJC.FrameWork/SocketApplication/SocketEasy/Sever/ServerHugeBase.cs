@@ -368,6 +368,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                                     Session connSession;
                                     if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
                                     {
+                                        connSession.LastSessionTime = DateTime.Now;
                                         if (messageError == null)
                                         {
                                             FormApp(message, connSession);
