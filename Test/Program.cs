@@ -131,6 +131,10 @@ namespace Test
 
         static void Main(string[] args)
         {
+            Console.WriteLine("可用tcp:" + LJC.FrameWork.SocketApplication.SocketApplicationComm.GetIdelTcpPort());
+            Console.WriteLine("可用tcp:" + LJC.FrameWork.SocketApplication.SocketApplicationComm.GetIdelUdpPort());
+            Console.Read();
+            return;
             //int ix = 0;
             //while (true)
             //{
