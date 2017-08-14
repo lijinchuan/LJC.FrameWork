@@ -131,15 +131,27 @@ namespace Test
 
         static void Main(string[] args)
         {
-            //int ix = 0;
-            //while (true)
-            //{
-            //    var str = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<string>(1, 100, "你好啊"+(ix++));
-            //    Console.WriteLine(str);
+            int ix = 0;
+            while (true)
+            {
+                var msgtxt=@"据了解，群众提出的意见主要集中在单身申请家庭年龄、离婚限制年限、住房转出记录、东西城房源以及能否落户、入学等方面。
+　　制定政策引导单身青年先租房
+　　一是关于单身申请年龄。有群众反映30岁年龄限制过高，同时也有群众赞成，认为共有产权住房应优先保障家庭结构稳定且人口较多的家庭。不满30周岁单身家庭可“先租后买”，形成梯度消费。据此，市住建委表示下一步，将制定支持政策，引导单身青年通过租房方式解决住房困难问题，实现有效衔接。
+　　“无住房转出记录”将明确为“在本市无住房转出记录”
+　　二是关于离婚、有住房转出记录人员限制申请。对于离婚人员申请问题，市住建委已在《办法》中明确仅限制“有住房家庭夫妻离异后单独提出申请”的情形，对离婚前家庭成员无住房或再婚家庭，不受此限制。
+　　对于要求无住房转出记录，目的是聚焦无房刚需家庭首次购房需求，符合回归自住属性、杜绝投资投机需求。同时，采纳部分群众提出应将“无住房转出记录”明确为“在本市无住房转出记录”的意见建议，在《办法》中予以修改。";
 
-            //    Thread.Sleep(1000);
-            //}
-            //Console.Read();
+                var enbytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msgtxt,false);
+                var comparebytes = LJC.FrameWork.Comm.GZip.Compress(enbytes);
+                var obytest = System.Text.Encoding.UTF8.GetBytes(msgtxt);
+                var comparebytes2 = LJC.FrameWork.Comm.GZip.Compress(obytest);
+                
+                var str = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<string>(100, 100, msgtxt + (ix++));
+                Console.WriteLine(str);
+
+                Thread.Sleep(1000);
+            }
+            Console.Read();
 
 
             LJC.FrameWork.SocketApplication.SocketEasyUDP.Server.SessionServer serverbase =new LJC.FrameWork.SocketApplication.SocketEasyUDP.Server.SessionServer(19000);

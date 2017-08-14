@@ -491,26 +491,37 @@ namespace LJC.FrameWork.EntityBuf
 
         public static byte[] Serialize(object o, bool compress=true)
         {
+            if (o != null && o is byte[])
+            {
+                return (byte[])o;
+            }
+
             MemoryStream ms = new MemoryStream();
             MemoryStreamWriter writer = new MemoryStreamWriter(ms);
             Serialize(o, writer);
             var bytes = writer.GetBytes();
 
-            //if (compress&&bytes.Length>minGZIPCompressLenth)
-            //{
-            //    var compressBytes = GZip.Compress(bytes);
-            //    return compressBytes;
-            //}
-            //else
-            //{
-            //    return bytes;
-            //}
-
-            return bytes;
+            if (compress && bytes.Length > minGZIPCompressLenth)
+            {
+                var compressBytes = GZip.Compress(bytes);
+                return compressBytes;
+            }
+            else
+            {
+                return bytes;
+            }
         }
 
-        public static void Serialize(object o, BufferPollManager poolmanager, ref int bufferindex, ref long size, ref byte[] serbyte)
+        public static void Serialize(object o, BufferPollManager poolmanager, ref int bufferindex, ref long size, ref byte[] serbyte,bool compress=true)
         {
+            if (o != null && o is byte[])
+            {
+                bufferindex = -1;
+                serbyte = (byte[])o;
+                size = serbyte.Length;
+                return;
+            }
+
             MemoryStreamWriter writer = new MemoryStreamWriter(poolmanager);
 
             Serialize(o, writer);
@@ -520,12 +531,43 @@ namespace LJC.FrameWork.EntityBuf
             if (bufferindex == -1)
             {
                 serbyte = writer.GetBytes();
+                if (compress && size-8 > minGZIPCompressLenth)
+                {
+                    var compressBytes = GZip.Compress(serbyte.Skip(8).Take((int)size-8).ToArray());
+                    size=8+compressBytes.Length;
+                    serbyte=new byte[size];
+                    for (int i = 0; i < compressBytes.Length; i++)
+                    {
+                        serbyte[i + 8] = compressBytes[i];
+                    }
+                }
+            }
+            else
+            {
+                if (compress && size - 8 > minGZIPCompressLenth)
+                {
+                    var offset = poolmanager.GetOffset(bufferindex);
+                    var compressBytes = GZip.Compress(poolmanager.Buffer.Skip(offset + 8).Take((int)size - 8).ToArray());
+                    size = 8 + compressBytes.Length;
+                    for (int i = 0; i < compressBytes.Length; i++)
+                    {
+                        poolmanager.Buffer[offset + 8 + i] = compressBytes[i];
+                    }
+                }
             }
         }
 
         public static void Serialize(object o, string file, bool compress = true)
         {
-            byte[] results= Serialize(o, compress);
+            byte[] results = null;
+            if (o != null && o is byte[])
+            {
+                results = (byte[])o;
+            }
+            else
+            {
+                results = Serialize(o, compress);
+            }
             using (FileStream fs=new FileStream(file,FileMode.Create))
             {
                 int len = results.Length;
@@ -892,16 +934,15 @@ namespace LJC.FrameWork.EntityBuf
 
         public static object DeSerialize(Type DestType, byte[] bytes, bool compress = true)
         {
-            //var decompressBytes=bytes;
-            //if (compress && bytes != null && bytes.Length > minGZIPCompressLenth)
-            //{
-            //    decompressBytes = GZip.Decompress(bytes);
-            //}
-            //var ms = new MemoryStream(decompressBytes);
+            var decompressBytes = bytes;
+            if (compress && bytes != null && bytes.Length > minGZIPCompressLenth)
+            {
+                decompressBytes = GZip.Decompress(bytes);
+            }
 
             try
             {
-                var ms = new MemoryStream(bytes);
+                var ms = new MemoryStream(decompressBytes);
                 BinaryReader reader = new BinaryReader(ms);
                 MemoryStreamReader rd = new MemoryStreamReader(reader);
                 var obj = DeSerialize(DestType, rd);

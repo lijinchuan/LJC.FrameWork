@@ -154,9 +154,7 @@ namespace Test2
                 service.RegisterService();
                 Console.WriteLine("注册成功");
             });
-            service.SessionResume += new Action(() => { service.RegisterService(); Console.WriteLine("恢复重注册"); });
             service.Error += service_Error;
-            service.OnClientReset += new Action(() => { service.RegisterService(); Console.WriteLine("重置重注册"); });
             service.Login(null, null);
         }
 
