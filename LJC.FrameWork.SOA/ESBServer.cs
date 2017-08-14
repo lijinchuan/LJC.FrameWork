@@ -187,7 +187,7 @@ namespace LJC.FrameWork.SOA
                             serviceInfo = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo)).LastOrDefault();
                             if(serviceInfo==null)
                             {
-                                throw new Exception(string.Format("{0}服务未注册,服务超过30秒无应答。", request.ServiceNo));
+                                throw new Exception(string.Format("{0}服务可能不可用,30秒无应答。", request.ServiceNo));
                             }
                         }
 
@@ -247,9 +247,6 @@ namespace LJC.FrameWork.SOA
                 {
                     msgRet.SetMessageBody(resp);
                     session.Socket.SendMessge(msgRet);
-
-                    //LogHelper.Instance.Error(string.Format("SOA请求失败,服务可能未注册,请求序列号:{0},服务号:{1},功能号:{2},耗时:{3}",
-                    //    msgTransactionID, request.ServiceNo, request.FuncId,DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒"));
                 }
             }
         }

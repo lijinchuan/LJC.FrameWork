@@ -538,6 +538,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     new Action<byte[], Session>((b, s) =>
                         {
                             Message message = EntityBufCore.DeSerialize<Message>(b);
+                            s.LastSessionTime = DateTime.Now;
                             FormApp(message, s);
                         }).BeginInvoke(buffer, appSocket, null, null);
                 }

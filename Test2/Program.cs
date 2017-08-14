@@ -166,6 +166,8 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            Test10021();
+            return;
             TestEsbservices();
             Console.Read();
         }
@@ -179,7 +181,7 @@ namespace Test2
         {
             try
             {
-                System.Threading.Tasks.Parallel.For(0, 15, (n) =>
+                System.Threading.Tasks.Parallel.For(0, 1, (n) =>
                     {
                         long start = Environment.TickCount;
                         for (int i = 0; i < 100; i++)
@@ -189,7 +191,7 @@ namespace Test2
                                 start = Environment.TickCount;
                                 var ids = "600358.SH,600086.SH,000768.SZ,300578.SZ,002624.SZ,603558.SH,300024.SZ,300532.SZ,601939.SH,601988.SH,002593.SZ,600318.SH,000540.SZ,601211.SH,000783.SZ,002847.SZ,603444.SH,600015.SH,002145.SZ,601288.SH,002131.SZ,600067.SH,300058.SZ,600628.SH,300242.SZ,600016.SH,600208.SH,601377.SH,000967.SZ,002712.SZ,300392.SZ,601888.SH,603099.SH,002143.SZ,300071.SZ,600276.SH,601398.SH,300513.SZ,600768.SH,603588.SH,603993.SH,000430.SZ,603729.SH,603881.SH,000630.SZ,000839.SZ,300144.SZ,600418.SH,600594.SH,603069.SH".Split(',');
                                 //var ids = "600358.SH,600086.SH".Split(',');
-                                var result = LJC.FrameWork.SOA.ESBClient.DoSOARequest<List<LJC.Com.StockService.Contract.StockSimpleInfo>>(1, 10021, ids);
+                                var result = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<List<LJC.Com.StockService.Contract.StockSimpleInfo>>(1, 10021, ids);
                                 long ms = Environment.TickCount - start;
                                 Console.WriteLine(i + " " + ms);
                             }

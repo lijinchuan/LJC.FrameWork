@@ -9,7 +9,7 @@ namespace LJC.FrameWork.SOA
     {
         private ESBClient[] Clients = null;
 
-        public ESBClientPoolManager(uint clientcount=5,Func<ESBClient> getClient=null)
+        public ESBClientPoolManager(uint clientcount=5,Func<int,ESBClient> getClient=null)
         {
             if(clientcount==0)
             {
@@ -17,9 +17,9 @@ namespace LJC.FrameWork.SOA
             }
 
             Clients = new ESBClient[clientcount];
-            for (uint i = 0; i < clientcount; i++)
+            for (int i = 0; i < clientcount; i++)
             {
-                var client = getClient == null ? new ESBClient() : getClient();
+                var client = getClient == null ? new ESBClient() : getClient(i);
                 client.Error += client_Error;
                 client.Login(null, null);
                 Clients[i] = client;

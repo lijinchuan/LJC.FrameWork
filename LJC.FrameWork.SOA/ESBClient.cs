@@ -248,7 +248,27 @@ namespace LJC.FrameWork.SOA
                                              };
                                             if (client.StartSession())
                                             {
-                                                poollist.Add(new ESBClientPoolManager(5, () => client));
+                                                poollist.Add(new ESBClientPoolManager(5, (idx) =>
+                                                {
+                                                    if (idx == 0)
+                                                    {
+                                                        return client;
+                                                    }
+                                                    var newclient= new ESBClient(ip, info.RedirectTcpPort, false);
+                                                    newclient.Error += (ex) =>
+                                                    {
+                                                        if (ex is System.Net.WebException)
+                                                        {
+                                                            client.CloseClient();
+                                                            client.Dispose();
+                                                            lock (_esbClientDicManager)
+                                                            {
+                                                                _esbClientDicManager.Remove(serviceId);
+                                                            }
+                                                        }
+                                                    };
+                                                    return newclient;
+                                                }));
                                                 LogHelper.Instance.Debug(string.Format("创建tcp客户端成功:{0},端口{1}", ip, info.RedirectTcpPort));
                                                 break;
                                             }
@@ -290,11 +310,12 @@ namespace LJC.FrameWork.SOA
                 if (_esbClientDicManager.TryGetValue(serviceId, out poolmanagerlist) && poolmanagerlist != null && poolmanagerlist.Count > 0)
                 {
                     Console.WriteLine("直连了");
-                    LogHelper.Instance.Debug("直连");
                     var poolmanager = poolmanagerlist.Count == 1 ? poolmanagerlist[0]
                     : poolmanagerlist[new Random().Next(0, poolmanagerlist.Count)];
 
-                    return poolmanager.RandClient().DoRequest<T>(functionId, param);
+                    var client=poolmanager.RandClient();
+                    LogHelper.Instance.Debug("功能"+serviceId+"直连" + client.ipString + ":" + client.ipPort);
+                    return client.DoRequest<T>(functionId, param);
                 }
                 else
                 {

@@ -140,6 +140,10 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
         }
 
+        /// <summary>
+        /// 客户端方法
+        /// </summary>
+        /// <param name="message"></param>
         protected sealed override void OnMessage(Message message)
         {
             base.OnMessage(message);
@@ -394,7 +398,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         /// <param name="message"></param>
         protected override void FormApp(Message message, Session session)
         {
-            session.LastSessionTime = DateTime.Now;
+            //session.LastSessionTime = DateTime.Now;
 
             if (ServerModeNeedLogin && !session.IsLogin && !message.IsMessage(MessageType.LOGIN))
             {

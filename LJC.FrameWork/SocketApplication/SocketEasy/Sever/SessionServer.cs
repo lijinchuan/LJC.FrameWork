@@ -165,8 +165,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
         /// <param name="message"></param>
         protected override void FormApp(Message message, Session session)
         {
-            session.LastSessionTime = DateTime.Now;
-
             if (ServerModeNeedLogin && !session.IsLogin && !message.IsMessage(MessageType.LOGIN))
             {
                 Message msg = new Message(MessageType.RELOGIN);

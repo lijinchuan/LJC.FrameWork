@@ -125,17 +125,15 @@ namespace LJC.FrameWork.SocketEasy.Sever
             _bufferpoll.RealseBuffer(e.BufferIndex);
             e.ClearBuffer();
             //e.AcceptSocket.Disconnect(true);
-            if (e.SocketError == SocketError.Success)
+            try
             {
-                try
-                {
-                    e.AcceptSocket.Shutdown(SocketShutdown.Both);
-                }
-                catch
-                {
-
-                }
+                e.AcceptSocket.Shutdown(SocketShutdown.Send);
             }
+            catch
+            {
+
+            }
+            e.AcceptSocket.Close();
             e.AcceptSocket = null;
             _iocpQueue.Enqueue(e);
         }
@@ -221,7 +219,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
             var socketAsyncEventArgs = e as IOCPSocketAsyncEventArgs;
             socketAsyncEventArgs.AcceptSocket = socket;
-            socketAsyncEventArgs.DisconnectReuseSocket = true;
             socketAsyncEventArgs.Completed += SocketAsyncEventArgs_Completed;
             socketAsyncEventArgs.UserToken = appSocket.SessionID;
 
@@ -371,6 +368,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                                     Session connSession;
                                     if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
                                     {
+                                        connSession.LastSessionTime = DateTime.Now;
                                         if (messageError == null)
                                         {
                                             FormApp(message, connSession);
