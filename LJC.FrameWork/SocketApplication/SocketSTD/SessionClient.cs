@@ -62,7 +62,16 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
                 if (autoResetEvent.IsTimeOut)
                 {
-                    throw new Exception(string.Format("请求超时，请求序列号:{0}", reqID));
+                    var ex = new TimeoutException();
+                    ex.Data.Add("MessageType", message.MessageHeader.MessageType);
+                    ex.Data.Add("TransactionID", message.MessageHeader.TransactionID);
+                    ex.Data.Add("ipString", this.ipString);
+                    ex.Data.Add("ipPort", this.ipPort);
+                    if (message.MessageBuffer != null)
+                    {
+                        ex.Data.Add("MessageBuffer", Convert.ToBase64String(message.MessageBuffer));
+                    }
+                    throw ex;
                 }
                 else
                 {

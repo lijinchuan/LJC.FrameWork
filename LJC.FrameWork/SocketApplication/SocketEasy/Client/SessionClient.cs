@@ -282,12 +282,23 @@ namespace LJC.FrameWork.SocketEasy.Client
 
                 if (BuzException != null)
                 {
+                    BuzException.Data.Add("MessageType", message.MessageHeader.MessageType);
+                    BuzException.Data.Add("TransactionID", message.MessageHeader.TransactionID);
                     throw BuzException;
                 }
 
                 if (autoResetEvent.IsTimeOut)
                 {
-                    throw new Exception(string.Format("请求超时，请求序列号:{0}", reqID));
+                    var ex= new TimeoutException();
+                    ex.Data.Add("MessageType", message.MessageHeader.MessageType);
+                    ex.Data.Add("TransactionID", message.MessageHeader.TransactionID);
+                    ex.Data.Add("serverIp", this.serverIp);
+                    ex.Data.Add("ipPort", this.ipPort);
+                    if (message.MessageBuffer != null)
+                    {
+                        ex.Data.Add("MessageBuffer", Convert.ToBase64String(message.MessageBuffer));
+                    }
+                    throw ex;
                 }
                 else
                 {

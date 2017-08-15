@@ -219,12 +219,26 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
                 if (BuzException != null)
                 {
+                    BuzException.Data.Add("MessageType", message.MessageHeader.MessageType);
+                    BuzException.Data.Add("TransactionID", message.MessageHeader.TransactionID);
                     throw BuzException;
                 }
 
                 if (autoResetEvent.IsTimeOut)
                 {
-                    throw new TimeoutException(string.Format("请求超时，请求序列号:{0}", reqID));
+                    var ex = new TimeoutException();
+                    ex.Data.Add("MessageType", message.MessageHeader.MessageType);
+                    ex.Data.Add("TransactionID", message.MessageHeader.TransactionID);
+                    if (SessionContext != null)
+                    {
+                        ex.Data.Add("SessionContext.IPAddress", this.SessionContext.IPAddress);
+                        ex.Data.Add("SessionContext.Port", this.SessionContext.Port);
+                    }
+                    if (message.MessageBuffer != null)
+                    {
+                        ex.Data.Add("MessageBuffer", Convert.ToBase64String(message.MessageBuffer));
+                    }
+                    throw ex;
                 }
                 else
                 {
