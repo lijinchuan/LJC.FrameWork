@@ -63,6 +63,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 if (autoResetEvent.IsTimeOut)
                 {
                     var ex = new TimeoutException();
+                    ex.Data.Add("errorsender", "LJC.FrameWork.SocketApplication.SocketSTD.SessionClient");
                     ex.Data.Add("MessageType", message.MessageHeader.MessageType);
                     ex.Data.Add("TransactionID", message.MessageHeader.TransactionID);
                     ex.Data.Add("ipString", this.ipString);
@@ -71,6 +72,8 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     {
                         ex.Data.Add("MessageBuffer", Convert.ToBase64String(message.MessageBuffer));
                     }
+                    ex.Data.Add("resulttype", typeof(T).FullName);
+                    LogManager.LogHelper.Instance.Error("SendMessageAnsy", ex);
                     throw ex;
                 }
                 else

@@ -130,22 +130,32 @@ namespace LJC.FrameWork.SOA
 
         private static int OrderIp(string ip)
         {
-            if (ip.StartsWith("192.168."))
+            if (ip.StartsWith("192.168.0."))
             {
                 return 0;
             }
 
+            if (ip.StartsWith("192.168.1."))
+            {
+                return 10;
+            }
+
+            if (ip.StartsWith("192.168."))
+            {
+                return 50;
+            }
+
             if (ip.StartsWith("172."))
             {
-                return 1;
+                return 100;
             }
 
             if (ip.StartsWith("10."))
             {
-                return 2;
+                return 200;
             }
 
-            return 3;
+            return 300;
         }
 
         public static T DoSOARequest2<T>(int serviceId, int functionId, object param)
@@ -255,6 +265,7 @@ namespace LJC.FrameWork.SOA
                                                         return client;
                                                     }
                                                     var newclient= new ESBClient(ip, info.RedirectTcpPort, false);
+                                                    newclient.StartSession();
                                                     newclient.Error += (ex) =>
                                                     {
                                                         if (ex is System.Net.WebException)

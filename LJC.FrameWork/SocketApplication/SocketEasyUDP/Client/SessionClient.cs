@@ -227,6 +227,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                 if (autoResetEvent.IsTimeOut)
                 {
                     var ex = new TimeoutException();
+                    ex.Data.Add("errorsender", "LJC.FrameWork.SocketApplication.SocketEasyUDP.Client.SessionClient");
                     ex.Data.Add("MessageType", message.MessageHeader.MessageType);
                     ex.Data.Add("TransactionID", message.MessageHeader.TransactionID);
                     if (SessionContext != null)
@@ -238,6 +239,8 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                     {
                         ex.Data.Add("MessageBuffer", Convert.ToBase64String(message.MessageBuffer));
                     }
+                    ex.Data.Add("resulttype", typeof(T).FullName);
+                    LogManager.LogHelper.Instance.Error("SendMessageAnsy", ex);
                     throw ex;
                 }
                 else

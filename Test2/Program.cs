@@ -166,8 +166,6 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            Test10021();
-            return;
             TestEsbservices();
             Console.Read();
         }
