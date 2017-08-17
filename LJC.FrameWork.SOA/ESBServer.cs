@@ -38,7 +38,7 @@ namespace LJC.FrameWork.SOA
                 sb.AppendFormat("当前注册了{0}个服务实例<br/>", servicelist.Count);
                 if (servicelist.Count > 0)
                 {
-                    sb.AppendFormat("<table>");
+                    sb.AppendFormat("<table border=\"1\" cellspaing=\"1\" cellpadding=\"2\">");
                     sb.AppendFormat("<tr><td>服务号</td><td>服务实例</td></tr>");
                     foreach (var gp in servicelist.GroupBy(p => p.ServiceNo))
                     {
@@ -60,6 +60,37 @@ namespace LJC.FrameWork.SOA
                     sb.AppendFormat("</table>");
                 }
 
+                //客户端
+                sb.Append("<br/>");
+                var clients = _esb.GetConnectedList().Select(p => p).ToList();
+                sb.AppendFormat("当前连接了{0}个客户端", clients.Count);
+                sb.Append("<table  border=\"1\" cellspaing=\"1\" cellpadding=\"2\">");
+                sb.Append("<tr>");
+                sb.AppendFormat("<td>clientid</td><td>地址</td><td>连接时间</td><td>上次心跳时间</td><td>连接时长</td>");
+                sb.Append("</tr>");
+                foreach (var item in clients)
+                {
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
+                        item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                        item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes);
+                }
+                sb.Append("</table>");
+
+                //客户端
+                sb.Append("<br/>");
+                clients = _esb.ClientSessionList.Select(p => p).ToList();
+                sb.AppendFormat("当前活跃{0}个客户端", clients.Count);
+                sb.Append("<table  border=\"1\" cellspaing=\"1\" cellpadding=\"2\">");
+                sb.Append("<tr>");
+                sb.AppendFormat("<td>clientid</td><td>地址</td><td>连接时间</td><td>上次心跳时间</td><td>连接时长</td>");
+                sb.Append("</tr>");
+                foreach (var item in clients)
+                {
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
+                        item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                        item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"),item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes);
+                }
+                sb.Append("</table>");
 
                 response.Content = sb.ToString();
                 return true;
@@ -79,6 +110,11 @@ namespace LJC.FrameWork.SOA
                 LJC.FrameWork.Net.HTTP.Server.HttpServer manhttpserver = new Net.HTTP.Server.HttpServer(new Net.HTTP.Server.Server(manport));
                 manhttpserver.Handlers.Add(new LJC.FrameWork.Net.HTTP.Server.RESTfulApiHandlerBase(LJC.FrameWork.Net.HTTP.Server.HMethod.GET, "/esb/index", new List<string>() { }, new DefaultHander(this)));
             }
+        }
+
+        internal System.Collections.Concurrent.ConcurrentDictionary<string, Session> GetConnectedList()
+        {
+            return this._connectSocketDic;
         }
 
         internal void DoTransferResponse(SOATransferResponse response)

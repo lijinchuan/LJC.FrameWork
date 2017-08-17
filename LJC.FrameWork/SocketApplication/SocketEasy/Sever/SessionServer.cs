@@ -11,7 +11,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 {
     public class SessionServer:/*ServerBase*/ServerHugeBase
     {
-        protected Dictionary<string, Session> appSockets;
+        protected Dictionary<string, Session> appLoginSockets;
 
         private Dictionary<string, AutoReSetEventResult> watingEvents;
 
@@ -20,14 +20,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
         public SessionServer(string[] ips, int port)
             : base(ips, port)
         {
-            appSockets = new Dictionary<string, Session>();
+            appLoginSockets = new Dictionary<string, Session>();
             watingEvents = new Dictionary<string, AutoReSetEventResult>();
         }
 
         public SessionServer(int port)
             : base(null, port)
         {
-            appSockets = new Dictionary<string, Session>();
+            appLoginSockets = new Dictionary<string, Session>();
             watingEvents = new Dictionary<string, AutoReSetEventResult>();
         }
 
@@ -86,13 +86,13 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                 //session.Socket = s;
                 //session.IPAddress = ((System.Net.IPEndPoint)s.RemoteEndPoint).Address.ToString();
-                lock (appSockets)
+                lock (appLoginSockets)
                 {
-                    if (appSockets.ContainsKey(session.SessionID))
+                    if (appLoginSockets.ContainsKey(session.SessionID))
                     {
-                        appSockets.Remove(session.SessionID);
+                        appLoginSockets.Remove(session.SessionID);
                     }
-                    appSockets.Add(session.SessionID, session);
+                    appLoginSockets.Add(session.SessionID, session);
                 }
                 Console.WriteLine("{0}成功登陆", request.LoginID);
             }
@@ -134,9 +134,9 @@ namespace LJC.FrameWork.SocketEasy.Sever
             Message msg = new Message(MessageType.LOGOUT);
 
             session.Socket.SendMessge(msg);
-            lock (appSockets)
+            lock (appLoginSockets)
             {
-                appSockets.Remove(session.SessionID);
+                appLoginSockets.Remove(session.SessionID);
             }
             session.IsValid = false;
 

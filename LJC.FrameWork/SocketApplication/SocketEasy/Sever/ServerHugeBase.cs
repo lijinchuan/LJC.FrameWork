@@ -21,7 +21,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
         protected string[] bindIpArray;
         protected int ipPort;
         protected bool isStartServer = false;
-        private ConcurrentDictionary<string, Session> _connectSocketDic = new ConcurrentDictionary<string, Session>();
+        protected ConcurrentDictionary<string, Session> _connectSocketDic = new ConcurrentDictionary<string, Session>();
         private ConcurrentQueue<IOCPSocketAsyncEventArgs> _iocpQueue = new ConcurrentQueue<IOCPSocketAsyncEventArgs>();
         private BufferPollManager _bufferpoll = null;
         
@@ -216,6 +216,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             appSocket.IsValid = true;
             appSocket.SessionID = SocketApplicationComm.GetSeqNum();
             appSocket.Socket = socket;
+            appSocket.ConnectTime = DateTime.Now;
 
             var socketAsyncEventArgs = e as IOCPSocketAsyncEventArgs;
             socketAsyncEventArgs.AcceptSocket = socket;
