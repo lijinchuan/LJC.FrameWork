@@ -1271,6 +1271,11 @@
             Gets list of aliases(CNAME) that are associated with a host.
             </summary>
         </member>
+        <member name="T:LJC.FrameWork.Net.HTTP.Server.RESTfulApiHandlerBase">
+            <summary>
+            RESTfull处理器的接口
+            </summary>
+        </member>
         <member name="T:LJC.FrameWork.Net.IAsyncOP">
             <summary>
             Represents asynchronous operation.

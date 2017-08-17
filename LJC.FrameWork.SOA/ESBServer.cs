@@ -14,14 +14,71 @@ namespace LJC.FrameWork.SOA
     public class ESBServer:SocketEasy.Sever.SessionServer
     {
         private static object LockObj = new object();
-        protected List<ESBServiceInfo> ServiceContainer = new List<ESBServiceInfo>();
-        private Dictionary<string,Session> ClientSessionList = new Dictionary<string,Session>();
-        private static ReaderWriterLockSlim ConatinerLock = new ReaderWriterLockSlim();
+        internal List<ESBServiceInfo> ServiceContainer = new List<ESBServiceInfo>();
+        internal Dictionary<string,Session> ClientSessionList = new Dictionary<string,Session>();
+        internal static ReaderWriterLockSlim ConatinerLock = new ReaderWriterLockSlim();
+
+        private string ManagerWebPortStr = System.Configuration.ConfigurationManager.AppSettings["esbmanport"];
+
+        #region 管理web
+        public class DefaultHander : LJC.FrameWork.Net.HTTP.Server.IRESTfulHandler
+        {
+            private ESBServer _esb = null;
+            public DefaultHander(ESBServer esb)
+            {
+                _esb = esb;
+            }
+
+            public bool Process(LJC.FrameWork.Net.HTTP.Server.HttpServer server, LJC.FrameWork.Net.HTTP.Server.HttpRequest request, LJC.FrameWork.Net.HTTP.Server.HttpResponse response, Dictionary<string, string> param)
+            {
+                StringBuilder sb = new StringBuilder();
+
+                sb.AppendFormat("当前时间:{0}<br/><br/>",DateTime.Now.ToString("yyyy-MM-dd"));
+                var servicelist = _esb.ServiceContainer.Select(p => p).ToList();
+                sb.AppendFormat("当前注册了{0}个服务实例<br/>", servicelist.Count);
+                if (servicelist.Count > 0)
+                {
+                    sb.AppendFormat("<table>");
+                    sb.AppendFormat("<tr><td>服务号</td><td>服务实例</td></tr>");
+                    foreach (var gp in servicelist.GroupBy(p => p.ServiceNo))
+                    {
+                        sb.AppendFormat("<tr>");
+                        sb.AppendFormat("<td>{0}</td>", gp.Key);
+                        sb.Append("<td>");
+                        sb.Append("<table>");
+                        sb.Append("<tr><td>ID</td><td>服务器地址</td><td>TCP直连</td><td>UDP直连</td></tr>");
+                        foreach (var item in gp)
+                        {
+                            sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td></tr>", item.ClientID, item.Session.IPAddress, item.Session.Port,
+                                item.RedirectTcpIps == null ? "" : (string.Join(",", item.RedirectTcpIps) + ":" + item.RedirectTcpPort),
+                                item.RedirectUdpIps == null ? "" : (string.Join(",", item.RedirectUdpIps) + ":" + item.RedirectUdpPort));
+                        }
+                        sb.Append("</table>");
+                        sb.Append("</td>");
+                        sb.AppendFormat("</tr>");
+                    }
+                    sb.AppendFormat("</table>");
+                }
+
+
+                response.Content = sb.ToString();
+                return true;
+            }
+        }
+        #endregion
 
         public ESBServer(int port)
             : base(port)
         {
             ServerModeNeedLogin = false;
+
+            if (!string.IsNullOrWhiteSpace(ManagerWebPortStr))
+            {
+                var manport = int.Parse(ManagerWebPortStr);
+
+                LJC.FrameWork.Net.HTTP.Server.HttpServer manhttpserver = new Net.HTTP.Server.HttpServer(new Net.HTTP.Server.Server(manport));
+                manhttpserver.Handlers.Add(new LJC.FrameWork.Net.HTTP.Server.RESTfulApiHandlerBase(LJC.FrameWork.Net.HTTP.Server.HMethod.GET, "/esb/index", new List<string>() { }, new DefaultHander(this)));
+            }
         }
 
         internal void DoTransferResponse(SOATransferResponse response)

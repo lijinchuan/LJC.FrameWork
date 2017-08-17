@@ -150,6 +150,8 @@
     <Compile Include="HostEntry.cs" />
     <Compile Include="HTTP\Server\HttpServer.cs" />
     <Compile Include="HTTP\Server\HttpSocket.cs" />
+    <Compile Include="HTTP\Server\IRESTfulHandler.cs" />
+    <Compile Include="HTTP\Server\RESTfulApiHandlerBase.cs" />
     <Compile Include="IAsyncOP.cs" />
     <Compile Include="IMAP\Client\IMAP_Client_CmdPart.cs" />
     <Compile Include="IMAP\Client\IMAP_Client_CmdPart_Type.cs" />

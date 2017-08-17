@@ -31,6 +31,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -72,6 +73,10 @@
     <Compile Include="SOAServerResponse.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\LJC.FrameWork.Net.csproj">
+      <Project>{7ab36ccf-5ffd-4780-a54e-a102eca028b5}</Project>
+      <Name>LJC.FrameWork.Net</Name>
+    </ProjectReference>
     <ProjectReference Include="..\LJC.FrameWork\LJC.FrameWork.csproj">
       <Project>{77c9b3f8-7ec5-4ab4-ad65-3b0cc9e1a914}</Project>
       <Name>LJC.FrameWork</Name>
