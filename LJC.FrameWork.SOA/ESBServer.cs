@@ -33,7 +33,7 @@ namespace LJC.FrameWork.SOA
             {
                 StringBuilder sb = new StringBuilder();
 
-                sb.AppendFormat("当前时间:{0}<br/><br/>",DateTime.Now.ToString("yyyy-MM-dd"));
+                sb.AppendFormat("当前时间:{0}<br/><br/>",DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
                 var servicelist = _esb.ServiceContainer.Select(p => p).ToList();
                 sb.AppendFormat("当前注册了{0}个服务实例<br/>", servicelist.Count);
                 if (servicelist.Count > 0)
@@ -45,7 +45,7 @@ namespace LJC.FrameWork.SOA
                         sb.AppendFormat("<tr>");
                         sb.AppendFormat("<td>{0}</td>", gp.Key);
                         sb.Append("<td>");
-                        sb.Append("<table>");
+                        sb.Append("<table  border=\"1\" cellspaing=\"1\" cellpadding=\"2\">");
                         sb.Append("<tr><td>ID</td><td>服务器地址</td><td>TCP直连</td><td>UDP直连</td></tr>");
                         foreach (var item in gp)
                         {

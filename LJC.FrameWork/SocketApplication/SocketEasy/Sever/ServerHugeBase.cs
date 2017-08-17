@@ -216,6 +216,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             appSocket.IsValid = true;
             appSocket.SessionID = SocketApplicationComm.GetSeqNum();
             appSocket.Socket = socket;
+            appSocket.Port = endPoint.Port;
             appSocket.ConnectTime = DateTime.Now;
 
             var socketAsyncEventArgs = e as IOCPSocketAsyncEventArgs;
