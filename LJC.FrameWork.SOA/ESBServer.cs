@@ -14,7 +14,7 @@ namespace LJC.FrameWork.SOA
     public class ESBServer:SocketEasy.Sever.SessionServer
     {
         private static object LockObj = new object();
-        internal List<ESBServiceInfo> ServiceContainer = new List<ESBServiceInfo>();
+        protected List<ESBServiceInfo> ServiceContainer = new List<ESBServiceInfo>();
         internal Dictionary<string,Session> ClientSessionList = new Dictionary<string,Session>();
         internal static ReaderWriterLockSlim ConatinerLock = new ReaderWriterLockSlim();
 
@@ -49,7 +49,7 @@ namespace LJC.FrameWork.SOA
                         sb.Append("<tr><td>ID</td><td>服务器地址</td><td>TCP直连</td><td>UDP直连</td></tr>");
                         foreach (var item in gp)
                         {
-                            sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td></tr>", item.ClientID, item.Session.IPAddress, item.Session.Port,
+                            sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td></tr>", item.Session.SessionID, item.Session.IPAddress, item.Session.Port,
                                 item.RedirectTcpIps == null ? "" : (string.Join(",", item.RedirectTcpIps) + ":" + item.RedirectTcpPort),
                                 item.RedirectUdpIps == null ? "" : (string.Join(",", item.RedirectUdpIps) + ":" + item.RedirectUdpPort));
                         }
