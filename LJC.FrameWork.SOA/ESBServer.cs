@@ -32,21 +32,34 @@ namespace LJC.FrameWork.SOA
             public bool Process(LJC.FrameWork.Net.HTTP.Server.HttpServer server, LJC.FrameWork.Net.HTTP.Server.HttpRequest request, LJC.FrameWork.Net.HTTP.Server.HttpResponse response, Dictionary<string, string> param)
             {
                 StringBuilder sb = new StringBuilder();
+                sb.Append(@"<style type=""text/css"">
+        table{
+            border:solid 1px lightblue; width:100%;
+        }
+        th{
+            height:30px;
+        }
 
+        td{
+            border-top:dashed 1px #ccc;
+            height:22px;
+        }
+
+    </style>                ");
                 sb.AppendFormat("当前时间:{0}<br/><br/>",DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
                 var servicelist = _esb.ServiceContainer.Select(p => p).ToList();
                 sb.AppendFormat("当前注册了{0}个服务实例<br/>", servicelist.Count);
                 if (servicelist.Count > 0)
                 {
-                    sb.AppendFormat("<table border=\"1\" cellspaing=\"1\" cellpadding=\"2\">");
-                    sb.AppendFormat("<tr><td>服务号</td><td>服务实例</td></tr>");
+                    sb.AppendFormat("<table>");
+                    sb.AppendFormat("<tr><th>服务号</th><th>服务实例</th></tr>");
                     foreach (var gp in servicelist.GroupBy(p => p.ServiceNo))
                     {
                         sb.AppendFormat("<tr>");
                         sb.AppendFormat("<td>{0}</td>", gp.Key);
                         sb.Append("<td>");
-                        sb.Append("<table  border=\"1\" cellspaing=\"1\" cellpadding=\"2\">");
-                        sb.Append("<tr><td>ID</td><td>服务器地址</td><td>TCP直连</td><td>UDP直连</td></tr>");
+                        sb.Append("<table>");
+                        sb.Append("<tr><th>ID</th><th>服务器地址</th><th>TCP直连</th><th>UDP直连</th></tr>");
                         foreach (var item in gp)
                         {
                             sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td></tr>", item.Session.SessionID, item.Session.IPAddress, item.Session.Port,
@@ -64,9 +77,9 @@ namespace LJC.FrameWork.SOA
                 sb.Append("<br/>");
                 var clients = _esb.GetConnectedList().Select(p => p).ToList();
                 sb.AppendFormat("当前连接了{0}个客户端", clients.Count);
-                sb.Append("<table  border=\"1\" cellspaing=\"1\" cellpadding=\"2\">");
+                sb.Append("<table>");
                 sb.Append("<tr>");
-                sb.AppendFormat("<td>clientid</td><td>地址</td><td>连接时间</td><td>上次心跳时间</td><td>连接时长(分)</td><td>发送字节</td><td>接收字节</td>");
+                sb.AppendFormat("<th>clientid</th><th>地址</th><th>连接时间</th><th>上次心跳时间</th><th>连接时长(分钟)</th><th>发送字节</th><th>接收字节</th>");
                 sb.Append("</tr>");
                 foreach (var item in clients)
                 {
@@ -81,15 +94,16 @@ namespace LJC.FrameWork.SOA
                 sb.Append("<br/>");
                 clients = _esb.ClientSessionList.Select(p => p).ToList();
                 sb.AppendFormat("当前活跃{0}个客户端", clients.Count);
-                sb.Append("<table  border=\"1\" cellspaing=\"1\" cellpadding=\"2\">");
+                sb.Append("<table>");
                 sb.Append("<tr>");
-                sb.AppendFormat("<td>clientid</td><td>地址</td><td>连接时间</td><td>上次心跳时间</td><td>连接时长</td>");
+                sb.AppendFormat("<th>clientid</th><th>地址</th><th>连接时间</th><th>上次心跳时间</th><th>连接时长(分钟)</th><th>发送字节</th><th>接收字节</th>");
                 sb.Append("</tr>");
                 foreach (var item in clients)
                 {
-                    sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
                         item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                        item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"),Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes,3));
+                        item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"),Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes,3),
+                        item.Value.BytesSend,item.Value.BytesRev);
                 }
                 sb.Append("</table>");
 
@@ -142,7 +156,7 @@ namespace LJC.FrameWork.SOA
                     resp.Result = response.Result;
 
                     msgRet.SetMessageBody(resp);
-                    session.Socket.SendMessge(msgRet);
+                    session.SendMessage(msgRet);
 
                     var toulp = (Tuple<int, int>)session.Tag;
 
@@ -243,7 +257,7 @@ namespace LJC.FrameWork.SOA
                 }
                 
                 msgRet.SetMessageBody(resp);
-                session.Socket.SendMessge(msgRet);
+                session.SendMessage(msgRet);
             }
             else
             {
@@ -340,7 +354,7 @@ namespace LJC.FrameWork.SOA
                 if (!resp.IsSuccess)
                 {
                     msgRet.SetMessageBody(resp);
-                    session.Socket.SendMessge(msgRet);
+                    session.SendMessage(msgRet);
                 }
             }
         }
@@ -387,7 +401,7 @@ namespace LJC.FrameWork.SOA
                         IsSuccess = false
                     });
                 }
-                session.Socket.SendMessge(msg);
+                session.SendMessage(msg);
                 return;
             }
             else if (message.IsMessage((int)SOAMessageType.UnRegisterService))
@@ -414,7 +428,7 @@ namespace LJC.FrameWork.SOA
                         ErrMsg = e.Message,
                     });
                 }
-                session.Socket.SendMessge(msg);
+                session.SendMessage(msg);
                 return;
             }
             else if (message.IsMessage((int)SOAMessageType.DoSOARequest))

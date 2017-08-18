@@ -278,7 +278,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
             //s.Send(msg.ToBytes());
             session.LastSessionTime = DateTime.Now;
-            session.Socket.SendMessge(msg);
+            session.SendMessage(msg);
 
             SocketApplicationComm.Debug(string.Format("{0}发来心跳！", session.SessionID));
         }
@@ -346,7 +346,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             responsemsg.SessionTimeOut = headBeatInt * 3;
             responsemsg.LoginFailReson = loginFailMsg;
             LoginSuccessMessage.SetMessageBody(responsemsg);
-            session.Socket.SendMessge(LoginSuccessMessage);
+            session.SendMessage(LoginSuccessMessage);
 
             if (!canLogin)
             {
@@ -364,7 +364,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         {
             Message msg = new Message(MessageType.LOGOUT);
 
-            session.Socket.SendMessge(msg);
+            session.SendMessage(msg);
             appSockets.Remove(session.SessionID);
             session.IsValid = false;
 
@@ -403,7 +403,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             if (ServerModeNeedLogin && !session.IsLogin && !message.IsMessage(MessageType.LOGIN))
             {
                 Message msg = new Message(MessageType.RELOGIN);
-                session.Socket.SendMessge(msg);
+                session.SendMessage(msg);
                 return;
             }
 

@@ -143,7 +143,7 @@ namespace LJC.FrameWork.SocketApplication
             if (this.Socket == null)
                 throw new Exception("无套接字");
 
-            var sendcount = this.Socket.SendMessge(msg);
+            var sendcount = this.Socket.SendMessage(msg);
 
             if (sendcount > 0)
             {

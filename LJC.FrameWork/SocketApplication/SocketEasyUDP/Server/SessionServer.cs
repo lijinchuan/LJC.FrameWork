@@ -111,7 +111,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
         {
             Message msg = new Message(MessageType.LOGOUT);
 
-            session.Socket.SendMessge(msg);
+            session.SendMessage(msg);
             lock (_sessiondic)
             {
                 _sessiondic.Remove(session.SessionID);

@@ -70,7 +70,7 @@ namespace LJC.FrameWork.SocketApplication
             }
         }
 
-        public static int SendMessge(this Socket s, Message message)
+        public static int SendMessage(this Socket s, Message message)
         {
             try
             {
