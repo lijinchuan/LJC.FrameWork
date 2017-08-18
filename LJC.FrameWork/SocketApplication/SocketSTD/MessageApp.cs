@@ -455,7 +455,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         {
             try
             {
-                return socketClient.SendMessge(message);
+                return socketClient.SendMessge(message) > 0;
             }
             catch (Exception e)
             {

@@ -108,6 +108,18 @@ namespace LJC.FrameWork.SocketApplication
             internal set;
         }
 
+        public long BytesRev
+        {
+            get;
+            set;
+        }
+
+        public long BytesSend
+        {
+            get;
+            set;
+        }
+
         internal Session()
         {
             HeadBeatInterVal = 10000;
@@ -131,14 +143,15 @@ namespace LJC.FrameWork.SocketApplication
             if (this.Socket == null)
                 throw new Exception("无套接字");
 
-            var boo = this.Socket.SendMessge(msg);
+            var sendcount = this.Socket.SendMessge(msg);
 
-            if (boo)
+            if (sendcount > 0)
             {
                 this.LastSessionTime = DateTime.Now;
+                this.BytesSend += sendcount;
             }
 
-            return boo;
+            return sendcount > 0;
         }
     }
 }

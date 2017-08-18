@@ -70,13 +70,13 @@ namespace LJC.FrameWork.SocketApplication
             }
         }
 
-        public static bool SendMessge(this Socket s, Message message)
+        public static int SendMessge(this Socket s, Message message)
         {
             try
             {
                 if (s == null)
                 {
-                    return false;
+                    return 0;
                 }
 
                 byte[] data = null;
@@ -109,7 +109,7 @@ namespace LJC.FrameWork.SocketApplication
                             LogManager.LogHelper.Instance.Debug(s.Handle + "发送数据:" + message.MessageHeader.TransactionID + "长度:" + data.Length + ", " + Convert.ToBase64String(data));
                         }
 
-                        return sendcount > 0;
+                        return sendcount;
                     }
                 }
                 else
@@ -151,7 +151,7 @@ namespace LJC.FrameWork.SocketApplication
                                 throw new Exception(senderror.ToString());
                             }
                         }
-                        return sendcount > 0;
+                        return sendcount;
                     }
                     finally
                     {

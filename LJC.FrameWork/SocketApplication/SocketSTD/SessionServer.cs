@@ -37,7 +37,8 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             using (AutoReSetEventResult autoResetEvent = new AutoReSetEventResult(reqID))
             {
                 watingEvents.Add(reqID, autoResetEvent);
-                if (s.Socket.SendMessge(message))
+
+                if (s.SendMessage(message))
                 {
                     WaitHandle.WaitAny(new WaitHandle[] { autoResetEvent }, timeOut);
 

@@ -66,13 +66,14 @@ namespace LJC.FrameWork.SOA
                 sb.AppendFormat("当前连接了{0}个客户端", clients.Count);
                 sb.Append("<table  border=\"1\" cellspaing=\"1\" cellpadding=\"2\">");
                 sb.Append("<tr>");
-                sb.AppendFormat("<td>clientid</td><td>地址</td><td>连接时间</td><td>上次心跳时间</td><td>连接时长</td>");
+                sb.AppendFormat("<td>clientid</td><td>地址</td><td>连接时间</td><td>上次心跳时间</td><td>连接时长(分)</td><td>发送字节</td><td>接收字节</td>");
                 sb.Append("</tr>");
                 foreach (var item in clients)
                 {
-                    sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
                         item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                        item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes);
+                        item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes, 3),
+                        item.Value.BytesSend, item.Value.BytesRev);
                 }
                 sb.Append("</table>");
 
@@ -88,7 +89,7 @@ namespace LJC.FrameWork.SOA
                 {
                     sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
                         item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                        item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"),item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes);
+                        item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"),Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes,3));
                 }
                 sb.Append("</table>");
 
