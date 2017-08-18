@@ -88,6 +88,10 @@ namespace LJC.FrameWork.SOA
                         item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes, 3),
                         item.Value.BytesSend, item.Value.BytesRev);
                 }
+                if (clients.Count > 0)
+                {
+                    sb.AppendFormat("<tr><td colspan='5'>{0}</td><td>{1}kb</td><td>{2}kb</td></tr>", "合计", (clients.Sum(p => p.Value.BytesSend) / 1024), (clients.Sum(p => p.Value.BytesRev) / 1024));
+                }
                 sb.Append("</table>");
 
                 //客户端
@@ -100,7 +104,7 @@ namespace LJC.FrameWork.SOA
                 sb.Append("</tr>");
                 foreach (var item in clients)
                 {
-                    sb.AppendFormat("<tr><th>{0}</th><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>", item.Key, item.Value.SessionID, item.Value.IPAddress, item.Value.Port,
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>", item.Key, item.Value.SessionID, item.Value.IPAddress, item.Value.Port,
                         item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
                         item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes, 3),
                         item.Value.BytesSend, item.Value.BytesRev);
