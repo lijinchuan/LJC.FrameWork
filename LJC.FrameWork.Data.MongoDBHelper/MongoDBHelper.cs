@@ -218,9 +218,41 @@ namespace LJC.FrameWork.Data.Mongo
             return list;
         }
 
+        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, int pageindex, int pagesize, string[] fields, MongoSortWarpper sorts)
+        {
+            var mongoquery = querys == null ? Query.Null : querys.MongoQuery;
+            var mongocollection = GetCollecion<T>(connectionName, database, collection);
+            var mongosortby = (sorts == null || sorts.MongoSortBy == SortBy.Null) ? SortBy.Null : sorts.MongoSortBy;
+            int skip = (pageindex - 1) * pagesize;
+
+            MongoCursor<T> mongocursor = null;
+            if (mongosortby != SortBy.Null)
+            {
+                mongocursor = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize).SetSortOrder(mongosortby);
+            }
+            else
+            {
+                mongocursor = mongocollection.FindAs<T>(mongoquery).SetSkip(skip).SetLimit(pagesize);
+            }
+
+            if (fields != null && fields.Length > 0)
+            {
+                mongocursor = mongocursor.SetFields(fields);
+            }
+
+            List<T> list = mongocursor.ToList();
+
+            return list;
+        }
+
         public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, int pageindex, int pagesize, MongoFieldSelecter<T> fieldselecter, MongoSortWarpper<T> sorts, out long total) where T : new()
         {
             return Find<T>(connectionName, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, fieldselecter == null ? null : fieldselecter.GetFields(), (MongoSortWarpper)sorts, out total);
+        }
+
+        public static List<T> Find<T>(string connectionName, string database, string collection, MongoQueryWarpper<T> querys, int pageindex, int pagesize, MongoFieldSelecter<T> fieldselecter, MongoSortWarpper<T> sorts) where T : new()
+        {
+            return Find<T>(connectionName, database, collection, (MongoQueryWarpper)querys, pageindex, pagesize, fieldselecter == null ? null : fieldselecter.GetFields(), (MongoSortWarpper)sorts);
         }
 
         public static T FindOneByIdAs<T>(string connectionName, string database, string collection, string id)
