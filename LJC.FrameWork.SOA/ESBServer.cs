@@ -62,6 +62,14 @@ namespace LJC.FrameWork.SOA
                         sb.Append("<tr><th>ID</th><th>服务器地址</th><th>TCP直连</th><th>UDP直连</th></tr>");
                         foreach (var item in gp)
                         {
+                            if (DateTime.Now.Subtract(item.Session.LastSessionTime).TotalMinutes > 1)
+                            {
+                                lock (this._esb.ServiceContainer)
+                                {
+                                    _esb.ServiceContainer.Remove(item);
+                                }
+                            }
+
                             sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td></tr>", item.Session.SessionID, item.Session.IPAddress, item.Session.Port,
                                 item.RedirectTcpIps == null ? "" : (string.Join(",", item.RedirectTcpIps) + ":" + item.RedirectTcpPort),
                                 item.RedirectUdpIps == null ? "" : (string.Join(",", item.RedirectUdpIps) + ":" + item.RedirectUdpPort));
@@ -81,8 +89,20 @@ namespace LJC.FrameWork.SOA
                 sb.Append("<tr>");
                 sb.AppendFormat("<th>clientid</th><th>地址</th><th>连接时间</th><th>上次心跳时间</th><th>连接时长(分钟)</th><th>发送字节</th><th>接收字节</th>");
                 sb.Append("</tr>");
+                HashSet<string> clienthash = new HashSet<string>();
                 foreach (var item in clients)
                 {
+                    if (!clienthash.Contains(item.Key))
+                    {
+                        clienthash.Add(item.Key);
+                    }
+
+                    if(DateTime.Now.Subtract(item.Value.LastSessionTime).TotalMinutes>1)
+                    {
+                        Session removesession=null;
+                        _esb.GetConnectedList().TryRemove(item.Key, out removesession);
+                    }
+
                     sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
                         item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
                         item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes, 3),
@@ -104,6 +124,14 @@ namespace LJC.FrameWork.SOA
                 sb.Append("</tr>");
                 foreach (var item in clients)
                 {
+                    if (!clienthash.Contains(item.Value.SessionID))
+                    {
+                        lock (_esb.ClientSessionList)
+                        {
+                            _esb.ClientSessionList.Remove(item.Key);
+                        }
+                    }
+
                     sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>", item.Key, item.Value.SessionID, item.Value.IPAddress, item.Value.Port,
                         item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
                         item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes, 3),

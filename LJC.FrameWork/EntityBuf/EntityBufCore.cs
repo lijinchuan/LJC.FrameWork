@@ -514,14 +514,6 @@ namespace LJC.FrameWork.EntityBuf
 
         public static void Serialize(object o, BufferPollManager poolmanager, ref int bufferindex, ref long size, ref byte[] serbyte,bool compress=true)
         {
-            if (o != null && o is byte[])
-            {
-                bufferindex = -1;
-                serbyte = (byte[])o;
-                size = serbyte.Length;
-                return;
-            }
-
             MemoryStreamWriter writer = new MemoryStreamWriter(poolmanager);
 
             Serialize(o, writer);
@@ -560,14 +552,7 @@ namespace LJC.FrameWork.EntityBuf
         public static void Serialize(object o, string file, bool compress = true)
         {
             byte[] results = null;
-            if (o != null && o is byte[])
-            {
-                results = (byte[])o;
-            }
-            else
-            {
-                results = Serialize(o, compress);
-            }
+            results = Serialize(o, compress);
             using (FileStream fs=new FileStream(file,FileMode.Create))
             {
                 int len = results.Length;
