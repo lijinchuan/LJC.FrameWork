@@ -404,6 +404,55 @@ namespace LJC.FrameWork.Data.Mongo
             return Update<T>(connectionName, database, collection, (MongoQueryWarpper)querys, (MongoUpdateWarpper)updates, flgs);
         }
 
+        public static long Incr<T>(string connectionName, string database, string collection, MongoQueryWarpper querys, string field, long incr)
+        {
+            MongoUpdateWarpper updates = new MongoUpdateWarpper();
+            updates.Incr(field, incr);
+
+            IMongoQuery mongoquery = querys == null ? Query.Null : querys.MongoQuery;
+
+            MD.Builders.UpdateBuilder updateBuilder = updates.MongoUpdateBuilder;
+            if (updateBuilder != null)
+            {
+                var mongocollection = GetCollecion<T>(connectionName, database, collection);
+
+                var result = mongocollection.Update(mongoquery, updates.MongoUpdateBuilder, UpdateFlags.Upsert);
+                if (!result.UpdatedExisting)
+                {
+                    return incr;
+                }
+
+                var entity = mongocollection.FindOneAs<T>(querys.MongoQuery);
+                var property = typeof(T).GetProperty(field);
+
+                if (property == null)
+                {
+                    foreach (var mb in typeof(T).GetMembers())
+                    {
+                        var ca = mb.GetCustomAttributes(typeof(MB.Serialization.Attributes.BsonElementAttribute), true).FirstOrDefault();
+                        if (ca == null)
+                        {
+                            continue;
+                        }
+                        if (((MB.Serialization.Attributes.BsonElementAttribute)ca).ElementName.Equals(field))
+                        {
+                            property = typeof(T).GetProperty(mb.Name);
+                            break;
+                        }
+                    }
+                }
+
+                if (property == null)
+                {
+                    return 0;
+                }
+
+                return (long)(Convert.ChangeType(property.GetValue(entity, null), typeof(Int64)));
+            }
+
+            return 0;
+        }
+
         public static bool Remove(string connectionName, string database, string collection, MongoQueryWarpper querys)
         {
             if (querys == null)
