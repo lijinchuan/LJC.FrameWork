@@ -126,7 +126,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             else
             {
                 _logger = new LocalFileQueueCfg();
-                _logger.LastChageTime = Environment.TickCount;
+                _logger.LastChageTime = Environment.TickCount & Int32.MaxValue;
                 _logger.QueueFile = queuefilepath;
                 SaveConfig();
             }
@@ -136,11 +136,11 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
 
         private void TimerAction(object o)
         {
-            var tc = Environment.TickCount;
+            var tc = Environment.TickCount & Int32.MaxValue;
             try
             {
                 _backtimer.Change(Timeout.Infinite, Timeout.Infinite);
-                if (_queueWriter != null&&!this._isdispose)
+                if (_queueWriter != null && !this._isdispose)
                 {
                     _queueWriter.Flush();
                 }
@@ -154,7 +154,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             }
             finally
             {
-                _backtimer.Change(1000 - (Environment.TickCount - tc), 0);
+                _backtimer.Change(Math.Max(1000 - (Environment.TickCount & Int32.MaxValue - tc), 0), 0);
             }
         }
 
@@ -216,7 +216,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
                     {
                         errortimes = 0;
                         _logger.LastPos = _queueReader.ReadedPostion();
-                        _logger.LastChageTime = Environment.TickCount;
+                        _logger.LastChageTime = Environment.TickCount & Int32.MaxValue;
 
                         if (OnProcessQueueSuccessed != null)
                         {

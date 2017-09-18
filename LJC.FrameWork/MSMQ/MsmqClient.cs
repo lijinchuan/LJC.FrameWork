@@ -211,7 +211,7 @@ namespace LJC.FrameWork.MSMQ
                     _mq.Value.Send(submsg);
                 }
             }
-            _lastActivityMills = Environment.TickCount;
+            _lastActivityMills = Environment.TickCount & Int32.MaxValue;
         }
 
         private static bool IsTimeOutEx(Exception ex)
@@ -307,7 +307,7 @@ namespace LJC.FrameWork.MSMQ
                 }
             }
 
-            _lastActivityMills = Environment.TickCount;
+            _lastActivityMills = Environment.TickCount & Int32.MaxValue;
         }
 
         private bool _isDisposed = false;

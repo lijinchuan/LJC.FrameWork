@@ -534,7 +534,7 @@ namespace LJC.FrameWork.Comm
         {
             
             var ret = new HttpResponseEx();
-            ret.RequestMills = Environment.TickCount;
+            ret.RequestMills = Environment.TickCount & Int32.MaxValue;
             
             try
             {
@@ -668,7 +668,7 @@ namespace LJC.FrameWork.Comm
                 ret.ErrorMsg = ex;
             }
 
-            ret.RequestMills = Environment.TickCount - ret.RequestMills;
+            ret.RequestMills = Environment.TickCount & Int32.MaxValue - ret.RequestMills;
             return ret;
         }
         #endregion

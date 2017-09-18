@@ -227,7 +227,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                             }
                             else
                             {
-                                Console.WriteLine(Environment.TickCount + ":收确认:" + bagid);
+                                Console.WriteLine((Environment.TickCount & Int32.MaxValue) + ":收确认:" + bagid);
                                 if (_sendmsgflag.BagId == bagid)
                                 {
                                     _sendmsgflag.Set();

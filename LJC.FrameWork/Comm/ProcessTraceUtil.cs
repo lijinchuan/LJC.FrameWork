@@ -36,7 +36,7 @@ namespace LJC.FrameWork.Comm
         {
             try
             {
-                TraceDic[Thread.CurrentThread.ManagedThreadId].Enqueue(new Tuple<string, long>(message, Environment.TickCount));
+                TraceDic[Thread.CurrentThread.ManagedThreadId].Enqueue(new Tuple<string, long>(message, Environment.TickCount & Int32.MaxValue));
             }
             catch { }
         }
@@ -45,7 +45,7 @@ namespace LJC.FrameWork.Comm
         {
             try
             {
-                return Environment.TickCount - TraceDic[Thread.CurrentThread.ManagedThreadId].First().Item2;
+                return Environment.TickCount & Int32.MaxValue - TraceDic[Thread.CurrentThread.ManagedThreadId].First().Item2;
             }
             catch
             {

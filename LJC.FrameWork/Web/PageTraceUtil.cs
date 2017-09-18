@@ -41,7 +41,7 @@ namespace LJC.FrameWork.Web
             {
                 var context = System.Web.HttpContext.Current;
                 var dic=TraceDic[context.Items[TraceIDName].ToString()];
-                dic.Enqueue(new Tuple<string, long>(message, Environment.TickCount));
+                dic.Enqueue(new Tuple<string, long>(message, Environment.TickCount & Int32.MaxValue));
 
                 if (!context.Items.Contains(SessionIDName) && context.Session != null)
                 {
@@ -55,7 +55,7 @@ namespace LJC.FrameWork.Web
         {
             try
             {
-                return Environment.TickCount - TraceDic[System.Web.HttpContext.Current.Items[TraceIDName].ToString()].First().Item2;
+                return Environment.TickCount & Int32.MaxValue - TraceDic[System.Web.HttpContext.Current.Items[TraceIDName].ToString()].First().Item2;
             }
             catch
             {
