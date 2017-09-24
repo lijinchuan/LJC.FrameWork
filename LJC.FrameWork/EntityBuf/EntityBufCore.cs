@@ -576,11 +576,11 @@ namespace LJC.FrameWork.EntityBuf
                 msWriter.WriteByte((byte)flag);
             }
 
-            Tuple<EntityBufType, bool> touple = GetTypeBufType(o.GetType());
+            Tuple<EntityBufType, bool> tuple = GetTypeBufType(o.GetType());
 
-            if (touple.Item1.EntityType != EntityType.COMPLEX)
+            if (tuple.Item1.EntityType != EntityType.COMPLEX)
             {
-                SerializeSimple(o, touple.Item2, touple.Item1, msWriter);
+                SerializeSimple(o, tuple.Item2, tuple.Item1, msWriter);
                 return;
             }
 
