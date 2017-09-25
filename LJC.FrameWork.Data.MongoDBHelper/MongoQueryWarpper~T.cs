@@ -127,5 +127,17 @@ namespace LJC.FrameWork.Data.Mongo
             base.Or(query);
             return this;
         }
+
+        public MongoQueryWarpper Matches(Expression<Func<T, object>> name, string pattern)
+        {
+            base.Matches(MongoDBUtil.GetMongoElementField(name.Body), pattern);
+            return this;
+        }
+
+        public MongoQueryWarpper ElemMatch(Expression<Func<T, object>> name, MongoQueryWarpper query)
+        {
+            base.ElemMatch(MongoDBUtil.GetMongoElementField(name.Body), query);
+            return this;
+        }
     }
 }

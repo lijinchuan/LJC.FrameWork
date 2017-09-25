@@ -222,5 +222,27 @@ namespace LJC.FrameWork.Data.Mongo
             MongoQuery = Query.Or(MongoQuery, query.MongoQuery);
             return this;
         }
+
+        public MongoQueryWarpper Matches(string name, string pattern)
+        {
+            if (MongoQuery == Query.Null)
+            {
+                MongoQuery = Query.Matches(name, new BsonRegularExpression(pattern));
+                return this;
+            }
+            MongoQuery = Query.And(MongoQuery, Query.Matches(name, new BsonRegularExpression(pattern)));
+            return this;
+        }
+
+        public MongoQueryWarpper ElemMatch(string name, MongoQueryWarpper query)
+        {
+            if (MongoQuery == Query.Null)
+            {
+                MongoQuery = Query.ElemMatch(name, query.MongoQuery);
+                return this;
+            }
+            MongoQuery = Query.And(MongoQuery, Query.ElemMatch(name, query.MongoQuery));
+            return this;
+        }
     }
 }
