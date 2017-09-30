@@ -1,5 +1,6 @@
 ﻿using LJC.FrameWork.Net.HTTP.Server;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,11 @@ namespace TestHttpServer
     {
         static void Main(string[] args)
         {
+            var bts = BitConverter.GetBytes(true);
+            var bts2 = BitConverter.GetBytes(false);
+            BitArray ba = new BitArray(new bool[] { true, true, true, false, true, true, true, true, true,true });
+            byte[] bt=new byte[(int)Math.Ceiling(ba.Length/8.0)];
+            ba.CopyTo(bt, 0);
             decimal d = 1.21M;
             Console.WriteLine(d % 1);
 

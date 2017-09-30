@@ -338,15 +338,15 @@ namespace LJC.FrameWork.EntityBuf
                 flag |= LongTypeEnum.ByteVal;
                 byts = new byte[] { (byte)num };
             }
-            else if (num < ushort.MaxValue)
+            else if (num < short.MaxValue)
             {
                 flag |= LongTypeEnum.ShortVal;
-                byts = BitConverter.GetBytes((ushort)num);
+                byts = BitConverter.GetBytes((short)num);
             }
-            else if (num < UInt32.MaxValue)
+            else if (num < int.MaxValue)
             {
                 flag |= LongTypeEnum.IntVal;
-                byts = BitConverter.GetBytes((UInt32)num);
+                byts = BitConverter.GetBytes((int)num);
             }
             else
             {
