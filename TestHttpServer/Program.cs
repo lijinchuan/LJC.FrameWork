@@ -10,13 +10,25 @@ namespace TestHttpServer
     {
         static void Main(string[] args)
         {
-            HttpServer http = new HttpServer(new Server(8081));
-            http.Handlers.Add(new SubstitutingFileReader());
-            http.Handlers.Add(new RESTfulApiHandlerBase(HMethod.GET, "/api/patientinfo", new List<string>() { "Function", "UserJID" }, new PatientGetHander()));
-            http.Handlers.Add(new RESTfulApiHandlerBase(HMethod.POST, "/api/patientinfo", new List<string>() { "Function", "UserJID" }, new PatientPostHander()));
-            http.Handlers.Add(new RESTfulApiHandlerBase(HMethod.DELETE, "/api/patientinfo", new List<string>() { "Function", "UserJID" }, new PatientDeleteHander()));
-            http.Handlers.Add(new RESTfulApiHandlerBase(HMethod.PUT, "/api/patientinfo", new List<string>() { "Function", "UserJID" }, new PatientPutHander()));
-            Console.WriteLine("服务已启动，点击任何按键退出");
+            decimal d = 1.21M;
+            Console.WriteLine(d % 1);
+
+
+            var total = new DateTime(1899, 12, 31).Subtract(new DateTime(1970, 1, 1)).TotalMilliseconds;
+            var defaultchar = default(char);
+
+            Console.WriteLine("MaxValue:" + Byte.MaxValue);
+            Console.WriteLine("uint16:" + UInt16.MaxValue);
+            Console.WriteLine("uint32:" + UInt32.MaxValue);
+            Console.WriteLine("uint64:" + UInt64.MaxValue);
+
+            //HttpServer http = new HttpServer(new Server(8081));
+            //http.Handlers.Add(new SubstitutingFileReader());
+            //http.Handlers.Add(new RESTfulApiHandlerBase(HMethod.GET, "/api/patientinfo", new List<string>() { "Function", "UserJID" }, new PatientGetHander()));
+            //http.Handlers.Add(new RESTfulApiHandlerBase(HMethod.POST, "/api/patientinfo", new List<string>() { "Function", "UserJID" }, new PatientPostHander()));
+            //http.Handlers.Add(new RESTfulApiHandlerBase(HMethod.DELETE, "/api/patientinfo", new List<string>() { "Function", "UserJID" }, new PatientDeleteHander()));
+            //http.Handlers.Add(new RESTfulApiHandlerBase(HMethod.PUT, "/api/patientinfo", new List<string>() { "Function", "UserJID" }, new PatientPutHander()));
+            //Console.WriteLine("服务已启动，点击任何按键退出");
             Console.ReadKey();
         }
     }

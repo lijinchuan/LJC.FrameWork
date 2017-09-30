@@ -625,20 +625,20 @@ namespace LJC.FrameWork.EntityBuf
                     flag |= DecimalTypeFlag.ByteVal;
                     byts = new byte[] { (byte)data };
                 }
-                else if (data <= ushort.MaxValue)
+                else if (data <= short.MaxValue)
                 {
                     flag |= DecimalTypeFlag.ShortVal;
-                    byts = BitConverter.GetBytes((ushort)data);
+                    byts = BitConverter.GetBytes((short)data);
                 }
-                else if (data <= UInt32.MaxValue)
+                else if (data <= int.MaxValue)
                 {
                     flag |= DecimalTypeFlag.IntVal;
-                    byts = BitConverter.GetBytes((UInt32)data);
+                    byts = BitConverter.GetBytes((int)data);
                 }
-                else if (data <= UInt64.MaxValue)
+                else if (data <= long.MaxValue)
                 {
                     flag |= DecimalTypeFlag.Int64Val;
-                    byts = BitConverter.GetBytes((UInt64)data);
+                    byts = BitConverter.GetBytes((long)data);
                 }
             }
             else if ((mod * 10 % 1 == 0&&data<=9999999)
@@ -676,7 +676,7 @@ namespace LJC.FrameWork.EntityBuf
             _ms.Write(BitConverter.GetBytes(data.Length), 0, 4);
             foreach (decimal d in data)
             {
-                WriteDouble((double)d);
+                WriteDecimal(d);
             }
         }
 
