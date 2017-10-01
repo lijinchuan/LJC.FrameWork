@@ -179,7 +179,7 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteInt16Array(Int16[] numArray)
         {
-            CheckBufferPoll(numArray == null ? 1 : 4);
+            CheckBufferPoll(4);
 
             if (numArray == null)
             {
@@ -223,7 +223,7 @@ namespace LJC.FrameWork.EntityBuf
 
         public void WriteUInt16Array(UInt16[] numArray)
         {
-            CheckBufferPoll(numArray == null ? 1 : 4);
+            CheckBufferPoll(4);
 
             if (numArray == null)
             {
@@ -313,6 +313,29 @@ namespace LJC.FrameWork.EntityBuf
                 {
                     WriteInt32(num);
                 }
+            }
+        }
+
+        public void WriteChar(char num)
+        {
+            CheckBufferPoll(2);
+            _ms.Write(BitConverter.GetBytes(num), 0, 2);
+        }
+
+        public void WriteCharArray(char[] numArray)
+        {
+            CheckBufferPoll(4);
+            if (numArray == null)
+            {
+                _ms.Write(bytesNull, 0, 4);
+                return;
+            }
+
+            int len = numArray.Length;
+            WriteInt32(len);
+            foreach (char i in numArray)
+            {
+                WriteChar(i);
             }
         }
 
@@ -748,6 +771,28 @@ namespace LJC.FrameWork.EntityBuf
             //}
             //_ms.WriteByte((byte)flag);
             //_ms.Write(buffer, 0, buffer.Length);
+        }
+
+        public void WriteFloat(float data)
+        {
+            byte[] bytes = BitConverter.GetBytes(data);
+
+            _ms.Write(bytes, 0, bytes.Length);
+        }
+
+        public void WriteFloatArray(float[] data)
+        {
+            if (data == null || data.Length == 0)
+            {
+                WriteInt32(-1);
+                // WriteInt32(bytesNull, 0, 4);
+                return;
+            }
+            WriteInt32(data.Length);
+            foreach (float d in data)
+            {
+                WriteFloat(d);
+            }
         }
 
         void IDisposable.Dispose()

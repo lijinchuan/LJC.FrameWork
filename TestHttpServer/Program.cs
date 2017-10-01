@@ -11,7 +11,7 @@ namespace TestHttpServer
     {
         static void Main(string[] args)
         {
-            var bts = BitConverter.GetBytes(true);
+            var bts = BitConverter.GetBytes('a');
             var bts2 = BitConverter.GetBytes(false);
             BitArray ba = new BitArray(new bool[] { true, true, true, false, true, true, true, true, true,true });
             byte[] bt=new byte[(int)Math.Ceiling(ba.Length/8.0)];

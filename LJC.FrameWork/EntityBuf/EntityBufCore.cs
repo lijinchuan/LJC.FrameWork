@@ -320,6 +320,16 @@ namespace LJC.FrameWork.EntityBuf
                         msWriter.WriteInt32((Int32)val);
                     }
                     break;
+                case EntityType.CHAR:
+                     if (isArray)
+                    {
+                        msWriter.WriteCharArray((char[])val);
+                    }
+                    else
+                    {
+                        msWriter.WriteChar((char)val);
+                    }
+                    break;
                 case EntityType.DECIMAL:
                     if (isArray)
                     {
@@ -338,6 +348,16 @@ namespace LJC.FrameWork.EntityBuf
                     else
                     {
                         msWriter.WriteDouble((double)val);
+                    }
+                    break;
+                case EntityType.FLOAT:
+                    if (isArray)
+                    {
+                        msWriter.WriteFloatArray((float[])val);
+                    }
+                    else
+                    {
+                        msWriter.WriteFloat((float)val);
                     }
                     break;
                 case EntityType.INT64:
