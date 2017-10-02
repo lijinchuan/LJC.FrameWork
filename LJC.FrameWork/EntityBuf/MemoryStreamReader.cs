@@ -441,7 +441,7 @@ namespace LJC.FrameWork.EntityBuf
             decimal[] arr = new decimal[len];
             for (int i = 0; i < len; i++)
             {
-                arr[i] = (decimal)_reader.ReadDouble();
+                arr[i] = this.ReadDecimal();
             }
             return arr;
         }
