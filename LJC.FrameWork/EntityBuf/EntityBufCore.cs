@@ -758,6 +758,15 @@ namespace LJC.FrameWork.EntityBuf
                     {
                         return msReader.ReadString();
                     }
+                case EntityType.CHAR:
+                    if (isArray)
+                    {
+                        return msReader.ReadCharArray();
+                    }
+                    else
+                    {
+                        return msReader.ReadChar();
+                    }
                 case EntityType.SHORT:
                 case EntityType.INT16:
                     if (isArray)
@@ -804,6 +813,14 @@ namespace LJC.FrameWork.EntityBuf
                     else
                     {
                         return msReader.ReadDouble();
+                    }
+                case EntityType.FLOAT:
+                    if(isArray){
+                        return msReader.ReadFloatArray();
+                    }
+                    else
+                    {
+                        return msReader.ReadFloat();
                     }
                 case EntityType.DECIMAL:
                     if (isArray)

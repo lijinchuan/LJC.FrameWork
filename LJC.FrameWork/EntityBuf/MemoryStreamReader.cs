@@ -494,6 +494,42 @@ namespace LJC.FrameWork.EntityBuf
             //return ret;
         }
 
+        public float ReadFloat()
+        {
+            return _reader.ReadSingle();
+        }
+
+        public float[] ReadFloatArray()
+        {
+            int len = this.ReadInt32();
+            if (len == -1)
+                return null;
+            float[] arr = new float[len];
+            for (int i = 0; i < len; i++)
+            {
+                arr[i] = ReadFloat();
+            }
+            return arr;
+        }
+
+        public char ReadChar()
+        {
+            return _reader.ReadChar();
+        }
+
+        public char[] ReadCharArray()
+        {
+            int len = this.ReadInt32();
+            if (len == -1)
+                return null;
+            char[] arr = new char[len];
+            for (int i = 0; i < len; i++)
+            {
+                arr[i] = ReadChar();
+            }
+            return arr;
+        }
+
         void IDisposable.Dispose()
         {
             if (_reader != null)
