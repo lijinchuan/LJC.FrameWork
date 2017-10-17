@@ -51,7 +51,7 @@ namespace LJC.FrameWork.SOA
 
             _esbConfig= LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<ESBConfig>(configfile,true);
             if (_esbConfig.ESBServer.IndexOf('.') == -1
-                ||_esbConfig.ESBServer.IndexOf(':')==-1)
+                &&_esbConfig.ESBServer.IndexOf(':')==-1)
             {
                 var ipaddress = System.Net.Dns.GetHostAddresses(_esbConfig.ESBServer);
                 if (ipaddress == null)
