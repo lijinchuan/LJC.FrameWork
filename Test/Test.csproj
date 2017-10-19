@@ -84,8 +84,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GetPersonRequest.cs" />
+    <Compile Include="GetPersonResponse.cs" />
     <Compile Include="Man.cs" />
     <Compile Include="MySession.cs" />
+    <Compile Include="NewPersonInfo.cs" />
     <Compile Include="PrestigeInfo_CompareEntity.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
