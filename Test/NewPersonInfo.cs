@@ -24,5 +24,23 @@ namespace Test
             get;
             set;
         }
+
+        public String[] Friends
+        {
+            get;
+            set;
+        }
+
+        public Dictionary<String, NewPersonInfo> FriendsInfo
+        {
+            get;
+            set;
+        }
+
+        public List<String> Schools
+        {
+            get;
+            set;
+        }
     }
 }
