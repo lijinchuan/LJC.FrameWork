@@ -131,10 +131,15 @@ namespace Test
 
         static void Main(string[] args)
         {
-            var info=LJC.FrameWork.SOA.ESBClient.DoSOARequest<GetPersonResponse>(1000, 1, new GetPersonRequest
+            for (int ik = 0; ik < 10; ik++)
             {
-                Id=9999
-            });
+                var info = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<GetPersonResponse>(1000, 1, new GetPersonRequest
+                {
+                    Id = 9999
+                });
+            }
+
+            Console.Read();
 
             return;
             int ix = 0;
