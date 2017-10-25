@@ -131,12 +131,23 @@ namespace Test
 
         static void Main(string[] args)
         {
-            for (int ik = 0; ik < 10; ik++)
+            ShellUtil.CallShell(@"E:\Work\learn\Git\Ljc.JFrameWork\lib\JavaService-2.0.10.64\install.bat", null);
+            return;
+            int cnt=0;
+            while ((cnt++) < 3)
             {
-                var info = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<GetPersonResponse>(1000, 1, new GetPersonRequest
+                long l1 = Environment.TickCount & long.MaxValue;
+                for (int ik = 0; ik < 10000; ik++)
                 {
-                    Id = 9999
-                });
+                    var info = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<GetPersonResponse>(1000, 1, new GetPersonRequest
+                    {
+                        Id = 9999
+                    });
+                }
+
+                long l2 = Environment.TickCount & long.MaxValue;
+
+                Console.WriteLine(l2 - l1);
             }
 
             Console.Read();

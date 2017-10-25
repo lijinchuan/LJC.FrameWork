@@ -320,12 +320,12 @@ namespace LJC.FrameWork.SOA
                 List<ESBClientPoolManager> poolmanagerlist = null;
                 if (_esbClientDicManager.TryGetValue(serviceId, out poolmanagerlist) && poolmanagerlist != null && poolmanagerlist.Count > 0)
                 {
-                    Console.WriteLine("直连了");
+                    //Console.WriteLine("直连了");
                     var poolmanager = poolmanagerlist.Count == 1 ? poolmanagerlist[0]
                     : poolmanagerlist[new Random().Next(0, poolmanagerlist.Count)];
 
                     var client=poolmanager.RandClient();
-                    LogHelper.Instance.Debug("功能"+serviceId+"直连" + client.ipString + ":" + client.ipPort);
+                    //LogHelper.Instance.Debug("功能"+serviceId+"直连" + client.ipString + ":" + client.ipPort);
                     return client.DoRequest<T>(functionId, param);
                 }
                 else

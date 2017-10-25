@@ -193,6 +193,7 @@
     <Compile Include="Comm\SerializerHelper.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Comm\ShellUtil.cs" />
     <Compile Include="Comm\SingleTimer.cs">
       <SubType>Component</SubType>
     </Compile>
