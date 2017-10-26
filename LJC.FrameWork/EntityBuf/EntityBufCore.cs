@@ -17,7 +17,7 @@ namespace LJC.FrameWork.EntityBuf
         private static ReaderWriterLockSlim EntityBufTypeDicLockSlim = new ReaderWriterLockSlim();
         private static ReaderWriterLockSlim TypeBufTypeDicLockSlim = new ReaderWriterLockSlim();
 
-        private static byte complexchar=(byte)'\f';
+        //private static byte complexchar=(byte)'\f';
 
         /// <summary>
         /// 类型缓存
@@ -248,8 +248,8 @@ namespace LJC.FrameWork.EntityBuf
             }
             else
             {
-                msWriter.WriteByte(complexchar);
-                msWriter.WriteByte(complexchar);
+                //msWriter.WriteByte(complexchar);
+                //msWriter.WriteByte(complexchar);
 
                 if (val != null)
                 {
@@ -1053,20 +1053,20 @@ namespace LJC.FrameWork.EntityBuf
                     }
                     else
                     {
-                        byte byte1 = 0;
-                        byte byte2 = 0;
-                        while (true)
-                        {
-                            byte1 = msReader.ReadByte();
-                            if (byte1 == complexchar)
-                            {
-                                byte2 = msReader.ReadByte();
-                                if (byte2 == complexchar)
-                                {
-                                    break;
-                                }
-                            }
-                        }
+                        //byte byte1 = 0;
+                        //byte byte2 = 0;
+                        //while (true)
+                        //{
+                        //    byte1 = msReader.ReadByte();
+                        //    if (byte1 == complexchar)
+                        //    {
+                        //        byte2 = msReader.ReadByte();
+                        //        if (byte2 == complexchar)
+                        //        {
+                        //            break;
+                        //        }
+                        //    }
+                        //}
 
                         //读下标志
                         EntityBufTypeFlag flag=(EntityBufTypeFlag)msReader.ReadByte();
