@@ -166,6 +166,12 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            Message msg = new Message();
+            var bytes= LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
+
+            var newmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(bytes);
+
+
             TestEsbservices();
             Console.Read();
         }

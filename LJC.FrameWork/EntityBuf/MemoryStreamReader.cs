@@ -374,6 +374,16 @@ namespace LJC.FrameWork.EntityBuf
             return ret;
         }
 
+        public int PeekChar()
+        {
+            return _reader.PeekChar();
+        }
+
+        public void Skip(long offset)
+        {
+            _reader.BaseStream.Position += offset;
+        }
+
         public byte ReadByte()
         {
             return _reader.ReadByte();
