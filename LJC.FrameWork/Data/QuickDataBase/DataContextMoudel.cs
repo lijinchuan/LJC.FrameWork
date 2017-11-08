@@ -644,8 +644,13 @@ namespace LJC.FrameWork.Data.QuickDataBase
                     {
                         break;
                     }
-                    minkeyvalue = Convert.ToInt64(sublist.Last().Eval(this.keyName));
                     listall.AddRange(sublist);
+                    minkeyvalue = Convert.ToInt64(sublist.Last().Eval(this.keyName));
+                    if (minkeyvalue==0)
+                    {
+                        break;
+                    }
+                    
                 }
             }
             finally
