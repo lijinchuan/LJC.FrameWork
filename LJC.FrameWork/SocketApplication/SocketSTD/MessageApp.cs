@@ -178,6 +178,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             {
                 if (socketClient != null&&socketClient.Connected)
                 {
+                    socketClient.Shutdown(SocketShutdown.Both);
                     socketClient.Close();
                 }
                 isStartClient = false;
@@ -204,7 +205,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 bool isResetClient = false;
                 if (socketClient != null)
                 {
-                    socketClient.Close();
+                    socketClient.Shutdown(SocketShutdown.Both);
                     isResetClient = true;
                 }
 
@@ -396,7 +397,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     OnError(e);
                 }
             }
-
+            socketClient.Shutdown(SocketShutdown.Both);
             socketClient.Close();
         }
 
@@ -510,7 +511,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     OnError(e);
                 }
             }
-
+            socketServer.Shutdown(SocketShutdown.Both);
             socketServer.Close();
             SocketApplicationComm.Debug("关闭服务器套接字!");
         }
@@ -558,7 +559,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     OnError(exp);
                 }
             }
-
+            socket.Shutdown(SocketShutdown.Both);
             socket.Close();
             SocketApplicationComm.Debug(string.Format("服务器关闭套接字：{0}", appSocket.SessionID));
         }
@@ -581,11 +582,13 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
                 if (socketServer != null)
                 {
+                    socketServer.Shutdown(SocketShutdown.Both);
                     socketServer.Close();
                 }
 
                 if (socketClient != null)
                 {
+                    socketClient.Shutdown(SocketShutdown.Both);
                     socketClient.Close();
                 }
 
