@@ -65,7 +65,14 @@ namespace LJC.FrameWork.SOA
                     resp.ErrMsg = ex.ToString();
                     retmsg.SetMessageBody(resp);
 
-                    session.SendMessage(retmsg);
+                    try
+                    {
+                        session.SendMessage(retmsg);
+                    }
+                    catch (Exception exx)
+                    {
+                        OnError(exx);
+                    }
                 }
             }
             else
