@@ -205,7 +205,15 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 bool isResetClient = false;
                 if (socketClient != null)
                 {
-                    socketClient.Shutdown(SocketShutdown.Both);
+                    try
+                    {
+                        socketClient.Shutdown(SocketShutdown.Both);
+                    }
+                    catch
+                    {
+
+                    }
+                    socketClient.Close();
                     isResetClient = true;
                 }
 
