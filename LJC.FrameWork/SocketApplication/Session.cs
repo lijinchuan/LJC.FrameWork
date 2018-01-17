@@ -133,8 +133,18 @@ namespace LJC.FrameWork.SocketApplication
 
         public void Close()
         {
-            if (this.Socket != null && this.Socket.Connected)
+            if (this.Socket != null)
+            {
+                try
+                {
+                    this.Socket.Shutdown(SocketShutdown.Both);
+                }
+                catch
+                {
+
+                }
                 this.Socket.Close();
+            }
             this.IsValid = false;
         }
 

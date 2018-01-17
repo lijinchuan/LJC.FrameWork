@@ -24,6 +24,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
         protected ConcurrentDictionary<string, Session> _connectSocketDic = new ConcurrentDictionary<string, Session>();
         private ConcurrentQueue<IOCPSocketAsyncEventArgs> _iocpQueue = new ConcurrentQueue<IOCPSocketAsyncEventArgs>();
         private BufferPollManager _bufferpoll = null;
+        private System.Timers.Timer _worktimer = null;
         
         /// <summary>
         /// 对象清理之前的事件
@@ -107,6 +108,15 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     Listening();
                 }
 
+                if (_worktimer == null)
+                {
+                    _worktimer = LJC.FrameWork.Comm.TaskHelper.SetInterval(5000, () =>
+                        {
+                            CheckConnectedClient();
+                            return false;
+                        });
+                }
+
                 isStartServer = true;
                 return true;
             }
@@ -114,6 +124,20 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 OnError(e);
                 return false;
+            }
+        }
+
+        private void CheckConnectedClient()
+        {
+            var sessions = _connectSocketDic.Values.ToArray();
+            Session remsession=null;
+            foreach (var s in sessions)
+            {
+                if(DateTime.Now.Subtract(s.LastSessionTime).TotalSeconds>180)
+                {
+                    _connectSocketDic.TryRemove(s.SessionID, out remsession);
+                    s.Close();
+                }
             }
         }
 
@@ -464,6 +488,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
             if (socketServer != null)
             {
                 socketServer.Close();
+            }
+
+            if (_worktimer != null)
+            {
+                _worktimer.Stop();
+                _worktimer.Close();
             }
         }
     }

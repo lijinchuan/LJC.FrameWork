@@ -97,12 +97,6 @@ namespace LJC.FrameWork.SOA
                         clienthash.Add(item.Key);
                     }
 
-                    if(DateTime.Now.Subtract(item.Value.LastSessionTime).TotalMinutes>1)
-                    {
-                        Session removesession=null;
-                        _esb.GetConnectedList().TryRemove(item.Key, out removesession);
-                    }
-
                     sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
                         item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
                         item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes, 3),
