@@ -210,6 +210,7 @@ namespace LJC.FrameWork.SOA
                                                     }
                                                 }
                                             };
+
                                             client.StartClient();
                                             client.Login(null, null);
                                             int trytimes = 0;
@@ -226,6 +227,7 @@ namespace LJC.FrameWork.SOA
                                             }
                                             if (trytimes == 3)
                                             {
+                                                client.Dispose();
                                                 LogHelper.Instance.Debug(string.Format("创建udp客户端失败:{0},端口{1}", ip, info.RedirectUdpPort));
                                                 throw new TimeoutException();
                                             }

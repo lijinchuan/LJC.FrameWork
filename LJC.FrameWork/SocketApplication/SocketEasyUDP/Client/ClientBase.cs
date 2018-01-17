@@ -219,6 +219,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                         try
                         {
                             _isstartclient = true;
+                           
                             var bytes = _udpClient.Receive(ref _serverPoint);
                             var bagid = BitConverter.ToInt64(bytes, 0);
                             if (bytes.Length > 8)

@@ -166,6 +166,17 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            ESBUdpClient client = new ESBUdpClient("192.168.0.100", 2998);
+            client.StartClient();
+            client.LoginFail += () =>
+                {
+                    Console.WriteLine("登录失败");
+                    client.Dispose();
+                };
+            client.Login(null, null);
+
+            Console.Read();
+
             Message msg = new Message();
             var bytes= LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
 
