@@ -17,7 +17,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
         ConcurrentDictionary<string, ConcurrentDictionary<string, ArrayList>> indexdic = new ConcurrentDictionary<string, ConcurrentDictionary<string, ArrayList>>();
         Dictionary<string, object> keylocker = new Dictionary<string, object>();
 
-        public class LockerDestroy : ICoroutineUnit
+        string dirbase = System.AppDomain.CurrentDomain.BaseDirectory;
+
+        public static EntityTableEngine LocalEngine = new EntityTableEngine(null);
+
+        class LockerDestroy : ICoroutineUnit
         {
             private DateTime _timeadd = DateTime.Now;
             private Dictionary<string, object> _lockerdic;
@@ -68,17 +72,25 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
+        public EntityTableEngine(string dir)
+        {
+            if (!string.IsNullOrWhiteSpace(dir))
+            {
+                this.dirbase = dir;
+            }
+        }
+
         public void CreateTable(string tablename,string keyname,Type ttype)
         {
-            string tablefile = tablename;
+            string tablefile =dirbase+"\\"+ tablename;
             bool delfile = true;
             if (!File.Exists(tablefile))
             {
                 try
                 {
-                    using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablename, ObjTextReaderWriterEncodeType.entitybuf))
+                    using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                     {
-                        string metafile = tablename + ".meta";
+                        string metafile = dirbase + "\\" + tablename + ".meta";
                         if (!File.Exists(metafile))
                         {
                             EntityTableMeta meta = new EntityTableMeta();
@@ -108,7 +120,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
 
                         //索引
-                        string indexfile = tablename + ".id";
+                        string indexfile = dirbase + "\\" + tablename + ".id";
                         using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                         {
                         }
@@ -153,7 +165,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         private void LoadIndex(string tablename)
         {
-            string indexfile = tablename + ".id";
+            string indexfile = dirbase + "\\" + tablename + ".id";
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
                 var idc = indexdic[tablename];
@@ -207,7 +219,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 return meta;
             }
 
-            string metafile = tablename + ".meta";
+            string metafile = dirbase + "\\" + tablename + ".meta";
             if (!File.Exists(metafile))
             {
                 throw new Exception("找不到元文件:" + tablename);
@@ -252,12 +264,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
             }
 
-            var keyvalue = meta.KeyProperty.GetValueMethed(item);
+            var keyvalue = item.Eval(meta.KeyProperty);
+            //var keyvalue = meta.KeyProperty.GetValueMethed(item);
             if (keyvalue == null)
             {
                 throw new Exception("key值不能为空");
             }
-            string tablefile = tablename;
+            string tablefile = dirbase + "\\" + tablename;
             var tableitem = new EntityTableItem<T>(item);
             tableitem.Flag = EntityTableItemFlag.Ok;
             var locker = GetKeyLocker(tablename, keyvalue.ToString());
@@ -291,7 +304,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         al.Add(newindex);
                     }
 
-                    string indexfile = tablename + ".id";
+                    string indexfile = dirbase + "\\" + tablename + ".id";
                     using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                     {
                         idx.AppendObject(newindex);
@@ -302,7 +315,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public bool Delete(string tablename, string key)
         {
-            string tablefile = tablename;
             EntityTableMeta meta = GetMetaData(tablename);
             ArrayList arr = null;
 
@@ -311,7 +323,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 if (indexdic[tablename].TryRemove(key, out arr))
                 {
-                    string indexfile = tablename + ".id";
+                    string indexfile = dirbase + "\\" + tablename + ".id";
                     using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                     {
                         foreach (var item in arr)
@@ -338,7 +350,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
             }
 
-            string tablefile = tablename;
+            string tablefile = dirbase + "\\" + tablename;
             ArrayList arr = null;
 
             var locker = GetKeyLocker(tablename, key);
@@ -346,7 +358,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 if (indexdic[tablename].TryRemove(key, out arr))
                 {
-                    string indexfile = tablename + ".id";
+                    string indexfile = dirbase + "\\" + tablename + ".id";
                     using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                     {
                         foreach (var a in arr)
@@ -358,7 +370,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
 
-                var keyvalue = meta.KeyProperty.GetValueMethed(item);
+                var keyvalue = item.Eval(meta.KeyProperty);
+                //var keyvalue=meta.KeyProperty.GetValueMethed(item);
                 if (keyvalue == null)
                 {
                     throw new Exception("key值不能为空");
@@ -393,7 +406,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         al.Add(newindex);
                     }
 
-                    string indexfile = tablename + ".id";
+                    string indexfile = dirbase + "\\" + tablename + ".id";
                     using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                     {
                         idx.AppendObject(newindex);
@@ -405,9 +418,23 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return true;
         }
 
+        public bool Exists(string tablename, string key)
+        {
+            try
+            {
+                var meta = this.GetMetaData(tablename);
+
+                return indexdic[tablename].ContainsKey(key);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public IEnumerable<T> Find<T>(string tablename, string key) where T : new()
         {
-            string tablefile = tablename;
+            string tablefile = dirbase + "\\" + tablename;
             EntityTableMeta meta = GetMetaData(tablename);
             ArrayList arr = null;
             EntityTableIndexItem indexitem = null;
