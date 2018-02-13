@@ -13,7 +13,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
         private ObjTextReader _queueReader = null;
         private LocalFileQueueCfg _logger = null;
         private Timer _backtimer = null;
-        private long _lastCfgChageTime = 0;
+        private DateTime _lastCfgChageTime = DateTime.MinValue;
         private object _lock = new object();
         private bool IsRuning = false;
         /// <summary>
@@ -60,7 +60,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             }
         }
 
-        public LocalFileQueue(string queuename, string queuefilepath)
+        public LocalFileQueue(string queuename, string queuefilepath,bool canwrite=true,bool canread=true)
         {
             if (string.IsNullOrWhiteSpace(queuename))
             {
@@ -90,45 +90,59 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
                 }
             }
 
-            //由于文件写是独占式的，当程序快速重启时，文件可能未及时释放
-            int trytimes = 0;
-            while (true)
+            if (canwrite)
             {
-                try
+                //由于文件写是独占式的，当程序快速重启时，文件可能未及时释放
+                int trytimes = 0;
+                while (true)
                 {
-                    _queueWriter = ObjTextWriter.CreateWriter(queuefilepath, ObjTextReaderWriterEncodeType.jsonbuf);
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    trytimes++;
-                    if (trytimes >= 3)
+                    try
                     {
-                        throw ex;
+                        //_queueWriter = ObjTextWriter.CreateWriter(queuefilepath, ObjTextReaderWriterEncodeType.jsonbuf);
+                        _queueWriter = ObjTextWriter.CreateWriter(queuefilepath, ObjTextReaderWriterEncodeType.entitybuf);
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        trytimes++;
+                        if (trytimes >= 3)
+                        {
+                            throw ex;
+                        }
+                        Thread.Sleep(1000 * trytimes);
                     }
                 }
-
-                Thread.Sleep(1000 * trytimes);
             }
 
-            _queueReader = ObjTextReader.CreateReader(queuefilepath);
-
-            FileInfo finfo = new FileInfo(queuefilepath);
-            QueueCfgFile = finfo.Directory.FullName +"\\"+ queuename + ".cfg";
-            if (File.Exists(QueueCfgFile))
+            if (canread)
             {
-                _logger = LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<LocalFileQueueCfg>(QueueCfgFile, true);
-                if (_logger.LastPos > 0)
+                while (true)
                 {
-                    _queueReader.SetPostion(_logger.LastPos);
+                    if (File.Exists(queuefilepath))
+                    {
+                        break;
+                    }
+                    Thread.Sleep(1000);
                 }
-            }
-            else
-            {
-                _logger = new LocalFileQueueCfg();
-                _logger.LastChageTime = Environment.TickCount & Int32.MaxValue;
-                _logger.QueueFile = queuefilepath;
-                SaveConfig();
+                _queueReader = ObjTextReader.CreateReader(queuefilepath);
+
+                FileInfo finfo = new FileInfo(queuefilepath);
+                QueueCfgFile = finfo.Directory.FullName + "\\" + queuename + ".cfg";
+                if (File.Exists(QueueCfgFile))
+                {
+                    _logger = LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<LocalFileQueueCfg>(QueueCfgFile, true);
+                    if (_logger.LastPos > 0)
+                    {
+                        _queueReader.SetPostion(_logger.LastPos);
+                    }
+                }
+                else
+                {
+                    _logger = new LocalFileQueueCfg();
+                    _logger.LastChageTime = DateTime.Now;
+                    _logger.QueueFile = queuefilepath;
+                    SaveConfig();
+                }
             }
 
             _backtimer = new Timer(new TimerCallback(TimerAction), null, 0, 0);
@@ -136,7 +150,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
 
         private void TimerAction(object o)
         {
-            var tc = Environment.TickCount & Int32.MaxValue;
+            var tc = DateTime.Now;
             try
             {
                 _backtimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -145,7 +159,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
                     _queueWriter.Flush();
                 }
 
-                if (!IsRuning)
+                if (!IsRuning && _queueReader != null)
                 {
                     new Action(ProcessQueue).BeginInvoke(null, null);
                 }
@@ -154,7 +168,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             }
             finally
             {
-                _backtimer.Change(Math.Max(1000 - (Environment.TickCount & Int32.MaxValue - tc), 0), 0);
+                _backtimer.Change((int)Math.Max(1000 - (DateTime.Now.Subtract(tc)).TotalMilliseconds, 0), 0);
             }
         }
 
@@ -164,11 +178,19 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             {
                 throw new Exception("null值不能写入队列");
             }
+            if (_queueWriter == null)
+            {
+                throw new NotSupportedException("不支持写入");
+            }
             _queueWriter.AppendObject(obj);
         }
 
         private void ProcessBadQueue(T last)
         {
+            if (_queueReader == null)
+            {
+                return;
+            }
             var oldpostion = _queueReader.ReadedPostion();
 
             while (true)
@@ -198,25 +220,28 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             {
                 return;
             }
-
-            if (IsRuning)
+            lock (this)
             {
-                return;
+                if (IsRuning)
+                {
+                    return;
+                }
+                IsRuning = true;
             }
-            IsRuning = true;
+
             T last = null;
             int errortimes = 0;
             try
             {
                 //ProcessBadQueue(last);
-                foreach (var t in _queueReader.ReadObjectWating<T>())
+                foreach (var t in _queueReader.ReadObjectsWating<T>())
                 {
                     last = t;
                     if (OnProcessQueue(t))
                     {
                         errortimes = 0;
                         _logger.LastPos = _queueReader.ReadedPostion();
-                        _logger.LastChageTime = Environment.TickCount & Int32.MaxValue;
+                        _logger.LastChageTime = DateTime.Now;
 
                         if (OnProcessQueueSuccessed != null)
                         {
@@ -264,7 +289,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
 
         protected void Dispose(bool isdispose)
         {
-            if (_isdispose)
+            if (isdispose)
             {
                 _backtimer.Dispose();
                 if (_queueWriter != null)

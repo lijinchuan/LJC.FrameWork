@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace LJC.FrameWork.Comm
 {
@@ -46,7 +47,7 @@ namespace LJC.FrameWork.Comm
             return new ObjTextReader(textfile);
         }
 
-        public T ReadObjectFromBack<T>(bool autoReset=true) where T : class
+        public T ReadObjectFromBack<T>(bool autoReset = true) where T : class
         {
             if (!_canReadFromBack)
                 throw new Exception("不支持从后向前读");
@@ -55,7 +56,7 @@ namespace LJC.FrameWork.Comm
                 return default(T);
 
             var oldpostion = _sr.BaseStream.Position;
-            
+
             byte[] bylen = new byte[4];
             _sr.BaseStream.Read(bylen, 0, 4);
             var len = BitConverter.ToInt32(bylen, 0);
@@ -70,48 +71,89 @@ namespace LJC.FrameWork.Comm
             //else
             //    _sr.BaseStream.Position = oldpostion - 4;
 
-            _sr.BaseStream.Position = oldpostion-4;
+            _sr.BaseStream.Position = oldpostion - 4;
 
             using (MemoryStream ms = new MemoryStream(contentbyte))
             {
-                return ProtoBuf.Serializer.Deserialize<T>(ms);
+                switch (this._encodeType)
+                {
+                    case ObjTextReaderWriterEncodeType.protobufex:
+                    case ObjTextReaderWriterEncodeType.protobuf:
+                        {
+                            return ProtoBuf.Serializer.Deserialize<T>(ms);
+                        }
+                    case ObjTextReaderWriterEncodeType.jsonbuf:
+                    case ObjTextReaderWriterEncodeType.jsonbufex:
+                        {
+                            return JsonUtil<T>.Deserialize(Encoding.UTF8.GetString(contentbyte));
+                        }
+                    case ObjTextReaderWriterEncodeType.entitybufex:
+                    case ObjTextReaderWriterEncodeType.entitybuf:
+                        {
+                            return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte);
+                        }
+                    default:
+                        {
+                            throw new NotSupportedException();
+                        }
+                }
+
             }
         }
 
-        public T ReadObject<T>() where T : class
+        private string ReadLine(Stream s)
         {
-            if(CheckNexIsEndSpan(_sr.BaseStream))
+            using (System.IO.MemoryStream ms = new MemoryStream())
             {
-                _sr.BaseStream.Position += 3;
+                int b = 0;
+                while ((b=s.ReadByte())!=-1)
+                {
+                    byte bt = (byte)b;
+                    ms.WriteByte(bt);
+                    if (bt == '\n')
+                    {
+                        break;
+                    }
+                }
+
+                return System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            }
+        }
+
+        private T ReadObject<T>(Stream s) where T : class
+        {
+            if (CheckNexIsEndSpan(s))
+            {
+                s.Position += 3;
             }
 
             if (_encodeType == ObjTextReaderWriterEncodeType.protobuf
                 || _encodeType == ObjTextReaderWriterEncodeType.protobufex)
             {
                 byte[] bylen = new byte[4];
-                _sr.BaseStream.Read(bylen, 0, 4);
+                s.Read(bylen, 0, 4);
                 var len = BitConverter.ToInt32(bylen, 0);
                 //239 187 191
                 if (len <= 0 || len == 12565487)
                     return default(T);
 
                 //检查长度
-                if (_sr.BaseStream.Length - _sr.BaseStream.Position < len)
+                if (s.Length - s.Position < len)
                 {
-                    _sr.BaseStream.Position -= 4;
+                    s.Position -= 4;
                     return default(T);
                 }
 
                 var contentbyte = new Byte[len];
-                _sr.BaseStream.Read(contentbyte, 0, len);
+                s.Read(contentbyte, 0, len);
 
                 if (_canReadFromBack)
                 {
-                    _sr.BaseStream.Position += 4;
+                    s.Position += 4;
                 }
 
                 //扫过分隔符
-                _sr.BaseStream.Position += 2;
+                s.Position += 2;
 
                 using (MemoryStream ms = new MemoryStream(contentbyte))
                 {
@@ -122,7 +164,7 @@ namespace LJC.FrameWork.Comm
                || _encodeType == ObjTextReaderWriterEncodeType.jsonbufex)
             {
                 byte[] bylen = new byte[4];
-                _sr.BaseStream.Read(bylen, 0, 4);
+                s.Read(bylen, 0, 4);
                 var len = BitConverter.ToInt32(bylen, 0);
                 //239 187 191
                 if (len <= 0 || len == 12565487)
@@ -134,47 +176,74 @@ namespace LJC.FrameWork.Comm
                 }
 
                 //检查长度
-                if (_sr.BaseStream.Length - _sr.BaseStream.Position < len)
+                if (s.Length - s.Position < len)
                 {
-                    _sr.BaseStream.Position -= 4;
+                    s.Position -= 4;
                     return default(T);
                 }
 
                 var contentbyte = new Byte[len];
-                _sr.BaseStream.Read(contentbyte, 0, len);
+                s.Read(contentbyte, 0, len);
 
                 if (_canReadFromBack)
                 {
-                    _sr.BaseStream.Position += 4;
+                    s.Position += 4;
                 }
 
                 //扫过分隔符
-                _sr.BaseStream.Position += 2;
+                s.Position += 2;
 
                 using (MemoryStream ms = new MemoryStream(contentbyte))
                 {
                     //return ProtoBuf.Serializer.Deserialize<T>(ms);
                     return JsonUtil<T>.Deserialize(Encoding.UTF8.GetString(ms.ToArray()));
                 }
-
             }
-            else if (_encodeType == ObjTextReaderWriterEncodeType.jsongzip)
+            else if (_encodeType == ObjTextReaderWriterEncodeType.entitybuf || _encodeType == ObjTextReaderWriterEncodeType.entitybufex)
             {
                 byte[] bylen = new byte[4];
-                _sr.BaseStream.Read(bylen, 0, 4);
+                s.Read(bylen, 0, 4);
                 var len = BitConverter.ToInt32(bylen, 0);
                 if (len == 0 || len == 12565487)
                     return default(T);
 
                 //检查长度
-                if (_sr.BaseStream.Length - _sr.BaseStream.Position < len)
+                if (s.Length - s.Position < len)
                 {
-                    _sr.BaseStream.Position -= 4;
+                    s.Position -= 4;
                     return default(T);
                 }
 
                 var contentbyte = new Byte[len];
-                _sr.BaseStream.Read(contentbyte, 0, len);
+                s.Read(contentbyte, 0, len);
+
+                if (_canReadFromBack)
+                {
+                    s.Position += 4;
+                }
+
+                //扫过分隔符
+                s.Position += 2;
+
+                return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte);
+            }
+            else if (_encodeType == ObjTextReaderWriterEncodeType.jsongzip)
+            {
+                byte[] bylen = new byte[4];
+                s.Read(bylen, 0, 4);
+                var len = BitConverter.ToInt32(bylen, 0);
+                if (len == 0 || len == 12565487)
+                    return default(T);
+
+                //检查长度
+                if (s.Length - s.Position < len)
+                {
+                    s.Position -= 4;
+                    return default(T);
+                }
+
+                var contentbyte = new Byte[len];
+                s.Read(contentbyte, 0, len);
 
                 var decomparssbytes = GZip.Decompress(contentbyte);
                 var jsonstr = Encoding.UTF8.GetString(decomparssbytes);
@@ -183,29 +252,35 @@ namespace LJC.FrameWork.Comm
             else
             {
                 //string s = _sr.ReadLine().Trim((char)65279, (char)1); //过滤掉第一行
-                string s = _sr.ReadLine();
+                string str =ReadLine(s);
 
-                if (s == null)
+                if (str == null)
                     return default(T);
 
-                s = s.Trim((char)65279, (char)1);
+                str = str.Trim((char)65279, (char)1);
 
-                while ((string.IsNullOrEmpty(s) || !s.Last().Equals(splitChar))
+                while ((string.IsNullOrEmpty(str) || !str.Last().Equals(splitChar))
                     && !_sr.EndOfStream)
                 {
-                    s += _sr.ReadLine().Trim((char)65279, (char)1);
+                    str +=ReadLine(s).Trim((char)65279, (char)1);
                 }
 
-                if (!string.IsNullOrEmpty(s) && s.Last().Equals(splitChar))
+                if (!string.IsNullOrEmpty(str) && str.Last().Equals(splitChar))
                 {
-                    s = s.Remove(s.Length - 1, 1);
-                    return JsonUtil<T>.Deserialize(s);
+                    str = str.Remove(str.Length - 1, 1);
+                    return JsonUtil<T>.Deserialize(str);
                 }
 
                 return default(T);
             }
         }
 
+        public T ReadObject<T>() where T : class
+        {
+            return ReadObject<T>(_sr.BaseStream);
+        }
+
+        [Obsolete("replace by ReadObjectsWating")]
         public IEnumerable<T> ReadObjectWating<T>() where T : class
         {
             //var oldpost = _sr.BaseStream.Position;
@@ -219,10 +294,78 @@ namespace LJC.FrameWork.Comm
                     last = item;
                     yield return item;
                 }
-                oldlen=_sr.BaseStream.Length;
+                //oldlen=_sr.BaseStream.Length;
+                oldlen = _sr.BaseStream.Position;
                 while (_sr.BaseStream.Length - oldlen < 4)
                 {
                     Thread.Sleep(1);
+                }
+            }
+        }
+
+        public IEnumerable<T> ReadObjectsWating<T>(int timeout=0) where T : class
+        {
+            //var oldpost = _sr.BaseStream.Position;
+            var oldlen = 0L;
+            T item = default(T);
+            T last = default(T);
+            DateTime wtime = DateTime.Now;
+            int wms = 0;
+            int sleelms = 1;
+
+            int bufferlen = 1024 * 1024 * 10;
+            byte[] bytes = new byte[bufferlen];
+
+            while (true)
+            {
+                int readlen = _sr.BaseStream.Read(bytes, 0, bufferlen);
+
+                if (readlen > 0)
+                {
+                    _sr.BaseStream.Position -= readlen;
+                    oldlen = _sr.BaseStream.Position;
+
+                    using (MemoryStream ms = new MemoryStream(bytes, 0, readlen))
+                    {
+                        while ((item = ReadObject<T>(ms)) != null)
+                        {
+                            last = item;
+                            _sr.BaseStream.Position = oldlen + ms.Position;
+                            yield return item;
+                        }
+
+                        if (oldlen != _sr.BaseStream.Position)
+                        {
+                            oldlen = _sr.BaseStream.Position;
+                            wtime = DateTime.Now;
+                            sleelms = 1;
+                        }
+                    }
+                }
+
+                bool exit = false;
+                while (_sr.BaseStream.Length - oldlen < 4)
+                {
+                    Thread.Sleep(sleelms);
+                    wms += sleelms;
+
+                    if (timeout > 0 && wms > timeout)
+                    {
+                        exit = true;
+                        break;
+                    }
+                    else
+                    {
+                        if (sleelms++ > 100)
+                        {
+                            sleelms = 1;
+                        }
+                    }
+                }
+
+                if (exit)
+                {
+                    break;
                 }
             }
         }

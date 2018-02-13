@@ -20,7 +20,9 @@ namespace LJC.FrameWork.Comm
         {
             get
             {
-                return ObjTextReaderWriterEncodeType.protobufex == this._encodeType;
+                return ObjTextReaderWriterEncodeType.protobufex == this._encodeType
+                    || ObjTextReaderWriterEncodeType.entitybufex == this._encodeType
+                    || ObjTextReaderWriterEncodeType.jsonbufex == this._encodeType;
             }
         }
 

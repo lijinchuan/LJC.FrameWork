@@ -66,15 +66,16 @@ namespace LJC.FrameWork.Comm
             }
         }
 
-        public void AppendObject<T>(T obj) where T : class
+        public long AppendObject<T>(T obj) where T : class
         {
+            var offset = 0L;
             if (ObjTextReaderWriterEncodeType.protobuf == this._encodeType
                 || ObjTextReaderWriterEncodeType.protobufex == this._encodeType)
             {
                 using (MemoryStream ms = new MemoryStream())
                 {
                     ProtoBuf.Serializer.Serialize<T>(ms, obj);
-                    Append(ms.ToArray(),true);
+                    offset = Append(ms.ToArray(), true);
                 }
             }
             else if (ObjTextReaderWriterEncodeType.jsonbuf == this._encodeType
@@ -87,7 +88,13 @@ namespace LJC.FrameWork.Comm
                 //}
 
                 var json = JsonUtil<T>.Serialize(obj);
-                Append(Encoding.UTF8.GetBytes(json), true);
+                offset = Append(Encoding.UTF8.GetBytes(json), true);
+            }
+            else if (ObjTextReaderWriterEncodeType.entitybuf == this._encodeType
+                || ObjTextReaderWriterEncodeType.entitybufex == this._encodeType)
+            {
+                var buf = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj);
+                offset = Append(buf, true);
             }
             else
             {
@@ -96,37 +103,48 @@ namespace LJC.FrameWork.Comm
                 {
                     var jsonByte = Encoding.UTF8.GetBytes(str);
                     var compressbytes = GZip.Compress(jsonByte);
-                    Append(compressbytes, false);
+                    offset = Append(compressbytes, false);
                 }
                 else
                 {
-                    Append(str);
+                    offset = Append(str);
                 }
             }
+
+            return offset;
         }
 
-        private void Append(string objtr)
+        private long Append(string objtr)
         {
             if (string.IsNullOrEmpty(objtr))
-                return;
+                return 0L;
 
             lock (this)
             {
+                long offset = _sw.BaseStream.Position;
                 _sw.WriteLine();
                 _sw.Write(objtr);
                 _sw.Write(splitChar);
+
+                return offset;
             }
         }
 
-        private void Append(byte[] objstream,bool writesplit)
+        public void SetPosition(long pos)
+        {
+            _sw.BaseStream.Position = pos;
+            
+        }
+
+        private long Append(byte[] objstream,bool writesplit)
         {
             if (objstream == null)
-                return;
-
+                return 0;
             var lenbyte = BitConverter.GetBytes(objstream.Length);
 
             lock (this)
             {
+                long offset = _sw.BaseStream.Position;
                 _sw.BaseStream.Write(lenbyte, 0, lenbyte.Length);
                 _sw.BaseStream.Write(objstream, 0, objstream.Length);
                 if (_canReadFromBack)
@@ -138,6 +156,18 @@ namespace LJC.FrameWork.Comm
                 {
                     _sw.BaseStream.Write(ObjTextReaderWriterBase.splitBytes, 0, 2);
                 }
+
+                return offset;
+            }
+        }
+
+        public void Override(long start, byte[] bytes)
+        {
+            lock (this)
+            {
+                _sw.BaseStream.Position = start;
+                long offset = _sw.BaseStream.Position;
+                _sw.BaseStream.Write(bytes, 0, bytes.Length);
             }
         }
 

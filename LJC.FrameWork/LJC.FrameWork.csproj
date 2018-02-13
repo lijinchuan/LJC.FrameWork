@@ -130,6 +130,11 @@
     <Compile Include="Comm\CookieHelper.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Comm\Coroutine\CoroutineCallBackEventArgs.cs" />
+    <Compile Include="Comm\Coroutine\CoroutineEngine.cs" />
+    <Compile Include="Comm\Coroutine\CoroutineUnitBag.cs" />
+    <Compile Include="Comm\Coroutine\CoroutineWorker.cs" />
+    <Compile Include="Comm\Coroutine\ICoroutineUnit.cs" />
     <Compile Include="Comm\CRC32.cs" />
     <Compile Include="Comm\DataHelper.cs">
       <SubType>Code</SubType>
@@ -230,6 +235,11 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="ConfigurationSectionHandler\ThreadPoolConfig.cs" />
+    <Compile Include="Data\EntityDataBase\EntityTableEngine.cs" />
+    <Compile Include="Data\EntityDataBase\EntityTableIndexItem.cs" />
+    <Compile Include="Data\EntityDataBase\EntityTableItem.cs" />
+    <Compile Include="Data\EntityDataBase\EntityTableItemFlag.cs" />
+    <Compile Include="Data\EntityDataBase\EntityTableMeta.cs" />
     <Compile Include="Data\QuickDataBase\CachDataContextMoudel.cs" />
     <Compile Include="Data\QuickDataBase\DatabaseHelper.cs" />
     <Compile Include="Data\QuickDataBase\DataBaseMapperAttr.cs" />

@@ -15,5 +15,7 @@ namespace LJC.FrameWork.Comm
         jsonbuf,
         //扩展的功能，支持回读
         jsonbufex,
+        entitybuf,
+        entitybufex,
     }
 }

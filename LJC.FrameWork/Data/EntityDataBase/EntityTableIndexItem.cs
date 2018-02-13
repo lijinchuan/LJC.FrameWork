@@ -2,26 +2,25 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace LJC.FrameWork.Comm.TextReaderWriter
+namespace LJC.FrameWork.Data.EntityDataBase
 {
-    [Serializable]
-    public class LocalFileQueueCfg
+    public class EntityTableIndexItem
     {
-        public long LastPos
+        public string Key
         {
             get;
             set;
         }
 
-        [System.Xml.Serialization.XmlIgnore]
-        public DateTime LastChageTime
+        public long Offset
         {
             get;
             set;
         }
 
-        public string QueueFile
+        public bool Del
         {
             get;
             set;
