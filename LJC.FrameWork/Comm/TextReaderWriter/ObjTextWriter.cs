@@ -134,7 +134,9 @@ namespace LJC.FrameWork.Comm
                     {
                         lock (this)
                         {
+                            var start = _sw.BaseStream.Position;
                             _sw.BaseStream.Write(bytes, 0, bytes.Length);
+                            offset = new Tuple<long, long>(start, _sw.BaseStream.Position);
                         }
 
                     }

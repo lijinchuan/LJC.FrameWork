@@ -145,14 +145,14 @@ namespace Test
             //    });
             //}
 
-            var key = "id19";
+            var key = "id17";
             var man19 = EntityTableEngine.LocalEngine.Find<Man>("man11.bin", key).First();
 
             Console.WriteLine(man19.IDCard + " " + man19.Name + " " + man19.Addr + " " + man19.Sex);
 
             EntityTableEngine.LocalEngine.Upsert("man11.bin", new Man
             {
-              Addr="addr1234567890",
+              Addr="addr1234567890"+Guid.NewGuid().ToString(),
               IDCard=man19.IDCard,
               Name=man19.Name,
               Sex=man19.Sex==0?1:0
