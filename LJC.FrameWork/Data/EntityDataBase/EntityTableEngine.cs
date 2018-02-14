@@ -262,10 +262,22 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 throw new Exception("key值不能为空");
             }
+
+            var keystr = keyvalue.ToString();
+
+            if (!meta.KeyDuplicate)
+            {
+                ArrayList arr=null;
+                if (indexdic[tablename].TryGetValue(keystr, out arr) && arr.Count > 0)
+                {
+                    throw new Exception(string.Format("key:{0}不可重复", keystr));
+                }
+            }
+
             string tablefile = dirbase + "\\" + tablename;
             var tableitem = new EntityTableItem<T>(item);
             tableitem.Flag = EntityTableItemFlag.Ok;
-            var locker = GetKeyLocker(tablename, keyvalue.ToString());
+            var locker = GetKeyLocker(tablename, keystr);
             lock (locker)
             {
                 using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
@@ -274,21 +286,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     ArrayList al = null;
                     var idc = indexdic[tablename];
-                    if (!idc.TryGetValue(keyvalue.ToString(), out al))
+                    if (!idc.TryGetValue(keystr, out al))
                     {
                         lock (idc)
                         {
-                            if (!idc.TryGetValue(keyvalue.ToString(), out al))
+                            if (!idc.TryGetValue(keystr, out al))
                             {
                                 al = new ArrayList();
-                                idc.TryAdd(keyvalue.ToString(), al);
+                                idc.TryAdd(keystr, al);
                             }
                         }
                     }
 
                     var newindex = new EntityTableIndexItem
                     {
-                        Key = keyvalue.ToString(),
+                        Key = keystr,
                         Offset = offset.Item1,
                         len = (int)(offset.Item2 - offset.Item1)
                     };

@@ -17,6 +17,19 @@ namespace LJC.FrameWork.Data.EntityDataBase
             set;
         }
 
+        private bool _keyDuplicate = true;
+        public bool KeyDuplicate
+        {
+            get
+            {
+                return _keyDuplicate;
+            }
+            set
+            {
+                _keyDuplicate = value;
+            }
+        }
+
         public DateTime CTime
         {
             get;
