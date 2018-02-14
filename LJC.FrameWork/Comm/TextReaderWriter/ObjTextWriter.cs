@@ -71,7 +71,7 @@ namespace LJC.FrameWork.Comm
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="obj"></param>
-        /// <param name="append">第一个stream是内存里面的stream,第二个是文件的stream</param>
+        /// <param name="append">返回null，则自动加到文件后面</param>
         /// <returns></returns>
         public Tuple<long, long> PreAppendObject<T>(T obj, Func<byte[], Stream, Tuple<long,long>> append) where T : class
         {

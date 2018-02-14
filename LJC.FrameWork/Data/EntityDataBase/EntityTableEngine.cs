@@ -254,16 +254,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return meta;
         }
 
-        public void Insert<T>(string tablename, T item) where T : new()
+        private bool Insert2<T>(string tablename, T item, EntityTableMeta meta) where T : new()
         {
-            //item.Eval()
-            EntityTableMeta meta = GetMetaData(tablename);
-
-            if (meta.TType != item.GetType())
-            {
-                throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
-            }
-
             var keyvalue = item.Eval(meta.KeyProperty);
             //var keyvalue = meta.KeyProperty.GetValueMethed(item);
             if (keyvalue == null)
@@ -298,7 +290,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         Key = keyvalue.ToString(),
                         Offset = offset.Item1,
-                        len=(int)(offset.Item2-offset.Item1)
+                        len = (int)(offset.Item2 - offset.Item1)
                     };
                     lock (al)
                     {
@@ -312,6 +304,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
             }
+
+            return true;
+        }
+
+        public bool Insert<T>(string tablename, T item) where T : new()
+        {
+            //item.Eval()
+            EntityTableMeta meta = GetMetaData(tablename);
+
+            if (meta.TType != item.GetType())
+            {
+                throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
+            }
+
+            return Insert2(tablename, item, meta);
         }
 
         public bool Delete(string tablename, string key)
@@ -342,7 +349,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return false;
         }
 
-        public bool Update<T>(string tablename, string key, T item) where T : new()
+        public bool Upsert<T>(string tablename, string key, T item) where T : new()
         {
             EntityTableMeta meta = GetMetaData(tablename);
 
@@ -350,21 +357,34 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
             }
+            
+            ArrayList arr=null;
+            if(indexdic[tablename].TryGetValue(key,out arr)&&arr.Count>0)
+            {
+                return Update2(tablename, key, item, meta);
+            }
+            else
+            {
+                return Insert2(tablename, item, meta);
+            }
+        }
 
+        private bool Update2<T>(string tablename, string key, T item, EntityTableMeta meta) where T : new()
+        {
             string tablefile = dirbase + "\\" + tablename;
             ArrayList arr = null;
-            Tuple<long, long> offset=null;
+            Tuple<long, long> offset = null;
             int indexpos = 0;
 
             var locker = GetKeyLocker(tablename, key);
             lock (locker)
             {
-                if(!indexdic[tablename].TryGetValue(key, out arr)||arr.Count==0)
+                if (!indexdic[tablename].TryGetValue(key, out arr) || arr.Count == 0)
                 {
                     throw new Exception(string.Format("更新失败，key为{0}的记录数为0", key));
                 }
 
-                indexpos = arr.Count-1;
+                indexpos = arr.Count - 1;
                 string indexfile = dirbase + "\\" + tablename + ".id";
                 EntityTableIndexItem indexitem = (EntityTableIndexItem)arr[indexpos];
                 using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
@@ -384,14 +404,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                 {
                     offset = otw.PreAppendObject(tableitem, (s1, s2) =>
+                    {
+                        if (s1.Length <= indexitem.len)
                         {
-                            if (s1.Length <= indexitem.len)
-                            {
-                                Console.WriteLine("修改->覆盖");
-                                return otw.Override(indexitem.Offset, s1);
-                            }
-                            return null;
-                        });
+                            Console.WriteLine("修改->覆盖");
+                            return otw.Override(indexitem.Offset, s1);
+                        }
+                        return null;
+                    });
                 }
 
 
@@ -432,6 +452,18 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 Console.WriteLine("写入成功:" + keyvalue + "->" + offset);
             }
             return true;
+        }
+
+        public bool Update<T>(string tablename, string key, T item) where T : new()
+        {
+            EntityTableMeta meta = GetMetaData(tablename);
+
+            if (meta.TType != item.GetType())
+            {
+                throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
+            }
+
+            return Update2(tablename, key, item,meta);
         }
 
         public bool Exists(string tablename, string key)

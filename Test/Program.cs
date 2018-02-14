@@ -150,9 +150,9 @@ namespace Test
 
             Console.WriteLine(man19.IDCard + " " + man19.Name + " " + man19.Addr + " " + man19.Sex);
 
-            EntityTableEngine.LocalEngine.Update("man11.bin", key, new Man
+            EntityTableEngine.LocalEngine.Upsert("man11.bin", key, new Man
             {
-              Addr="addr123",
+              Addr="addr123456",
               IDCard=man19.IDCard,
               Name=man19.Name,
               Sex=man19.Sex
