@@ -278,7 +278,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                 {
-                    long offset = otw.AppendObject(tableitem);
+                    var offset = otw.AppendObject(tableitem);
 
                     ArrayList al = null;
                     var idc = indexdic[tablename];
@@ -297,7 +297,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var newindex = new EntityTableIndexItem
                     {
                         Key = keyvalue.ToString(),
-                        Offset = offset
+                        Offset = offset.Item1,
+                        len=(int)(offset.Item2-offset.Item1)
                     };
                     lock (al)
                     {
@@ -352,22 +353,24 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             string tablefile = dirbase + "\\" + tablename;
             ArrayList arr = null;
+            Tuple<long, long> offset=null;
+            int indexpos = 0;
 
             var locker = GetKeyLocker(tablename, key);
             lock (locker)
             {
-                if (indexdic[tablename].TryRemove(key, out arr))
+                if(!indexdic[tablename].TryGetValue(key, out arr)||arr.Count==0)
                 {
-                    string indexfile = dirbase + "\\" + tablename + ".id";
-                    using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                    {
-                        foreach (var a in arr)
-                        {
-                            var indexitem = (EntityTableIndexItem)a;
-                            indexitem.Del = true;
-                            idx.AppendObject(indexitem);
-                        }
-                    }
+                    throw new Exception(string.Format("更新失败，key为{0}的记录数为0", key));
+                }
+
+                indexpos = arr.Count-1;
+                string indexfile = dirbase + "\\" + tablename + ".id";
+                EntityTableIndexItem indexitem = (EntityTableIndexItem)arr[indexpos];
+                using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                {
+                    indexitem.Del = true;
+                    idx.AppendObject(indexitem);
                 }
 
                 var keyvalue = item.Eval(meta.KeyProperty);
@@ -380,40 +383,53 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 tableitem.Flag = EntityTableItemFlag.Ok;
                 using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                 {
-                    long offset = otw.AppendObject(tableitem);
-
-                    ArrayList al = null;
-                    var idc = indexdic[tablename];
-                    if (!idc.TryGetValue(keyvalue.ToString(), out al))
-                    {
-                        lock (idc)
+                    offset = otw.PreAppendObject(tableitem, (s1, s2) =>
                         {
-                            if (!idc.TryGetValue(keyvalue.ToString(), out al))
+                            if (s1.Length <= indexitem.len)
                             {
-                                al = new ArrayList();
-                                idc.TryAdd(keyvalue.ToString(), al);
+                                Console.WriteLine("修改->覆盖");
+                                return otw.Override(indexitem.Offset, s1);
                             }
+                            return null;
+                        });
+                }
+
+
+                ArrayList al = null;
+                var idc = indexdic[tablename];
+                if (!idc.TryGetValue(keyvalue.ToString(), out al))
+                {
+                    lock (idc)
+                    {
+                        if (!idc.TryGetValue(keyvalue.ToString(), out al))
+                        {
+                            al = new ArrayList();
+                            idc.TryAdd(keyvalue.ToString(), al);
                         }
                     }
-
-                    var newindex = new EntityTableIndexItem
-                    {
-                        Key = keyvalue.ToString(),
-                        Offset = offset
-                    };
-                    lock (al)
-                    {
-                        al.Add(newindex);
-                    }
-
-                    string indexfile = dirbase + "\\" + tablename + ".id";
-                    using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                    {
-                        idx.AppendObject(newindex);
-                    }
-
-                    Console.WriteLine("写入成功:" + keyvalue + "->" + offset);
                 }
+
+                EntityTableIndexItem newindex = new EntityTableIndexItem
+                {
+                    Key = keyvalue.ToString(),
+                    Offset = offset.Item1,
+                    len = (int)(offset.Item2 - offset.Item1),
+                    Del = false
+                };
+
+                if (newindex.Offset == indexitem.Offset)
+                {
+                    newindex.len = indexitem.len;
+                }
+
+                arr[indexpos] = newindex;
+
+                using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                {
+                    idx.AppendObject(newindex);
+                }
+
+                Console.WriteLine("写入成功:" + keyvalue + "->" + offset);
             }
             return true;
         }

@@ -20,6 +20,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
             set;
         }
 
+        public int len
+        {
+            get;
+            set;
+        }
+
         public bool Del
         {
             get;

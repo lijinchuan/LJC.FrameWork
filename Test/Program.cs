@@ -12,6 +12,7 @@ using LJC.FrameWork.Data;
 using System.Linq.Expressions;
 using System.Threading;
 using LJC.FrameWork.SocketApplication.SocketSTD;
+using LJC.FrameWork.Data.EntityDataBase;
 
 namespace Test
 {
@@ -129,8 +130,44 @@ namespace Test
             }
         }
 
+        static void Test111()
+        {
+            //EntityTableEngine.LocalEngine.CreateTable("man11.bin", "IDCard", typeof(Man));
+
+            //for (int i = 0; i < 10000; i++)
+            //{
+            //    EntityTableEngine.LocalEngine.Insert("man11.bin", new Man
+            //    {
+            //        Addr="addr"+Guid.NewGuid().ToString(),
+            //        IDCard="id"+i,
+            //        Name="name"+i,
+            //        Sex=i%2
+            //    });
+            //}
+
+            var key = "id19";
+            var man19 = EntityTableEngine.LocalEngine.Find<Man>("man11.bin", key).First();
+
+            Console.WriteLine(man19.IDCard + " " + man19.Name + " " + man19.Addr + " " + man19.Sex);
+
+            EntityTableEngine.LocalEngine.Update("man11.bin", key, new Man
+            {
+              Addr="addr123",
+              IDCard=man19.IDCard,
+              Name=man19.Name,
+              Sex=man19.Sex
+            });
+
+            var man19_ = EntityTableEngine.LocalEngine.Find<Man>("man11.bin", key).First();
+            Console.WriteLine(man19_.IDCard + " " + man19_.Name + " " + man19_.Addr + " " + man19_.Sex);
+
+            Console.Read();
+        }
+
         static void Main(string[] args)
         {
+            Test111();
+
             ShellUtil.CallShell(@"E:\Work\learn\Git\Ljc.JFrameWork\lib\JavaService-2.0.10.64\install.bat", null);
             return;
             int cnt=0;
