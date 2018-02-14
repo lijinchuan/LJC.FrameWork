@@ -168,7 +168,7 @@ namespace Test
         {
             DateTime ts = DateTime.Now;
             int i = 0;
-            foreach (var man19 in EntityTableEngine.LocalEngine.List<Man>("man11.bin"))
+            foreach (var man19 in EntityTableEngine.LocalEngine.ListAll<Man>("man11.bin"))
             {
                 i++;
                 //Console.WriteLine(man19.IDCard + " " + man19.Name + " " + man19.Addr + " " + man19.Sex);

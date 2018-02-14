@@ -507,10 +507,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public IEnumerable<T> List<T>(string tablename) where T : new()
+        public IEnumerable<T> ListAll<T>(string tablename) where T:new()
         {
-            var meta = GetMetaData(tablename);
-
+            var meta = this.GetMetaData(tablename);
             var keys = indexdic[tablename].Keys;
             foreach (var key in keys)
             {
@@ -519,6 +518,27 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     yield return kk;
                 }
             }
+        }
+
+        public IEnumerable<T> List<T>(string tablename,int pi,int ps) where T : new()
+        {
+            var meta = this.GetMetaData(tablename);
+            var keys = indexdic[tablename].Keys;
+            keys = keys.Skip((pi - 1) * ps).Take(ps).ToList();
+            foreach (var key in keys)
+            {
+                foreach (var kk in Find<T>(tablename, key))
+                {
+                    yield return kk;
+                }
+            }
+        }
+
+        public int Count(string tablename)
+        {
+            var meta = this.GetMetaData(tablename);
+            var keys = indexdic[tablename].Keys;
+            return keys.Count;
         }
 
         public IEnumerable<T> Find<T>(string tablename, string key) where T : new()
