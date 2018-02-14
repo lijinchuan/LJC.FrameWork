@@ -130,7 +130,7 @@ namespace Test
             }
         }
 
-        static void Test111()
+        static void TestLocaldb()
         {
             //EntityTableEngine.LocalEngine.CreateTable("man11.bin", "IDCard", typeof(Man));
 
@@ -150,12 +150,12 @@ namespace Test
 
             Console.WriteLine(man19.IDCard + " " + man19.Name + " " + man19.Addr + " " + man19.Sex);
 
-            EntityTableEngine.LocalEngine.Upsert("man11.bin", key, new Man
+            EntityTableEngine.LocalEngine.Upsert("man11.bin", new Man
             {
-              Addr="addr123456",
+              Addr="addr1234567890",
               IDCard=man19.IDCard,
               Name=man19.Name,
-              Sex=man19.Sex
+              Sex=man19.Sex==0?1:0
             });
 
             var man19_ = EntityTableEngine.LocalEngine.Find<Man>("man11.bin", key).First();
@@ -164,9 +164,24 @@ namespace Test
             Console.Read();
         }
 
+        private static void TestLocaldbRead()
+        {
+            DateTime ts = DateTime.Now;
+            int i = 0;
+            foreach (var man19 in EntityTableEngine.LocalEngine.List<Man>("man11.bin"))
+            {
+                i++;
+                //Console.WriteLine(man19.IDCard + " " + man19.Name + " " + man19.Addr + " " + man19.Sex);
+            }
+
+            Console.WriteLine("共有数据:" + i + "条,用时:" + (DateTime.Now.Subtract(ts).TotalMilliseconds + "ms"));
+            Console.Read();
+        }
+
         static void Main(string[] args)
         {
-            Test111();
+            TestLocaldb();
+            TestLocaldbRead();
 
             ShellUtil.CallShell(@"E:\Work\learn\Git\Ljc.JFrameWork\lib\JavaService-2.0.10.64\install.bat", null);
             return;

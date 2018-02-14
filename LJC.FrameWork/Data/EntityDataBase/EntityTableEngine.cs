@@ -349,7 +349,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return false;
         }
 
-        public bool Upsert<T>(string tablename, string key, T item) where T : new()
+        public bool Upsert<T>(string tablename, T item) where T : new()
         {
             EntityTableMeta meta = GetMetaData(tablename);
 
@@ -357,7 +357,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
             }
-            
+
+            var keyobj = item.Eval(meta.KeyProperty);
+            if (keyobj == null)
+            {
+                throw new Exception("key不能为空");
+            }
+
+            string key = keyobj.ToString();
             ArrayList arr=null;
             if(indexdic[tablename].TryGetValue(key,out arr)&&arr.Count>0)
             {
@@ -454,7 +461,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return true;
         }
 
-        public bool Update<T>(string tablename, string key, T item) where T : new()
+        public bool Update<T>(string tablename, T item) where T : new()
         {
             EntityTableMeta meta = GetMetaData(tablename);
 
@@ -462,6 +469,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
             }
+
+            var keyobj = item.Eval(meta.KeyProperty);
+            if (keyobj == null)
+            {
+                throw new Exception("key不能为空");
+            }
+
+            string key = keyobj.ToString();
 
             return Update2(tablename, key, item,meta);
         }
@@ -477,6 +492,20 @@ namespace LJC.FrameWork.Data.EntityDataBase
             catch
             {
                 return false;
+            }
+        }
+
+        public IEnumerable<T> List<T>(string tablename) where T : new()
+        {
+            var meta = GetMetaData(tablename);
+
+            var keys = indexdic[tablename].Keys;
+            foreach (var key in keys)
+            {
+                foreach (var kk in Find<T>(tablename, key))
+                {
+                    yield return kk;
+                }
             }
         }
 
