@@ -80,9 +80,27 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
+        private string GetTableFile(string tablename)
+        {
+            string tablefile = dirbase + "\\" + tablename + ".etb";
+            return tablefile;
+        }
+
+        private string GetMetaFile(string tablename)
+        {
+            string metafile = dirbase + "\\" + tablename + ".meta";
+            return metafile;
+        }
+
+        private string GetIndexFile(string tablename)
+        {
+            string indexfile = dirbase + "\\" + tablename + ".id";
+            return indexfile;
+        }
+
         public void CreateTable(string tablename,string keyname,Type ttype)
         {
-            string tablefile =dirbase+"\\"+ tablename+".etb";
+            string tablefile =GetTableFile(tablename);
             bool delfile = true;
             if (!File.Exists(tablefile))
             {
@@ -90,7 +108,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                     {
-                        string metafile = dirbase + "\\" + tablename + ".meta";
+                        string metafile = GetMetaFile(tablename);
                         if (!File.Exists(metafile))
                         {
                             EntityTableMeta meta = new EntityTableMeta();
@@ -120,7 +138,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
 
                         //索引
-                        string indexfile = dirbase + "\\" + tablename + ".id";
+                        string indexfile = GetIndexFile(tablename);
                         using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                         {
                         }
@@ -165,7 +183,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         private void LoadIndex(string tablename)
         {
-            string indexfile = dirbase + "\\" + tablename + ".id";
+            string indexfile = GetIndexFile(tablename);
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
                 var idc = indexdic[tablename];
@@ -219,7 +237,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 return meta;
             }
 
-            string metafile = dirbase + "\\" + tablename + ".meta";
+            string metafile = GetMetaFile(tablename);
             if (!File.Exists(metafile))
             {
                 throw new Exception("找不到元文件:" + tablename);
@@ -274,7 +292,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
             }
 
-            string tablefile = dirbase + "\\" + tablename;
+            string tablefile = GetTableFile(tablename);
             var tableitem = new EntityTableItem<T>(item);
             tableitem.Flag = EntityTableItemFlag.Ok;
             var locker = GetKeyLocker(tablename, keystr);
@@ -309,7 +327,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         al.Add(newindex);
                     }
 
-                    string indexfile = dirbase + "\\" + tablename + ".id";
+                    string indexfile = GetIndexFile(tablename);
                     using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                     {
                         idx.AppendObject(newindex);
@@ -343,7 +361,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 if (indexdic[tablename].TryRemove(key, out arr))
                 {
-                    string indexfile = dirbase + "\\" + tablename + ".id";
+                    string indexfile = GetIndexFile(tablename);
                     using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                     {
                         foreach (var item in arr)
@@ -390,7 +408,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         private bool Update2<T>(string tablename, string key, T item, EntityTableMeta meta) where T : new()
         {
-            string tablefile = dirbase + "\\" + tablename + ".etb";
+            string tablefile = GetTableFile(tablename);
             ArrayList arr = null;
             Tuple<long, long> offset = null;
             int indexpos = 0;
@@ -404,7 +422,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
 
                 indexpos = arr.Count - 1;
-                string indexfile = dirbase + "\\" + tablename + ".id";
+                string indexfile = GetIndexFile(tablename);
                 EntityTableIndexItem indexitem = (EntityTableIndexItem)arr[indexpos];
                 using (ObjTextWriter idx = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                 {
@@ -543,7 +561,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public IEnumerable<T> Find<T>(string tablename, string key) where T : new()
         {
-            string tablefile = dirbase + "\\" + tablename + ".etb";
+            string tablefile = GetTableFile(tablename);
             EntityTableMeta meta = GetMetaData(tablename);
             ArrayList arr = null;
             EntityTableIndexItem indexitem = null;
