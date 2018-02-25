@@ -82,7 +82,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public void CreateTable(string tablename,string keyname,Type ttype)
         {
-            string tablefile =dirbase+"\\"+ tablename;
+            string tablefile =dirbase+"\\"+ tablename+".etb";
             bool delfile = true;
             if (!File.Exists(tablefile))
             {
@@ -390,7 +390,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         private bool Update2<T>(string tablename, string key, T item, EntityTableMeta meta) where T : new()
         {
-            string tablefile = dirbase + "\\" + tablename;
+            string tablefile = dirbase + "\\" + tablename + ".etb";
             ArrayList arr = null;
             Tuple<long, long> offset = null;
             int indexpos = 0;
@@ -543,7 +543,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public IEnumerable<T> Find<T>(string tablename, string key) where T : new()
         {
-            string tablefile = dirbase + "\\" + tablename;
+            string tablefile = dirbase + "\\" + tablename + ".etb";
             EntityTableMeta meta = GetMetaData(tablename);
             ArrayList arr = null;
             EntityTableIndexItem indexitem = null;
