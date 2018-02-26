@@ -167,8 +167,9 @@ namespace Test2
         static void TestLocaldb()
         {
             //Man 
-            //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man), new[] { "IDCard", "Sex" });
-            EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
+            EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man), new[] { "IDCard", "Sex" });
+            //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
+            DateTime time = DateTime.Now;
             for(int i=0;i<100000;i++){
                 EntityTableEngine.LocalEngine.Insert("Man", new Man
                 {
@@ -179,7 +180,7 @@ namespace Test2
                 });
             }
 
-            Console.WriteLine("写入完成");
+            Console.WriteLine("写入完成:"+DateTime.Now.Subtract(time).TotalMilliseconds);
             Console.Read();
         }
 
