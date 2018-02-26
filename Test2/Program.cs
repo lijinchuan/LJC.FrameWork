@@ -2,6 +2,7 @@
 using LJC.Com.StockService.Contract;
 using LJC.FrameWork.Comm;
 using LJC.FrameWork.Comm.TextReaderWriter;
+using LJC.FrameWork.Data.EntityDataBase;
 using LJC.FrameWork.Data.Mongo;
 using LJC.FrameWork.SOA;
 using LJC.FrameWork.SocketApplication;
@@ -163,9 +164,38 @@ namespace Test2
             Console.WriteLine(obj.Message);
         }
 
+        static void TestLocaldb()
+        {
+            //Man 
+            //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man), new[] { "IDCard", "Sex" });
+            EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
+            for(int i=0;i<100000;i++){
+                EntityTableEngine.LocalEngine.Insert("Man", new Man
+                {
+                    Addr="addr"+Guid.NewGuid().ToString(),
+                    IDCard="id"+i,
+                    Name="name"+i,
+                    Sex=new Random(Guid.NewGuid().GetHashCode()).Next(2)
+                });
+            }
+
+            Console.WriteLine("写入完成");
+            Console.Read();
+        }
+
+        static void TestLocaldbFind()
+        {
+
+            Console.Read();
+        }
+
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            TestLocaldb();
+
+            return;
+
             ESBUdpClient client = new ESBUdpClient("192.168.0.100", 2998);
             client.StartClient();
             client.LoginFail += () =>

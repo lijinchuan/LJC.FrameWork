@@ -17,6 +17,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
             set;
         }
 
+        /// <summary>
+        /// 其它索引
+        /// </summary>
+        public string[] Indexs
+        {
+            get;
+            set;
+        }
+
         private bool _keyDuplicate = true;
         public bool KeyDuplicate
         {
@@ -73,6 +82,16 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             get;
             set;
+        }
+
+        private Dictionary<string, PropertyInfoEx> _indexProperties = new Dictionary<string, PropertyInfoEx>();
+        [XmlIgnore]
+        public Dictionary<string, PropertyInfoEx> IndexProperties
+        {
+            get
+            {
+                return _indexProperties;
+            }
         }
 
         private object _locker = new object();

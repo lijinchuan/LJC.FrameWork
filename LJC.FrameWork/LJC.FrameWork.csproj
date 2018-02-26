@@ -177,6 +177,7 @@
     <Compile Include="Comm\ImageHelper.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Comm\IOUtil.cs" />
     <Compile Include="Comm\JsonHelper.cs">
       <SubType>Code</SubType>
     </Compile>
