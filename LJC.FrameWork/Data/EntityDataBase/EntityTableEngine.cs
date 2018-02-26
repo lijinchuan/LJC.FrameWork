@@ -295,7 +295,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             string tablefile = GetTableFile(tablename);
             var tableitem = new EntityTableItem<T>(item);
             tableitem.Flag = EntityTableItemFlag.Ok;
-            var locker = GetKeyLocker(tablename, keystr);
+            var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
             {
                 using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
@@ -356,7 +356,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             EntityTableMeta meta = GetMetaData(tablename);
             ArrayList arr = null;
 
-            var locker = GetKeyLocker(tablename, key);
+            var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
             {
                 if (indexdic[tablename].TryRemove(key, out arr))
@@ -413,7 +413,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             Tuple<long, long> offset = null;
             int indexpos = 0;
 
-            var locker = GetKeyLocker(tablename, key);
+            var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
             {
                 if (!indexdic[tablename].TryGetValue(key, out arr) || arr.Count == 0)
