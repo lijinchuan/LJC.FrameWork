@@ -281,6 +281,14 @@ namespace LJC.FrameWork.Comm
             _isdispose = true;
         }
 
+        public bool Isdispose
+        {
+            get
+            {
+                return _isdispose;
+            }
+        }
+
         public void Dispose()
         {
             Dispose(true);
@@ -289,6 +297,15 @@ namespace LJC.FrameWork.Comm
         ~ObjTextWriter()
         {
             Dispose(false);
+        }
+
+        /// <summary>
+        /// 附加数据
+        /// </summary>
+        public object Tag
+        {
+            get;
+            set;
         }
     }
 }

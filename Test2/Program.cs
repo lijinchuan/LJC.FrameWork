@@ -186,15 +186,25 @@ namespace Test2
 
         static void TestLocaldbFind()
         {
-
+            for (int i = 0; i < 2; i++)
+            {
+                var time = DateTime.Now;
+                int cnt = 0;
+                foreach (var m in EntityTableEngine.LocalEngine.Find<Man>("Man", "Sex", "1"))
+                {
+                    //Console.WriteLine(m.Name + " " + m.Sex);
+                    cnt++;
+                }
+                Console.WriteLine("读取完成:" + cnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
+            }
             Console.Read();
         }
 
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            TestLocaldb();
-
+            //TestLocaldb();
+            TestLocaldbFind();
             return;
 
             ESBUdpClient client = new ESBUdpClient("192.168.0.100", 2998);

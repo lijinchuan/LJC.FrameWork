@@ -129,7 +129,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         class WriterDestroy : ICoroutineUnit
         {
-            private DateTime _timeadd = DateTime.Now;
             private Dictionary<string,ObjTextWriter> _dic;
             private string _key;
             public bool IsSuccess()
@@ -157,7 +156,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void Exceute()
             {
-                if (DateTime.Now.Subtract(_timeadd).TotalSeconds > 5)
+                if (DateTime.Now.Subtract((DateTime)_dic[_key].Tag).TotalSeconds > 5)
                 {
                     _isdone = true;
                 }
@@ -506,18 +505,32 @@ namespace LJC.FrameWork.Data.EntityDataBase
             ObjTextWriter writer=null;
             if(writerdic.TryGetValue(filename,out writer))
             {
-                return writer;
+                lock (writer)
+                {
+                    if (!writer.Isdispose)
+                    {
+                        writer.Tag = DateTime.Now;
+                        return writer;
+                    }
+                }
             }
 
             lock (writerdic)
             {
                 if (writerdic.TryGetValue(filename, out writer))
                 {
-                    return writer;
+                    lock (writer)
+                    {
+                        if (!writer.Isdispose)
+                        {
+                            writer.Tag = DateTime.Now;
+                            return writer;
+                        }
+                    }
                 }
 
                 writer = ObjTextWriter.CreateWriter(filename, ObjTextReaderWriterEncodeType.entitybuf);
-
+                writer.Tag = DateTime.Now;
                 writerdic.Add(filename, writer);
 
                 LJC.FrameWork.Comm.Coroutine.CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new WriterDestroy(writerdic, filename));
