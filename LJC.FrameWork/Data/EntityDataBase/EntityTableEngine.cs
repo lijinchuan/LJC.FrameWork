@@ -108,7 +108,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void Exceute()
             {
-                if (DateTime.Now.Subtract(_timeadd).TotalSeconds > 30)
+                if (DateTime.Now.Subtract(_timeadd).TotalSeconds > 1)
                 {
                     _isdone = true;
                 }
