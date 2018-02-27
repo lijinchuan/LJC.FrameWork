@@ -722,7 +722,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             string key = keyobj.ToString();
             Dictionary<long, EntityTableIndexItem> arr = null;
-            if(keyindexdic[tablename].TryGetValue(key,out arr))
+            if (keyindexdic[tablename].TryGetValue(key, out arr) && arr.Count > 0)
             {
                 return Update2(tablename, key, item, meta);
             }
@@ -865,8 +865,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
             try
             {
                 var meta = this.GetMetaData(tablename);
-
-                return keyindexdic[tablename].ContainsKey(key);
+                Dictionary<long, EntityTableIndexItem> val = null;
+                return keyindexdic[tablename].TryGetValue(key, out val) && val.Count > 0;
             }
             catch
             {

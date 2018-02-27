@@ -190,9 +190,14 @@ namespace Test2
             {
                 var time = DateTime.Now;
                 int cnt = 0;
-                foreach (var m in EntityTableEngine.LocalEngine.Find<Man>("Man", "Sex", "1"))
+                //foreach (var m in EntityTableEngine.LocalEngine.Find<Man>("Man", "Sex", "1"))
+                //{
+                //    //Console.WriteLine(m.Name + " " + m.Sex);
+                //    cnt++;
+                //}
+                foreach (var m in EntityTableEngine.LocalEngine.Find<Man>("Man", "name8651"))
                 {
-                    //Console.WriteLine(m.Name + " " + m.Sex);
+                    Console.WriteLine(m.Name + " " + m.Addr);
                     cnt++;
                 }
                 Console.WriteLine("读取完成:" + cnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
