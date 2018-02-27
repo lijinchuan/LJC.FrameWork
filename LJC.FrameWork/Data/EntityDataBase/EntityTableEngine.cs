@@ -156,7 +156,23 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void Exceute()
             {
-                if (DateTime.Now.Subtract((DateTime)_dic[_key].Tag).TotalSeconds > 5)
+                var o = _dic[_key];
+                if (o != null)
+                {
+                    lock (o)
+                    {
+                        if (DateTime.Now.Subtract((DateTime)_dic[_key].Tag).TotalSeconds > 1)
+                        {
+                            lock (_dic)
+                            {
+                                o.Dispose();
+                                _dic.Remove(_key);
+                            }
+                            _isdone = true;
+                        }
+                    }
+                }
+                else
                 {
                     _isdone = true;
                 }
@@ -170,19 +186,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void CallBack(CoroutineCallBackEventArgs args)
             {
-
-                var o = _dic[_key];
-                if (o != null)
-                {
-                    lock (o)
-                    {
-                        lock (_dic)
-                        {
-                            _dic.Remove(_key);
-                            o.Dispose();
-                        }
-                    }
-                }
             }
         }
 
