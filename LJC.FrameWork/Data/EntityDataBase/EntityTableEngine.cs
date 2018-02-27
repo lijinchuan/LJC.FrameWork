@@ -19,7 +19,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         /// <summary>
         /// 索引缓存
         /// </summary>
-        ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long, EntityTableIndexItem>>> indexdic = new ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long, EntityTableIndexItem>>>();
+        ConcurrentDictionary<string, EntityTableIndexItemBag> indexdic = new ConcurrentDictionary<string, EntityTableIndexItemBag>();
 
         string dirbase = System.AppDomain.CurrentDomain.BaseDirectory+"\\localdb\\";
 
@@ -80,8 +80,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         class IndexDestroy : ICoroutineUnit
         {
-            private DateTime _timeadd = DateTime.Now;
-            private ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long, EntityTableIndexItem>>> _dic;
+            private ConcurrentDictionary<string, EntityTableIndexItemBag> _dic;
             private string _key;
             public bool IsSuccess()
             {
@@ -100,7 +99,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
 
-            public IndexDestroy(ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long, EntityTableIndexItem>>> dic, string key)
+            public IndexDestroy(ConcurrentDictionary<string, EntityTableIndexItemBag> dic, string key)
             {
                 this._dic = dic;
                 this._key = key;
@@ -108,9 +107,19 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void Exceute()
             {
-                if (DateTime.Now.Subtract(_timeadd).TotalSeconds > 1)
+                EntityTableIndexItemBag val=null;
+                _dic.TryGetValue(_key, out val);
+                if (val != null)
                 {
-                    _isdone = true;
+                    lock (val)
+                    {
+                        if (DateTime.Now.Subtract(val.LastUsed).TotalSeconds > 30)
+                        {
+                            EntityTableIndexItemBag val0;
+                            _dic.TryRemove(_key, out val0);
+                            _isdone = true;
+                        }
+                    }
                 }
             }
 
@@ -122,8 +131,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void CallBack(CoroutineCallBackEventArgs args)
             {
-                ConcurrentDictionary<string, Dictionary<long, EntityTableIndexItem>> val;
-                _dic.TryRemove(_key,out val);
+               
             }
         }
 
@@ -381,39 +389,38 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private ConcurrentDictionary<string, Dictionary<long, EntityTableIndexItem>> LoadIndex(string tablename, string indexname, EntityTableMeta meta)
+        private EntityTableIndexItemBag LoadIndex(string tablename, string indexname, EntityTableMeta meta)
         {
             string key = string.Format("{0}##{1}", tablename, indexname);
-            ConcurrentDictionary<string, Dictionary<long, EntityTableIndexItem>> temp=null;
+            EntityTableIndexItemBag temp = null;
             if(indexdic.TryGetValue(key,out temp))
             {
-                return temp;
+                temp.LastUsed = DateTime.Now;
+                //return temp;
             }
-
+            else
+            {
+                temp = new EntityTableIndexItemBag();
+            }
+            string indexfile = GetIndexFile(tablename, indexname);
             var locker = GetKeyLocker(tablename, "index_" + indexname);
-
             lock (locker)
             {
-                if (indexdic.TryGetValue(key, out temp))
-                {
-                    return temp;
-                }
-
-                temp = new ConcurrentDictionary<string, Dictionary<long, EntityTableIndexItem>>();
-                string indexfile = GetIndexFile(tablename, indexname);
-
                 using (ObjTextReader idxreader = ObjTextReader.CreateReader(indexfile))
                 {
+                    if (temp.LastOffset > 0)
+                    {
+                        idxreader.SetPostion(temp.LastOffset);
+                    }
+
                     Dictionary<long, EntityTableIndexItem> al = null;
                     foreach (var newindex in idxreader.ReadObjectsWating<EntityTableIndexItem>(1))
                     {
-                        if (!temp.TryGetValue(newindex.Key, out al))
+                        temp.LastOffset = idxreader.ReadedPostion();
+                        if (!temp.Dics.TryGetValue(newindex.Key, out al))
                         {
-                            if (!temp.TryGetValue(newindex.Key, out al))
-                            {
-                                al = new Dictionary<long, EntityTableIndexItem>();
-                                temp.TryAdd(newindex.Key, al);
-                            }
+                            al = new Dictionary<long, EntityTableIndexItem>();
+                            temp.Dics.TryAdd(newindex.Key, al);
                         }
 
                         if (newindex.Del)
@@ -422,17 +429,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                         else
                         {
-                            lock (al)
-                            {
-                                al.Add(newindex.Offset, newindex);
-                            }
-                        }
+                            al.Add(newindex.Offset, newindex);
+                        }                      
                     }
                 }
 
-                indexdic.TryAdd(key, temp);
-
-                LJC.FrameWork.Comm.Coroutine.CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new IndexDestroy(indexdic, key));
+                if (temp.LastUsed==DateTime.MinValue)
+                {
+                    temp.LastUsed = DateTime.Now;
+                    indexdic.TryAdd(key, temp);
+                    LJC.FrameWork.Comm.Coroutine.CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new IndexDestroy(indexdic, key));
+                }
+                else
+                {
+                    temp.LastUsed = DateTime.Now;
+                }
             }
 
             return temp;
@@ -937,7 +948,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 value = string.Empty;
             }
-            if (indexobj.TryGetValue(value, out arr))
+            if (indexobj.Dics.TryGetValue(value, out arr))
             {
                 //先找到offset
                 using (ObjTextReader otw = ObjTextReader.CreateReader(tablefile))

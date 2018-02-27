@@ -342,6 +342,13 @@ namespace LJC.FrameWork.Comm
                         }
                     }
                 }
+                else
+                {
+                    if (timeout > 0)
+                    {
+                        break;
+                    }
+                }
 
                 bool exit = false;
                 while (_sr.BaseStream.Length - oldlen < 4)
