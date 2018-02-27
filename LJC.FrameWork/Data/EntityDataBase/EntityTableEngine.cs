@@ -396,16 +396,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
             if(indexdic.TryGetValue(key,out temp))
             {
                 temp.LastUsed = DateTime.Now;
-                //return temp;
             }
-            else
-            {
-                temp = new EntityTableIndexItemBag();
-            }
+
             string indexfile = GetIndexFile(tablename, indexname);
             var locker = GetKeyLocker(tablename, "index_" + indexname);
             lock (locker)
             {
+                if (indexdic.TryGetValue(key, out temp))
+                {
+                    temp.LastUsed = DateTime.Now;
+                }
+                else
+                {
+                    temp = new EntityTableIndexItemBag();
+                }
+
                 using (ObjTextReader idxreader = ObjTextReader.CreateReader(indexfile))
                 {
                     if (temp.LastOffset > 0)
