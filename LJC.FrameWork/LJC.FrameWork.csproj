@@ -238,6 +238,7 @@
     <Compile Include="ConfigurationSectionHandler\ThreadPoolConfig.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableEngine.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableIndexItem.cs" />
+    <Compile Include="Data\EntityDataBase\EntityTableIndexItemBag.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableItem.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableItemFlag.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableMeta.cs" />
