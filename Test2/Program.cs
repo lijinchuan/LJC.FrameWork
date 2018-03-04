@@ -1,6 +1,7 @@
 ﻿using Ljc.Com.NewsService.Entity;
 using LJC.Com.StockService.Contract;
 using LJC.FrameWork.Comm;
+using LJC.FrameWork.Comm.Coroutine;
 using LJC.FrameWork.Comm.TextReaderWriter;
 using LJC.FrameWork.Data.EntityDataBase;
 using LJC.FrameWork.Data.Mongo;
@@ -200,11 +201,57 @@ namespace Test2
             Console.Read();
         }
 
+        class coroutineTest : LJC.FrameWork.Comm.Coroutine.ICoroutineUnit
+        {
+            DateTime time = DateTime.Now;
+            public bool IsSuccess()
+            {
+                return false;
+            }
+
+            public bool IsDone()
+            {
+                return DateTime.Now.Subtract(time).TotalSeconds > 10;
+            }
+
+            public bool IsTimeOut()
+            {
+                return false;
+            }
+
+            public void Exceute()
+            {
+                
+            }
+
+            public object GetResult()
+            {
+                return null;
+            }
+
+            public void CallBack(CoroutineCallBackEventArgs args)
+            {
+                Console.WriteLine("计时完成");
+            }
+        }
+
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
             //TestLocaldb();
-            TestLocaldbFind();
+            //TestLocaldbFind();
+
+            CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new coroutineTest());
+
+            Thread.Sleep(15000);
+            CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new coroutineTest());
+
+            Thread.Sleep(30000);
+            CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new coroutineTest());
+
+            
+
+            Console.Read();
             return;
 
             ESBUdpClient client = new ESBUdpClient("192.168.0.100", 2998);

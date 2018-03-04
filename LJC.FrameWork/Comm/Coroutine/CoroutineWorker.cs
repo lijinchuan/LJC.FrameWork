@@ -75,10 +75,6 @@ namespace LJC.FrameWork.Comm.Coroutine
                         if (thread.ThreadState == ThreadState.Aborted || thread.ThreadState == ThreadState.Stopped)
                         {
                             thread = new Thread(ts);
-                            if (running)
-                            {
-                                thread.Start();
-                            }
                             break;
                         }
                         else
@@ -108,6 +104,18 @@ namespace LJC.FrameWork.Comm.Coroutine
                 lock (unitstemp)
                 {
                     unitstemp.Add(bag);
+                }
+
+                if (!running)
+                {
+                    lock (this)
+                    {
+                        if (!running)
+                        {
+                            running = true;
+                            MakeThread();
+                        }
+                    }
                 }
             }
         }
@@ -160,12 +168,17 @@ namespace LJC.FrameWork.Comm.Coroutine
 
                 if (units.Count == 0)
                 {
-                    Thread.Sleep(sleepms);
                     if (sleepms < maxsleepms)
                     {
-                        sleepms++;
+                        Thread.Sleep(sleepms++);
+                        continue;
                     }
-                    continue;
+                    else
+                    {
+                        sleepms = 1;
+                        running = false;
+                        break;
+                    }
                 }
                 else
                 {
