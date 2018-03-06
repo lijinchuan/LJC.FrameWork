@@ -353,11 +353,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return locker;
         }
 
-        private void LoadKey(string tablename)
+        private void LoadKey(string tablename,EntityTableMeta meta)
         {
             string indexfile = GetKeyFile(tablename);
+            var indexmergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+            if (indexmergeinfo == null)
+            {
+                indexmergeinfo = new IndexMergeInfo();
+                meta.IndexMergeInfos.Add(indexmergeinfo);
+            }
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
+                if (indexmergeinfo.IndexMergePos > 0)
+                {
+                    idx.SetPostion(indexmergeinfo.IndexMergePos);
+                }
                 var idc = keyindexdic[tablename];
                 Dictionary<long, EntityTableIndexItem> al = null;
                 foreach(var newindex in idx.ReadObjectsWating<EntityTableIndexItem>(1))
@@ -514,7 +524,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
             }
 
-            LoadKey(tablename);
+            LoadKey(tablename,meta);
 
             return meta;
         }
