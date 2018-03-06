@@ -77,6 +77,19 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
+        private List<IndexMergeInfo> _indexMergeInfos = new List<IndexMergeInfo>();
+        public List<IndexMergeInfo> IndexMergeInfos
+        {
+            get
+            {
+                return _indexMergeInfos;
+            }
+            set
+            {
+                _indexMergeInfos = value;
+            }
+        }
+
         [XmlIgnore]
         public PropertyInfoEx KeyProperty
         {

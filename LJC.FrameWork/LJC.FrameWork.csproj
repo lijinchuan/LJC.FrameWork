@@ -242,6 +242,7 @@
     <Compile Include="Data\EntityDataBase\EntityTableItem.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableItemFlag.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableMeta.cs" />
+    <Compile Include="Data\EntityDataBase\IndexMergeInfo.cs" />
     <Compile Include="Data\QuickDataBase\CachDataContextMoudel.cs" />
     <Compile Include="Data\QuickDataBase\DatabaseHelper.cs" />
     <Compile Include="Data\QuickDataBase\DataBaseMapperAttr.cs" />
