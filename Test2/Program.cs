@@ -1,5 +1,6 @@
 ﻿using Ljc.Com.NewsService.Entity;
 using LJC.Com.StockService.Contract;
+using LJC.FrameWork.Collections;
 using LJC.FrameWork.Comm;
 using LJC.FrameWork.Comm.Coroutine;
 using LJC.FrameWork.Comm.TextReaderWriter;
@@ -243,6 +244,26 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            SortedList<long,long> st = new SortedList<long,long>();
+            List<long> listlong = new List<long>();
+           var soredlistlong = new SortedList2<long>();
+            DateTime dt = DateTime.Now;
+            for (int i = 0; i < 100000; i++)
+            {
+                var val = new Random(Guid.NewGuid().GetHashCode()).Next(int.MaxValue);
+                //st.Add(val, val);
+                //listlong.Add(val);
+                soredlistlong.Add(val);
+            }
+            //var listlongsort = listlong.OrderBy(p => p).ToList();
+            //var listlong1 = soredlistlong.GetList();
+            Console.WriteLine(DateTime.Now.Subtract(dt).TotalSeconds);
+            //foreach (var it in listlong1)
+            //{
+            //    Console.WriteLine(it);
+            //}
+            Console.Read();
+            return;
             //TestLocaldb();
             //TestLocaldbFind();
 

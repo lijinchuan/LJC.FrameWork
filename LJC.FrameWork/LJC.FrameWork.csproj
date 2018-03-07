@@ -111,6 +111,8 @@
     <Compile Include="CodeExpression\Sign\T.cs" />
     <Compile Include="CodeExpression\Sign\VarSign.cs" />
     <Compile Include="CodeExpression\SystemFunction\SysFun.cs" />
+    <Compile Include="Collections\SortedList2.cs" />
+    <Compile Include="Collections\SortedList.cs" />
     <Compile Include="Collections\StackEx.cs" />
     <Compile Include="Comm\AutoReSetEventResult.cs">
       <SubType>Code</SubType>

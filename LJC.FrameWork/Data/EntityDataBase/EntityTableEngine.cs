@@ -353,6 +353,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return locker;
         }
 
+        private void Order()
+        {
+            //SortedList
+        }
+
         private void LoadKey(string tablename,EntityTableMeta meta)
         {
             string indexfile = GetKeyFile(tablename);
