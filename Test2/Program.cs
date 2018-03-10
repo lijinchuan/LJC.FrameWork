@@ -186,6 +186,41 @@ namespace Test2
             Console.Read();
         }
 
+        static void TestLocaldb2()
+        {
+            //Man 
+            EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man), new[] { "IDCard", "Sex" });
+            //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
+            DateTime time = DateTime.Now;
+            for (int i = 100000; i < 200000; i++)
+            {
+                EntityTableEngine.LocalEngine.Insert("Man", new Man
+                {
+                    Addr = "addr" + Guid.NewGuid().ToString(),
+                    IDCard = "id" + i,
+                    Name = "name" + i,
+                    Sex = new Random(Guid.NewGuid().GetHashCode()).Next(2)
+                });
+            }
+
+            Console.WriteLine("写入完成:" + DateTime.Now.Subtract(time).TotalMilliseconds);
+            Console.Read();
+        }
+
+        static void TestOrder()
+        {
+            EntityTableEngine.LocalEngine.Order("Man", "Name");
+            using (ObjTextReader reader = ObjTextReader.CreateReader(@"D:\GitHub\LJC.FrameWork\Test2\bin\Release\localdb\Man.id"))
+            {
+                foreach(var item in  reader.ReadObjectsWating<EntityTableIndexItem>(1))
+                {
+                    Console.WriteLine(item.Key + "->" + item.Offset);
+                }
+            }
+
+            Console.Read();
+        }
+
         static void TestLocaldbFind()
         {
             for (int i = 0; i < 10; i++)
@@ -244,28 +279,11 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            SortedList<long,long> st = new SortedList<long,long>();
-            List<long> listlong = new List<long>();
-           var soredlistlong = new SortedList2<long>();
-            DateTime dt = DateTime.Now;
-            for (int i = 0; i < 100000; i++)
-            {
-                var val = new Random(Guid.NewGuid().GetHashCode()).Next(int.MaxValue);
-                //st.Add(val, val);
-                //listlong.Add(val);
-                soredlistlong.Add(val);
-            }
-            //var listlongsort = listlong.OrderBy(p => p).ToList();
-            //var listlong1 = soredlistlong.GetList();
-            Console.WriteLine(DateTime.Now.Subtract(dt).TotalSeconds);
-            //foreach (var it in listlong1)
-            //{
-            //    Console.WriteLine(it);
-            //}
-            Console.Read();
-            return;
             //TestLocaldb();
+            TestLocaldb2();
             //TestLocaldbFind();
+            TestOrder();
+            Console.Read();
 
             CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new coroutineTest());
 

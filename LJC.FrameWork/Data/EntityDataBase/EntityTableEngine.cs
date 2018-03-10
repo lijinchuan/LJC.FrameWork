@@ -353,9 +353,131 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return locker;
         }
 
-        private void Order()
+        public void Order(string tablename, string indexname)
         {
-            //SortedList
+            var meta = GetMetaData(tablename);
+            Order(tablename, indexname, meta);
+        }
+
+        public void Order(string tablename, string indexname, EntityTableMeta meta)
+        {
+            var mergeinfo = meta.IndexMergeInfos.Find(p => indexname.Equals(p.IndexName));
+            if (mergeinfo == null)
+            {
+                mergeinfo = new IndexMergeInfo();
+                mergeinfo.IndexName = indexname;
+                meta.IndexMergeInfos.Add(mergeinfo);
+            }
+            long lasmargepos = 0;
+            string newindexfile = string.Empty;
+            string indexfile =indexname.Equals(meta.KeyName)?GetKeyFile(tablename): GetIndexFile(tablename, indexname);
+            using (var reader = ObjTextReader.CreateReader(indexfile))
+            {
+                long readstartpostion = reader.ReadedPostion();
+                if (mergeinfo.IndexMergePos > 0)
+                {
+                    reader.SetPostion(mergeinfo.IndexMergePos);
+                }
+
+                var listtemp = new List<EntityTableIndexItem>();
+                int readcount = 0;
+                
+                foreach (var obj in reader.ReadObjectsWating<EntityTableIndexItem>(1))
+                {
+                    listtemp.Add(obj);
+                    if (++readcount > 5000000)
+                    {
+                        break;
+                    }
+                }
+
+                if (readcount == 0)
+                {
+                    return;
+                }
+
+                lasmargepos = reader.ReadedPostion();
+
+                listtemp = listtemp.OrderBy(p => p.Key).ThenBy(p => p.Offset).ToList();
+
+                
+                newindexfile =(indexname.Equals(meta.KeyName)?GetKeyFile(tablename): GetIndexFile(tablename, indexname)) + ".temp";
+                bool isall = false;
+                while (true)
+                {
+                    reader.SetPostion(readstartpostion);
+                    var listordered = new List<EntityTableIndexItem>();
+                    var loadcount = 0;
+                    foreach (var item in reader.ReadObjectsWating<EntityTableIndexItem>(1))
+                    {
+                        if (item.Offset >= mergeinfo.IndexMergePos)
+                        {
+                            break;
+                        }
+                        listordered.Add(item);
+                        if (++loadcount >= 1000000)
+                        {
+                            break;
+                        }
+                    }
+
+                    readstartpostion = reader.ReadedPostion();
+
+                    if (listordered.Count == 0)
+                    {
+                        listordered = listtemp;
+                        isall = true;
+                    }
+                    else
+                    {
+                        var subtemplist = listtemp.Where(p => p.Key.CompareTo(listordered.Last().Key) < 0).ToList();
+                        listordered.AddRange(subtemplist);
+                        listordered = listordered.OrderBy(p => p.Key).ThenBy(p => p.Offset).ToList();
+
+                        //存储
+
+                        listtemp = listtemp.Skip(subtemplist.Count).ToList();
+                    }
+
+                    
+                    using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                    {
+                        foreach (var item in listordered)
+                        {
+                            newwriter.AppendObject(item);
+                        }
+                    }
+
+                    if (isall)
+                    {
+                        break;
+                    }
+                }
+
+                reader.SetPostion(lasmargepos);
+                foreach (var item in reader.ReadObjectsWating<EntityTableIndexItem>(1))
+                {
+                    using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                    {
+                        newwriter.AppendObject(item);
+                    }
+                }
+
+                
+            }
+
+            var writer = GetWriter(indexfile);
+            //lock (writer)
+            {
+                writer.Dispose();
+                File.Delete(indexfile);
+                File.Move(newindexfile, indexfile);
+
+                mergeinfo.IndexMergePos = lasmargepos;
+                string metafile = GetMetaFile(tablename);
+
+                LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
+            }
         }
 
         private void LoadKey(string tablename,EntityTableMeta meta)
