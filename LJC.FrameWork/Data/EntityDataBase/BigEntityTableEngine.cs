@@ -511,7 +511,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         list.Add(newindex);
                     }
-                    list.Add(newindex);
+                    if (newindex.Del)
+                    {
+
+                    }
+                    else
+                    {
+                        list.Add(newindex);
+                    }
                 }
             }
             EntityTableIndexItem[] oldindexitems=null;
