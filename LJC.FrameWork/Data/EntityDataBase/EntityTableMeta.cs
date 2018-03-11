@@ -116,5 +116,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 return _locker;
             }
         }
+
+        [XmlIgnore]
+        public int NewCount
+        {
+            get;
+            set;
+        }
     }
 }

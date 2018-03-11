@@ -209,7 +209,7 @@ namespace Test2
 
         static void TestOrder()
         {
-            BigEntityTableEngine.LocalEngine.Order("Man", "Name");
+            BigEntityTableEngine.LocalEngine.MergeIndex("Man", "Name");
             using (ObjTextReader reader = ObjTextReader.CreateReader(@"D:\GitHub\LJC.FrameWork\Test2\bin\Release\localdb\Man.id"))
             {
                 foreach(var item in  reader.ReadObjectsWating<EntityTableIndexItem>(1))

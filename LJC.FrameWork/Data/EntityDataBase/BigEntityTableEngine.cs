@@ -14,6 +14,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
     public class BigEntityTableEngine
     {
         Dictionary<string, EntityTableMeta> metadic = new Dictionary<string, EntityTableMeta>();
+        ConcurrentDictionary<string, EntityTableIndexItem[]> keyindexarrdic = new ConcurrentDictionary<string, EntityTableIndexItem[]>();
         ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long,EntityTableIndexItem>>> keyindexdic = new ConcurrentDictionary<string,ConcurrentDictionary<string,Dictionary<long,EntityTableIndexItem>>>();
         Dictionary<string, object> keylocker = new Dictionary<string, object>();
         /// <summary>
@@ -355,13 +356,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return locker;
         }
 
-        public void Order(string tablename, string indexname)
+        public void MergeIndex(string tablename, string indexname)
         {
             var meta = GetMetaData(tablename);
-            Order(tablename, indexname, meta);
+            MergeIndex(tablename, indexname, meta);
         }
 
-        public void Order(string tablename, string indexname, EntityTableMeta meta)
+        public void MergeIndex(string tablename, string indexname, EntityTableMeta meta)
         {
             var mergeinfo = meta.IndexMergeInfos.Find(p => indexname.Equals(p.IndexName));
             if (mergeinfo == null)
@@ -493,12 +494,30 @@ namespace LJC.FrameWork.Data.EntityDataBase
         private void LoadKey(string tablename,EntityTableMeta meta)
         {
             string indexfile = GetKeyFile(tablename);
-            var indexmergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+             var indexmergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
             if (indexmergeinfo == null)
             {
                 indexmergeinfo = new IndexMergeInfo();
+                indexmergeinfo.IndexName = meta.KeyName;
                 meta.IndexMergeInfos.Add(indexmergeinfo);
             }
+
+            List<EntityTableIndexItem> list = new List<EntityTableIndexItem>();
+            using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
+            {
+                foreach (var newindex in idx.ReadObjectsWating<EntityTableIndexItem>(1))
+                {
+                    if (newindex.Offset >= indexmergeinfo.IndexMergePos)
+                    {
+                        list.Add(newindex);
+                    }
+                    list.Add(newindex);
+                }
+            }
+            EntityTableIndexItem[] oldindexitems=null;
+            keyindexarrdic.TryRemove(tablename, out oldindexitems);
+            keyindexarrdic.TryAdd(tablename, list.ToArray());
+    
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
                 if (indexmergeinfo.IndexMergePos > 0)

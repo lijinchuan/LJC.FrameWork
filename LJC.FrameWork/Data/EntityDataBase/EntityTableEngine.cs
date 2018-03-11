@@ -362,6 +362,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             if (indexmergeinfo == null)
             {
                 indexmergeinfo = new IndexMergeInfo();
+                indexmergeinfo.IndexName = meta.KeyName;
                 meta.IndexMergeInfos.Add(indexmergeinfo);
             }
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
