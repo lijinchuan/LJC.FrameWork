@@ -209,7 +209,7 @@ namespace Test2
 
         static void TestOrder()
         {
-            EntityTableEngine.LocalEngine.Order("Man", "Name");
+            BigEntityTableEngine.LocalEngine.Order("Man", "Name");
             using (ObjTextReader reader = ObjTextReader.CreateReader(@"D:\GitHub\LJC.FrameWork\Test2\bin\Release\localdb\Man.id"))
             {
                 foreach(var item in  reader.ReadObjectsWating<EntityTableIndexItem>(1))
@@ -279,8 +279,8 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            //TestLocaldb();
-            TestLocaldb2();
+            TestLocaldb();
+            //TestLocaldb2();
             //TestLocaldbFind();
             TestOrder();
             Console.Read();
