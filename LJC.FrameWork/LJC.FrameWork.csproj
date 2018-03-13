@@ -240,6 +240,8 @@
     </Compile>
     <Compile Include="ConfigurationSectionHandler\ThreadPoolConfig.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableEngine.cs" />
+    <Compile Include="Data\EntityDataBase\BigEntityTableIndexItem.cs" />
+    <Compile Include="Data\EntityDataBase\BigEntityTableIndexItemBag.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableEngine.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableIndexItem.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableIndexItemBag.cs" />

@@ -14,13 +14,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
     public class BigEntityTableEngine
     {
         Dictionary<string, EntityTableMeta> metadic = new Dictionary<string, EntityTableMeta>();
-        ConcurrentDictionary<string, EntityTableIndexItem[]> keyindexarrdic = new ConcurrentDictionary<string, EntityTableIndexItem[]>();
-        ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long,EntityTableIndexItem>>> keyindexdic = new ConcurrentDictionary<string,ConcurrentDictionary<string,Dictionary<long,EntityTableIndexItem>>>();
+        ConcurrentDictionary<string, BigEntityTableIndexItem[]> keyindexarrdic = new ConcurrentDictionary<string, BigEntityTableIndexItem[]>();
+        ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long, BigEntityTableIndexItem>>> keyindexdic = new ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long, BigEntityTableIndexItem>>>();
         Dictionary<string, object> keylocker = new Dictionary<string, object>();
         /// <summary>
         /// 索引缓存
         /// </summary>
-        ConcurrentDictionary<string, EntityTableIndexItemBag> indexdic = new ConcurrentDictionary<string, EntityTableIndexItemBag>();
+        ConcurrentDictionary<string, BigEntityTableIndexItemBag> indexdic = new ConcurrentDictionary<string, BigEntityTableIndexItemBag>();
 
         string dirbase = System.AppDomain.CurrentDomain.BaseDirectory+"\\localdb\\";
 
@@ -81,7 +81,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         class IndexDestroy : ICoroutineUnit
         {
-            private ConcurrentDictionary<string, EntityTableIndexItemBag> _dic;
+            private ConcurrentDictionary<string, BigEntityTableIndexItemBag> _dic;
             private string _key;
             public bool IsSuccess()
             {
@@ -100,7 +100,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
 
-            public IndexDestroy(ConcurrentDictionary<string, EntityTableIndexItemBag> dic, string key)
+            public IndexDestroy(ConcurrentDictionary<string, BigEntityTableIndexItemBag> dic, string key)
             {
                 this._dic = dic;
                 this._key = key;
@@ -108,7 +108,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void Exceute()
             {
-                EntityTableIndexItemBag val=null;
+                BigEntityTableIndexItemBag val=null;
                 _dic.TryGetValue(_key, out val);
                 if (val != null)
                 {
@@ -116,7 +116,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         if (DateTime.Now.Subtract(val.LastUsed).TotalSeconds > 30)
                         {
-                            EntityTableIndexItemBag val0;
+                            BigEntityTableIndexItemBag val0;
                             _dic.TryRemove(_key, out val0);
                             _isdone = true;
                         }
@@ -286,7 +286,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             LJC.FrameWork.Comm.SerializerHelper.SerializerToXML<EntityTableMeta>(meta, metafile, catchErr: true);
                             metadic.Add(tablename, meta);
 
-                            keyindexdic.TryAdd(tablename,new ConcurrentDictionary<string,Dictionary<long,EntityTableIndexItem>>());
+                            keyindexdic.TryAdd(tablename,new ConcurrentDictionary<string,Dictionary<long,BigEntityTableIndexItem>>());
                         }
                         else
                         {
@@ -502,10 +502,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 meta.IndexMergeInfos.Add(indexmergeinfo);
             }
 
-            List<EntityTableIndexItem> list = new List<EntityTableIndexItem>();
+            List<BigEntityTableIndexItem> list = new List<BigEntityTableIndexItem>();
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
-                foreach (var newindex in idx.ReadObjectsWating<EntityTableIndexItem>(1))
+                foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
                     if (newindex.Offset >= indexmergeinfo.IndexMergePos)
                     {
@@ -521,7 +521,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
             }
-            EntityTableIndexItem[] oldindexitems=null;
+            BigEntityTableIndexItem[] oldindexitems = null;
             keyindexarrdic.TryRemove(tablename, out oldindexitems);
             keyindexarrdic.TryAdd(tablename, list.ToArray());
     
@@ -532,8 +532,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     idx.SetPostion(indexmergeinfo.IndexMergePos);
                 }
                 var idc = keyindexdic[tablename];
-                Dictionary<long, EntityTableIndexItem> al = null;
-                foreach(var newindex in idx.ReadObjectsWating<EntityTableIndexItem>(1))
+                Dictionary<long, BigEntityTableIndexItem> al = null;
+                foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
                     if (!idc.TryGetValue(newindex.Key, out al))
                     {
@@ -541,7 +541,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             if (!idc.TryGetValue(newindex.Key, out al))
                             {
-                                al = new Dictionary<long, EntityTableIndexItem>();
+                                al = new Dictionary<long, BigEntityTableIndexItem>();
                                 idc.TryAdd(newindex.Key, al);
                             }
                         }
@@ -562,10 +562,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private EntityTableIndexItemBag LoadIndex(string tablename, string indexname, EntityTableMeta meta)
+        private BigEntityTableIndexItemBag LoadIndex(string tablename, string indexname, EntityTableMeta meta)
         {
             string key = string.Format("{0}##{1}", tablename, indexname);
-            EntityTableIndexItemBag temp = null;
+            BigEntityTableIndexItemBag temp = null;
             if(indexdic.TryGetValue(key,out temp))
             {
                 temp.LastUsed = DateTime.Now;
@@ -581,7 +581,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 else
                 {
-                    temp = new EntityTableIndexItemBag();
+                    temp = new BigEntityTableIndexItemBag();
                 }
 
                 using (ObjTextReader idxreader = ObjTextReader.CreateReader(indexfile))
@@ -591,13 +591,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         idxreader.SetPostion(temp.LastOffset);
                     }
 
-                    Dictionary<long, EntityTableIndexItem> al = null;
-                    foreach (var newindex in idxreader.ReadObjectsWating<EntityTableIndexItem>(1))
+                    Dictionary<long, BigEntityTableIndexItem> al = null;
+                    foreach (var newindex in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                     {
                         temp.LastOffset = idxreader.ReadedPostion();
                         if (!temp.Dics.TryGetValue(newindex.Key, out al))
                         {
-                            al = new Dictionary<long, EntityTableIndexItem>();
+                            al = new Dictionary<long, BigEntityTableIndexItem>();
                             temp.Dics.TryAdd(newindex.Key, al);
                         }
 
@@ -682,7 +682,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     if (!keyindexdic.ContainsKey(tablename))
                     {
-                        keyindexdic.TryAdd(tablename,new ConcurrentDictionary<string,Dictionary<long,EntityTableIndexItem>>());
+                        keyindexdic.TryAdd(tablename, new ConcurrentDictionary<string, Dictionary<long, BigEntityTableIndexItem>>());
                     }
                 }
             }
@@ -745,7 +745,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 var keylocker = GetKeyLocker(tablename, keystr);
 
-                Dictionary<long, EntityTableIndexItem> arr = null;
+                Dictionary<long, BigEntityTableIndexItem> arr = null;
                 lock (keylocker)
                 {
                     if (keyindexdic[tablename].TryGetValue(keystr, out arr))
@@ -765,10 +765,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 var otw = GetWriter(tablefile);
                 lock(otw)
                 {
-                    
                     var offset = otw.AppendObject(tableitem);
 
-                    Dictionary<long, EntityTableIndexItem> al = null;
+                    Dictionary<long, BigEntityTableIndexItem> al = null;
                     var idc = keyindexdic[tablename];
                     if (!idc.TryGetValue(keystr, out al))
                     {
@@ -776,13 +775,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             if (!idc.TryGetValue(keystr, out al))
                             {
-                                al = new Dictionary<long, EntityTableIndexItem>();
+                                al = new Dictionary<long, BigEntityTableIndexItem>();
                                 idc.TryAdd(keystr, al);
                             }
                         }
                     }
 
-                    var newkey = new EntityTableIndexItem
+                    var newkey = new BigEntityTableIndexItem
                     {
                         Key = keystr,
                         Offset = offset.Item1,
@@ -798,6 +797,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     ObjTextWriter keywriter = GetWriter(keyindexfile);
                     lock(keywriter)
                     {
+                        newkey.KeyOffset = keywriter.GetWritePosition();
                         keywriter.AppendObject(newkey);
                     }
 
@@ -840,7 +840,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public bool Delete(string tablename, string key)
         {
             EntityTableMeta meta = GetMetaData(tablename);
-            Dictionary<long, EntityTableIndexItem> arr = null;
+            Dictionary<long, BigEntityTableIndexItem> arr = null;
 
             var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
@@ -848,34 +848,33 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 if (keyindexdic[tablename].TryRemove(key, out arr))
                 {
                     string keyindexfile = GetKeyFile(tablename);
-                    //using (ObjTextWriter keywriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf))
                     ObjTextWriter keywriter = GetWriter(keyindexfile);
                     lock(keywriter)
                     {
                         foreach (var item in arr)
                         {
-                            var indexitem = (EntityTableIndexItem)item.Value;
+                            var indexitem = (BigEntityTableIndexItem)item.Value;
                             indexitem.Del = true;
+
+                            keywriter.SetPosition(indexitem.KeyOffset);
                             keywriter.AppendObject(indexitem);
 
                             foreach (var idx in meta.Indexs)
                             {
                                 string indexfile = GetIndexFile(tablename, idx);
-                                //using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                                 ObjTextWriter idxwriter = GetWriter(indexfile);
                                 lock(idxwriter)
                                 {
+                                    indexitem.KeyOffset = idxwriter.GetWritePosition();
                                     idxwriter.AppendObject(indexitem);
                                 }
                             }
                         }
                     }
-
-                    return true;
                 }
             }
 
-            return false;
+            return true;
         }
 
         public bool Upsert<T>(string tablename, T item) where T : new()
@@ -894,7 +893,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             string key = keyobj.ToString();
-            Dictionary<long, EntityTableIndexItem> arr = null;
+            Dictionary<long, BigEntityTableIndexItem> arr = null;
             if (keyindexdic[tablename].TryGetValue(key, out arr) && arr.Count > 0)
             {
                 return Update2(tablename, key, item, meta);
@@ -908,7 +907,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         private bool Update2<T>(string tablename, string key, T item, EntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
-            Dictionary<long, EntityTableIndexItem> arr = null;
+            Dictionary<long, BigEntityTableIndexItem> arr = null;
             Tuple<long, long> offset = null;
             int indexpos = 0;
 
@@ -922,7 +921,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 indexpos = arr.Count - 1;
                 string keyindexfile = GetKeyFile(tablename);
-                EntityTableIndexItem indexitem = (EntityTableIndexItem)arr[indexpos];
+                BigEntityTableIndexItem indexitem = (BigEntityTableIndexItem)arr[indexpos];
                 //using (ObjTextWriter keywriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf))
                 ObjTextWriter keywriter = GetWriter(keyindexfile);
                 {
@@ -953,7 +952,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
 
 
-                Dictionary<long, EntityTableIndexItem> al = null;
+                Dictionary<long, BigEntityTableIndexItem> al = null;
                 var keyidc = keyindexdic[tablename];
                 if (!keyidc.TryGetValue(keyvalue.ToString(), out al))
                 {
@@ -961,13 +960,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         if (!keyidc.TryGetValue(keyvalue.ToString(), out al))
                         {
-                            al = new Dictionary<long, EntityTableIndexItem>();
+                            al = new Dictionary<long, BigEntityTableIndexItem>();
                             keyidc.TryAdd(keyvalue.ToString(), al);
                         }
                     }
                 }
 
-                EntityTableIndexItem newkey = new EntityTableIndexItem
+                BigEntityTableIndexItem newkey = new BigEntityTableIndexItem
                 {
                     Key = keyvalue.ToString(),
                     Offset = offset.Item1,
@@ -993,7 +992,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     string indexfile = GetIndexFile(tablename, idx);
                     var indexvalue = item.Eval(meta.IndexProperties[idx]);
-                    var newindex = new EntityTableIndexItem
+                    var newindex = new BigEntityTableIndexItem
                     {
                         Key = indexvalue == null ? string.Empty : indexvalue.ToString(),
                         Offset = offset.Item1,
@@ -1004,6 +1003,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     ObjTextWriter idxwriter = GetWriter(indexfile);
                     lock(idxwriter)
                     {
+                        newindex.KeyOffset = idxwriter.GetWritePosition();
                         idxwriter.AppendObject(newindex);
                     }
                 }
@@ -1038,7 +1038,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             try
             {
                 var meta = this.GetMetaData(tablename);
-                Dictionary<long, EntityTableIndexItem> val = null;
+                Dictionary<long, BigEntityTableIndexItem> val = null;
                 return keyindexdic[tablename].TryGetValue(key, out val) && val.Count > 0;
             }
             catch
@@ -1085,8 +1085,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             string tablefile = GetTableFile(tablename);
             EntityTableMeta meta = GetMetaData(tablename);
-            Dictionary<long, EntityTableIndexItem> arr = null;
-            EntityTableIndexItem indexitem = null;
+            Dictionary<long, BigEntityTableIndexItem> arr = null;
+            BigEntityTableIndexItem indexitem = null;
             if (keyindexdic[tablename].TryGetValue(key, out arr))
             {
                 //先找到offset
@@ -1094,7 +1094,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     foreach (var o in arr)
                     {
-                        indexitem = (EntityTableIndexItem)o.Value;
+                        indexitem = (BigEntityTableIndexItem)o.Value;
                         if (!indexitem.Del)
                         {
                             otw.SetPostion(indexitem.Offset);
@@ -1118,8 +1118,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             string tablefile = GetTableFile(tablename);
             EntityTableMeta meta = GetMetaData(tablename);
-            Dictionary<long, EntityTableIndexItem> arr = null;
-            EntityTableIndexItem indexitem = null;
+            Dictionary<long, BigEntityTableIndexItem> arr = null;
+            BigEntityTableIndexItem indexitem = null;
 
             var indexobj=LoadIndex(tablename, index, meta);
             if (value == null)
@@ -1133,7 +1133,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     foreach (var o in arr)
                     {
-                        indexitem = (EntityTableIndexItem)o.Value;
+                        indexitem = (BigEntityTableIndexItem)o.Value;
                         if (!indexitem.Del)
                         {
                             otw.SetPostion(indexitem.Offset);

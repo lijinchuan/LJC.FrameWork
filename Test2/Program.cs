@@ -186,6 +186,27 @@ namespace Test2
             Console.Read();
         }
 
+        static void TestBigLocaldb()
+        {
+            //Man 
+            BigEntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man), new[] { "IDCard", "Sex" });
+            //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
+            DateTime time = DateTime.Now;
+            for (int i = 0; i < 100000; i++)
+            {
+                BigEntityTableEngine.LocalEngine.Insert("Man", new Man
+                {
+                    Addr = "addr" + Guid.NewGuid().ToString(),
+                    IDCard = "id" + i,
+                    Name = "name" + i,
+                    Sex = new Random(Guid.NewGuid().GetHashCode()).Next(2)
+                });
+            }
+
+            Console.WriteLine("写入完成:" + DateTime.Now.Subtract(time).TotalMilliseconds);
+            Console.Read();
+        }
+
         static void TestLocaldb2()
         {
             //Man 
@@ -242,6 +263,54 @@ namespace Test2
             Console.Read();
         }
 
+        static void TestBigLocaldbFind()
+        {
+            
+            for (int i = 0; i < 10; i++)
+            {
+                var time = DateTime.Now;
+                int cnt = 0;
+                //foreach (var m in EntityTableEngine.LocalEngine.Find<Man>("Man", "Sex", "1"))
+                //{
+                //    //Console.WriteLine(m.Name + " " + m.Sex);
+                //    cnt++;
+                //}
+                foreach (var m in BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name8651"))
+                {
+                    Console.WriteLine(m.Name + " " + m.Addr);
+                    cnt++;
+                }
+                Console.WriteLine("读取完成:" + cnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
+            }
+            Console.Read();
+        }
+
+        static void TestBigLocaldbDel()
+        {
+            //var boo = BigEntityTableEngine.LocalEngine.Delete("Man", "name3991");
+            //Console.WriteLine("删除:" + boo);
+
+            var items = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name3991");
+            if (items.Count() > 0)
+            {
+                Console.WriteLine("查找name3991:" + items.First().Name);
+            }
+            else
+            {
+                Console.WriteLine("查找name3991:不存在");
+            }
+
+            items = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name3992");
+            if (items.Count() > 0)
+            {
+                Console.WriteLine("查找name3992:" + items.First().Name);
+            }
+            else
+            {
+                Console.WriteLine("查找name3992:不存在");
+            }
+        }
+
         class coroutineTest : LJC.FrameWork.Comm.Coroutine.ICoroutineUnit
         {
             DateTime time = DateTime.Now;
@@ -279,6 +348,12 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            //TestBigLocaldb();
+            TestBigLocaldbDel();
+            TestBigLocaldbFind();
+            Console.Read();
+            return;
+
             TestLocaldb();
             //TestLocaldb2();
             //TestLocaldbFind();

@@ -340,6 +340,10 @@ namespace LJC.FrameWork.Comm
                             wtime = DateTime.Now;
                             sleelms = 1;
                         }
+                        else if (timeout > 0)
+                        {
+                            break;
+                        }
                     }
                 }
                 else
