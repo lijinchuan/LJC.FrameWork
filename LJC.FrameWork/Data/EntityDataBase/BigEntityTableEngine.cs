@@ -741,19 +741,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     var offset = otw.AppendObject(tableitem);
 
-                    Dictionary<long, BigEntityTableIndexItem> al = null;
                     var idc = keyindexlistdic[tablename];
-                    if (!idc.TryGetValue(keystr, out al))
-                    {
-                        lock (idc)
-                        {
-                            if (!idc.TryGetValue(keystr, out al))
-                            {
-                                al = new Dictionary<long, BigEntityTableIndexItem>();
-                                idc.TryAdd(keystr, al);
-                            }
-                        }
-                    }
 
                     var newkey = new BigEntityTableIndexItem
                     {
@@ -761,13 +749,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         Offset = offset.Item1,
                         len = (int)(offset.Item2 - offset.Item1)
                     };
-                    lock (al)
-                    {
-                        al.Add(newkey.Offset, newkey);
-                    }
+
+                    idc.Add(newkey);
 
                     string keyindexfile = GetKeyFile(tablename);
-                    //using (ObjTextWriter keywriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf))
                     ObjTextWriter keywriter = GetWriter(keyindexfile);
                     lock(keywriter)
                     {
@@ -779,7 +764,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         string indexfile = GetIndexFile(tablename, idx);
                         var indexvalue = item.Eval(meta.IndexProperties[idx]);
-                        var newindex = new EntityTableIndexItem
+                        var newindex = new BigEntityTableIndexItem
                         {
                             Key = indexvalue == null ? string.Empty : indexvalue.ToString(),
                             Offset = offset.Item1,
@@ -789,6 +774,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         ObjTextWriter idxwriter = GetWriter(indexfile);
                         lock(idxwriter)
                         {
+                            newindex.KeyOffset = idxwriter.GetWritePosition();
                             idxwriter.AppendObject(newindex);
                         }
                     }
@@ -821,34 +807,31 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public bool Delete(string tablename, string key)
         {
             EntityTableMeta meta = GetMetaData(tablename);
-            Dictionary<long, BigEntityTableIndexItem> arr = null;
+            List<BigEntityTableIndexItem> arr = keyindexlistdic[tablename];
 
             var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
             {
-                if (keyindexlistdic[tablename].TryRemove(key, out arr))
+                string keyindexfile = GetKeyFile(tablename);
+                ObjTextWriter keywriter = GetWriter(keyindexfile);
+                lock (keywriter)
                 {
-                    string keyindexfile = GetKeyFile(tablename);
-                    ObjTextWriter keywriter = GetWriter(keyindexfile);
-                    lock(keywriter)
+                    foreach (var item in arr)
                     {
-                        foreach (var item in arr)
+                        var indexitem = item;
+                        indexitem.Del = true;
+
+                        keywriter.SetPosition(indexitem.KeyOffset);
+                        keywriter.AppendObject(indexitem);
+
+                        foreach (var idx in meta.Indexs)
                         {
-                            var indexitem = (BigEntityTableIndexItem)item.Value;
-                            indexitem.Del = true;
-
-                            keywriter.SetPosition(indexitem.KeyOffset);
-                            keywriter.AppendObject(indexitem);
-
-                            foreach (var idx in meta.Indexs)
+                            string indexfile = GetIndexFile(tablename, idx);
+                            ObjTextWriter idxwriter = GetWriter(indexfile);
+                            lock (idxwriter)
                             {
-                                string indexfile = GetIndexFile(tablename, idx);
-                                ObjTextWriter idxwriter = GetWriter(indexfile);
-                                lock(idxwriter)
-                                {
-                                    indexitem.KeyOffset = idxwriter.GetWritePosition();
-                                    idxwriter.AppendObject(indexitem);
-                                }
+                                indexitem.KeyOffset = idxwriter.GetWritePosition();
+                                idxwriter.AppendObject(indexitem);
                             }
                         }
                     }
@@ -874,8 +857,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             string key = keyobj.ToString();
-            Dictionary<long, BigEntityTableIndexItem> arr = null;
-            if (keyindexlistdic[tablename].TryGetValue(key, out arr) && arr.Count > 0)
+            List<BigEntityTableIndexItem> arr = keyindexlistdic[tablename];
+            if (arr.Count > 0)
             {
                 return Update2(tablename, key, item, meta);
             }
@@ -888,14 +871,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
         private bool Update2<T>(string tablename, string key, T item, EntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
-            Dictionary<long, BigEntityTableIndexItem> arr = null;
+            List<BigEntityTableIndexItem> arr = keyindexlistdic[tablename];
             Tuple<long, long> offset = null;
             int indexpos = 0;
 
             var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
             {
-                if (!keyindexlistdic[tablename].TryGetValue(key, out arr))
+
+                if (arr.Count==0)
                 {
                     throw new Exception(string.Format("更新失败，key为{0}的记录数为0", key));
                 }
@@ -933,19 +917,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
 
 
-                Dictionary<long, BigEntityTableIndexItem> al = null;
+                List<BigEntityTableIndexItem> al = null;
                 var keyidc = keyindexlistdic[tablename];
-                if (!keyidc.TryGetValue(keyvalue.ToString(), out al))
-                {
-                    lock (keyidc)
-                    {
-                        if (!keyidc.TryGetValue(keyvalue.ToString(), out al))
-                        {
-                            al = new Dictionary<long, BigEntityTableIndexItem>();
-                            keyidc.TryAdd(keyvalue.ToString(), al);
-                        }
-                    }
-                }
 
                 BigEntityTableIndexItem newkey = new BigEntityTableIndexItem
                 {
@@ -1019,8 +992,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
             try
             {
                 var meta = this.GetMetaData(tablename);
-                Dictionary<long, BigEntityTableIndexItem> val = null;
-                return keyindexlistdic[tablename].TryGetValue(key, out val) && val.Count > 0;
+                List<BigEntityTableIndexItem> val = null;
+                return val.Count > 0;
             }
             catch
             {
