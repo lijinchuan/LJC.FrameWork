@@ -285,10 +285,26 @@ namespace Test2
             Console.Read();
         }
 
+        static void TestBigLocalUpdate()
+        {
+            var man1920=BigEntityTableEngine.LocalEngine.Find<Man>("Man","name1920").First();
+            Console.Write("修改前:"+man1920.Addr);
+            man1920.Addr = "龙坪镇新村李陈1026";
+            BigEntityTableEngine.LocalEngine.Update<Man>("Man", man1920);
+            var man1920_u = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name1920").First();
+            Console.Write("修改后:" + man1920_u.Addr);
+
+            man1920_u.Addr = Guid.NewGuid().ToString() + "asfasdfasdfase_addr";
+            BigEntityTableEngine.LocalEngine.Update<Man>("Man", man1920_u);
+
+            var man1920_uu = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name1920").First();
+            Console.Write("修改后:" + man1920_uu.Addr);
+        }
+
         static void TestBigLocaldbDel()
         {
-            //var boo = BigEntityTableEngine.LocalEngine.Delete("Man", "name3991");
-            //Console.WriteLine("删除:" + boo);
+            var boo = BigEntityTableEngine.LocalEngine.Delete("Man", "name3991");
+            Console.WriteLine("删除:" + boo);
 
             var items = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name3991");
             if (items.Count() > 0)
@@ -349,7 +365,8 @@ namespace Test2
         static void Main(string[] args)
         {
             //TestBigLocaldb();
-            TestBigLocaldbDel();
+            //TestBigLocaldbDel();
+            TestBigLocalUpdate();
             TestBigLocaldbFind();
             Console.Read();
             return;

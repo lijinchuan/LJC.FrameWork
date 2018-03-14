@@ -15,7 +15,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
     {
         Dictionary<string, EntityTableMeta> metadic = new Dictionary<string, EntityTableMeta>();
         ConcurrentDictionary<string, BigEntityTableIndexItem[]> keyindexarrdic = new ConcurrentDictionary<string, BigEntityTableIndexItem[]>();
-        ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long, BigEntityTableIndexItem>>> keyindexdic = new ConcurrentDictionary<string, ConcurrentDictionary<string, Dictionary<long, BigEntityTableIndexItem>>>();
+        ConcurrentDictionary<string, List<BigEntityTableIndexItem>> keyindexlistdic = new ConcurrentDictionary<string, List<BigEntityTableIndexItem>>();
         Dictionary<string, object> keylocker = new Dictionary<string, object>();
         /// <summary>
         /// 索引缓存
@@ -288,7 +288,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             LJC.FrameWork.Comm.SerializerHelper.SerializerToXML<EntityTableMeta>(meta, metafile, catchErr: true);
                             metadic.Add(tablename, meta);
 
-                            keyindexdic.TryAdd(tablename,new ConcurrentDictionary<string,Dictionary<long,BigEntityTableIndexItem>>());
+                            keyindexlistdic.TryAdd(tablename,new List<BigEntityTableIndexItem>());
                         }
                         else
                         {
@@ -509,15 +509,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
-                    if (newindex.Offset >= indexmergeinfo.IndexMergePos)
-                    {
-                        list.Add(newindex);
-                    }
-                    if (newindex.Del)
-                    {
-
-                    }
-                    else
+                    if (!newindex.Del)
                     {
                         list.Add(newindex);
                     }
@@ -533,32 +525,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     idx.SetPostion(indexmergeinfo.IndexMergePos);
                 }
-                var idc = keyindexdic[tablename];
-                Dictionary<long, BigEntityTableIndexItem> al = null;
+                var idc = keyindexlistdic[tablename];
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
-                    if (!idc.TryGetValue(newindex.Key, out al))
+                    if (!newindex.Del)
                     {
-                        lock (idc)
-                        {
-                            if (!idc.TryGetValue(newindex.Key, out al))
-                            {
-                                al = new Dictionary<long, BigEntityTableIndexItem>();
-                                idc.TryAdd(newindex.Key, al);
-                            }
-                        }
-                    }
-
-                    if (newindex.Del)
-                    {
-                        al.Remove(newindex.Offset);
-                    }
-                    else
-                    {
-                        lock (al)
-                        {
-                            al.Add(newindex.Offset,newindex);
-                        }
+                        idc.Add(newindex);
                     }
                 }
             }
@@ -678,13 +650,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
             }
 
-            if (!keyindexdic.ContainsKey(tablename))
+            if (!keyindexlistdic.ContainsKey(tablename))
             {
-                lock (keyindexdic)
+                lock (keyindexlistdic)
                 {
-                    if (!keyindexdic.ContainsKey(tablename))
+                    if (!keyindexlistdic.ContainsKey(tablename))
                     {
-                        keyindexdic.TryAdd(tablename, new ConcurrentDictionary<string, Dictionary<long, BigEntityTableIndexItem>>());
+                        keyindexlistdic.TryAdd(tablename,new List<BigEntityTableIndexItem>());
                     }
                 }
             }
@@ -750,7 +722,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 Dictionary<long, BigEntityTableIndexItem> arr = null;
                 lock (keylocker)
                 {
-                    if (keyindexdic[tablename].TryGetValue(keystr, out arr))
+                    if (keyindexlistdic[tablename].Any(p => string.Equals(p.Key, keystr)))
                     {
                         throw new Exception(string.Format("key:{0}不可重复", keystr));
                     }
@@ -770,7 +742,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var offset = otw.AppendObject(tableitem);
 
                     Dictionary<long, BigEntityTableIndexItem> al = null;
-                    var idc = keyindexdic[tablename];
+                    var idc = keyindexlistdic[tablename];
                     if (!idc.TryGetValue(keystr, out al))
                     {
                         lock (idc)
@@ -854,7 +826,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
             {
-                if (keyindexdic[tablename].TryRemove(key, out arr))
+                if (keyindexlistdic[tablename].TryRemove(key, out arr))
                 {
                     string keyindexfile = GetKeyFile(tablename);
                     ObjTextWriter keywriter = GetWriter(keyindexfile);
@@ -903,7 +875,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             string key = keyobj.ToString();
             Dictionary<long, BigEntityTableIndexItem> arr = null;
-            if (keyindexdic[tablename].TryGetValue(key, out arr) && arr.Count > 0)
+            if (keyindexlistdic[tablename].TryGetValue(key, out arr) && arr.Count > 0)
             {
                 return Update2(tablename, key, item, meta);
             }
@@ -923,7 +895,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
             {
-                if (!keyindexdic[tablename].TryGetValue(key, out arr))
+                if (!keyindexlistdic[tablename].TryGetValue(key, out arr))
                 {
                     throw new Exception(string.Format("更新失败，key为{0}的记录数为0", key));
                 }
@@ -962,7 +934,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
 
                 Dictionary<long, BigEntityTableIndexItem> al = null;
-                var keyidc = keyindexdic[tablename];
+                var keyidc = keyindexlistdic[tablename];
                 if (!keyidc.TryGetValue(keyvalue.ToString(), out al))
                 {
                     lock (keyidc)
@@ -1048,7 +1020,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 var meta = this.GetMetaData(tablename);
                 Dictionary<long, BigEntityTableIndexItem> val = null;
-                return keyindexdic[tablename].TryGetValue(key, out val) && val.Count > 0;
+                return keyindexlistdic[tablename].TryGetValue(key, out val) && val.Count > 0;
             }
             catch
             {
@@ -1059,7 +1031,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public IEnumerable<T> ListAll<T>(string tablename) where T:new()
         {
             var meta = this.GetMetaData(tablename);
-            var keys = keyindexdic[tablename].Keys;
+            var keys = keyindexlistdic[tablename].Keys;
             foreach (var key in keys)
             {
                 foreach (var kk in Find<T>(tablename, key))
@@ -1072,7 +1044,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public IEnumerable<T> List<T>(string tablename,int pi,int ps) where T : new()
         {
             var meta = this.GetMetaData(tablename);
-            var keys = keyindexdic[tablename].Keys;
+            var keys = keyindexlistdic[tablename].Keys;
             keys = keys.Skip((pi - 1) * ps).Take(ps).ToList();
             foreach (var key in keys)
             {
@@ -1086,7 +1058,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public int Count(string tablename)
         {
             var meta = this.GetMetaData(tablename);
-            var keys = keyindexdic[tablename].Keys;
+            var keys = keyindexlistdic[tablename].Keys;
             return keys.Count;
         }
 
@@ -1096,7 +1068,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             EntityTableMeta meta = GetMetaData(tablename);
             Dictionary<long, BigEntityTableIndexItem> arr = null;
             BigEntityTableIndexItem indexitem = null;
-            if (keyindexdic[tablename].TryGetValue(key, out arr))
+            if (keyindexlistdic[tablename].TryGetValue(key, out arr))
             {
                 //先找到offset
                 using (ObjTextReader otw = ObjTextReader.CreateReader(tablefile))
