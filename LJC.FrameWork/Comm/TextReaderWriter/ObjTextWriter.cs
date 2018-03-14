@@ -221,6 +221,11 @@ namespace LJC.FrameWork.Comm
             
         }
 
+        public long GetWritePosition()
+        {
+            return _sw.BaseStream.Position;
+        }
+
         private Tuple<long, long> Append(Stream s, byte[] objstream, bool writesplit)
         {
             var lenbyte = BitConverter.GetBytes(objstream.Length);
