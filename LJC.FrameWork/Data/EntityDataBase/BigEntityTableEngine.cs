@@ -28,6 +28,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
+        private static int MergeTriggerNewCount = 1000000;
+
         class LockerDestroy : ICoroutineUnit
         {
             private DateTime _timeadd = DateTime.Now;
@@ -505,6 +507,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             List<EntityTableIndexItem> list = new List<EntityTableIndexItem>();
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
+                List<EntityTableIndexItem> dellist = new List<EntityTableIndexItem>();
                 foreach (var newindex in idx.ReadObjectsWating<EntityTableIndexItem>(1))
                 {
                     if (newindex.Offset >= indexmergeinfo.IndexMergePos)
@@ -817,6 +820,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             idxwriter.AppendObject(newindex);
                         }
+                    }
+
+                    meta.NewCount += meta.Indexs.Length;
+                    if (meta.NewCount > MergeTriggerNewCount)
+                    {
+                        meta.NewCount = 0;
+                        new Action(() => MergeIndex(tablename, meta.KeyName)).BeginInvoke(null, null);
                     }
                 }
             }
