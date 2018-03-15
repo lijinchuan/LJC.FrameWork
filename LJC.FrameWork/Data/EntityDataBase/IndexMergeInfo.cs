@@ -19,5 +19,22 @@ namespace LJC.FrameWork.Data.EntityDataBase
             get;
             set;
         }
+
+
+        private int _loadFactor = 1;
+        /// <summary>
+        /// 加载因子
+        /// </summary>
+        public int LoadFactor
+        {
+            get
+            {
+                return _loadFactor;
+            }
+            set
+            {
+                _loadFactor = value;
+            }
+        }
     }
 }

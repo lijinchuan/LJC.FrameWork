@@ -28,7 +28,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private static int MergeTriggerNewCount = 1000000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 100;
+        /// <summary>
+        /// 最大单个key占用内存
+        /// </summary>
+        private const long MAX_KEYBUFFER = 500 * 1000 * 1000;
 
         class LockerDestroy : ICoroutineUnit
         {
@@ -504,6 +508,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 meta.IndexMergeInfos.Add(indexmergeinfo);
             }
 
+            //计算加载因子
+            indexmergeinfo.LoadFactor = (int)Math.Max(1, new FileInfo(indexfile).Length / MAX_KEYBUFFER);
+            
             List<BigEntityTableIndexItem> list = new List<BigEntityTableIndexItem>();
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
@@ -525,12 +532,27 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     idx.SetPostion(indexmergeinfo.IndexMergePos);
                 }
-                var idc = keyindexlistdic[tablename];
+                var indexlist = keyindexlistdic[tablename];
+                int i = 0;
+                BigEntityTableIndexItem lastreadindex = null;
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
                     if (!newindex.Del)
                     {
-                        idc.Add(newindex);
+                        if (indexmergeinfo.LoadFactor == 1 || (i++) % indexmergeinfo.LoadFactor == 0)
+                        {
+                            indexlist.Add(newindex);
+                        }
+
+                        lastreadindex = newindex;
+                    }
+                }
+
+                if (lastreadindex != null)
+                {
+                    if (indexmergeinfo.LoadFactor > 1 && i % indexmergeinfo.LoadFactor != 1)
+                    {
+                        indexlist.Add(lastreadindex);
                     }
                 }
             }
@@ -773,7 +795,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
 
                     meta.NewCount += meta.Indexs.Length;
-                    if (meta.NewCount > MergeTriggerNewCount)
+                    if (meta.NewCount > MERGE_TRIGGER_NEW_COUNT)
                     {
                         meta.NewCount = 0;
                         new Action(() => MergeIndex(tablename, meta.KeyName)).BeginInvoke(null, null);
@@ -1056,6 +1078,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 },ref mid);
 
                 if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+                {
+                    return default(T);
+                }
+
+                var meta = GetMetaData(tablename);
+                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+                if (keymergeinfo.LoadFactor == 1)
                 {
                     return default(T);
                 }
