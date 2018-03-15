@@ -1102,6 +1102,17 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
+        public T Find<T>(string tablename, string key) where T : new()
+        {
+            var t = FindMem<T>(tablename, key);
+            if (object.Equals(t,default(T)))
+            {
+                t = FindDisk<T>(tablename, key);
+            }
+
+            return t;
+        }
+
         public T FindMem<T>(string tablename, string key) where T : new()
         {
             string tablefile = GetTableFile(tablename);
