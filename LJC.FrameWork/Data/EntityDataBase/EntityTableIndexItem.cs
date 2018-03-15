@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LJC.FrameWork.Data.EntityDataBase
 {
-    public class EntityTableIndexItem
+    public class EntityTableIndexItem : IComparable<EntityTableIndexItem>
     {
         public string Key
         {
@@ -30,6 +30,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             get;
             set;
+        }
+
+        public int CompareTo(EntityTableIndexItem other)
+        {
+            return this.Key.CompareTo(other.Key);
         }
     }
 }

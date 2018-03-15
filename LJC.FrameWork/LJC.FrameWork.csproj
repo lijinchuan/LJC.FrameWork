@@ -112,7 +112,7 @@
     <Compile Include="CodeExpression\Sign\VarSign.cs" />
     <Compile Include="CodeExpression\SystemFunction\SysFun.cs" />
     <Compile Include="Collections\SortArrayList.cs" />
-    <Compile Include="Collections\SortedList2.cs" />
+    <Compile Include="Collections\SorteArray.cs" />
     <Compile Include="Collections\SortedList.cs" />
     <Compile Include="Collections\StackEx.cs" />
     <Compile Include="Comm\AutoReSetEventResult.cs">

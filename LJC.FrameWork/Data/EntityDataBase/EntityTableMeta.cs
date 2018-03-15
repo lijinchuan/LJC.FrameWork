@@ -27,6 +27,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         }
 
         private bool _keyDuplicate = true;
+        [Obsolete]
         public bool KeyDuplicate
         {
             get

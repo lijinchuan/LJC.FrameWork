@@ -166,6 +166,53 @@ namespace Test2
             Console.WriteLine(obj.Message);
         }
 
+        static void TestSorteArray()
+        {
+            List<BigEntityTableIndexItem> indexarray = new List<BigEntityTableIndexItem>();
+            for (int i = 0; i < 10; i++)
+            {
+                indexarray.Add(new BigEntityTableIndexItem
+                {
+                    Key=((i*2)+1).ToString(),
+                    Del=false,
+                    KeyOffset=0,
+                    len=100,
+                    Offset=0
+                });
+            }
+            SorteArray<LJC.FrameWork.Data.EntityDataBase.BigEntityTableIndexItem> sa = new SorteArray<BigEntityTableIndexItem>(indexarray.OrderBy(p=>p.Key).ToArray());
+            int mid=-100;
+            int fnd = 0;
+
+            var array = sa.GetArray().ToArray();
+
+            for (int i = 0; i < 30; i++)
+            {
+                if (i == 22)
+                {
+                    i = 99;
+                }
+                fnd = sa.Find(new BigEntityTableIndexItem
+                {
+                    Del=false,
+                    Key=i.ToString()
+                }, ref mid);
+
+                if (mid == array.Length - 1)
+                {
+                    Console.WriteLine(string.Format("查找:{0},fnd:{1},mid:{2},real:{3},midread:{4},midreadnext:{5}", i, fnd, mid, fnd > -1 ? array[fnd].Key : "", array[mid].Key, "最右边"));
+                }
+                else if (mid == -1)
+                {
+                    Console.WriteLine(string.Format("查找:{0},fnd:{1},mid:{2},real:{3},midread:{4},midreadnext:{5}", i, fnd, mid, fnd > -1 ? array[fnd].Key : "", "最左边", array[mid + 1].Key));
+                }
+                else
+                {
+                    Console.WriteLine(string.Format("查找:{0},fnd:{1},mid:{2},real:{3},midread:{4},midreadnext:{5}", i, fnd, mid, fnd > -1 ? array[fnd].Key : "", array[mid].Key, array[mid + 1].Key));
+                }
+            }
+        }
+
         static void TestLocaldb()
         {
             //Man 
@@ -275,7 +322,8 @@ namespace Test2
                 //    //Console.WriteLine(m.Name + " " + m.Sex);
                 //    cnt++;
                 //}
-                foreach (var m in BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name8651"))
+                var m = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name8651");
+                if(m!=null)
                 {
                     Console.WriteLine(m.Name + " " + m.Addr);
                     cnt++;
@@ -287,17 +335,17 @@ namespace Test2
 
         static void TestBigLocalUpdate()
         {
-            var man1920=BigEntityTableEngine.LocalEngine.Find<Man>("Man","name1920").First();
+            var man1920=BigEntityTableEngine.LocalEngine.FindMem<Man>("Man","name1920");
             Console.Write("修改前:"+man1920.Addr);
             man1920.Addr = "龙坪镇新村李陈1026";
             BigEntityTableEngine.LocalEngine.Update<Man>("Man", man1920);
-            var man1920_u = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name1920").First();
+            var man1920_u = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name1920");
             Console.Write("修改后:" + man1920_u.Addr);
 
             man1920_u.Addr = Guid.NewGuid().ToString() + "asfasdfasdfase_addr";
             BigEntityTableEngine.LocalEngine.Update<Man>("Man", man1920_u);
 
-            var man1920_uu = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name1920").First();
+            var man1920_uu = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name1920");
             Console.Write("修改后:" + man1920_uu.Addr);
         }
 
@@ -306,20 +354,20 @@ namespace Test2
             var boo = BigEntityTableEngine.LocalEngine.Delete("Man", "name3991");
             Console.WriteLine("删除:" + boo);
 
-            var items = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name3991");
-            if (items.Count() > 0)
+            var items = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name3991");
+            if (items!=null)
             {
-                Console.WriteLine("查找name3991:" + items.First().Name);
+                Console.WriteLine("查找name3991:" + items.Name);
             }
             else
             {
                 Console.WriteLine("查找name3991:不存在");
             }
 
-            items = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name3992");
-            if (items.Count() > 0)
+            items = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name3992");
+            if (items!=null)
             {
-                Console.WriteLine("查找name3992:" + items.First().Name);
+                Console.WriteLine("查找name3992:" + items.Name);
             }
             else
             {
@@ -364,6 +412,9 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            TestSorteArray();
+            Console.Read();
+            return;
             //TestBigLocaldb();
             //TestBigLocaldbDel();
             TestBigLocalUpdate();

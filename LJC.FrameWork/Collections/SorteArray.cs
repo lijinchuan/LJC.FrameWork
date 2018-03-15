@@ -6,11 +6,20 @@ using System.Text;
 
 namespace LJC.FrameWork.Collections
 {
-    public class SortedList2<T> where T : IComparable
+    public class SorteArray<T> where T : IComparable<T>
     {
         private const UInt16 CapLargerCount = 2;
         private T[] ListSort = null;
         int Count = 0;
+
+        public SorteArray(T[] array)
+        {
+            if (array != null)
+            {
+                this.ListSort = array;
+                Count = array.Length;
+            }
+        }
 
         public void Add(T value)
         {
@@ -102,7 +111,7 @@ namespace LJC.FrameWork.Collections
 
             if (ListSort[lt].CompareTo(key)>0)
             {
-                mid = lt;
+                mid = -1;
                 return -1;
             }
 
@@ -136,7 +145,7 @@ namespace LJC.FrameWork.Collections
 
         }
 
-        public IEnumerable<T> GetList()
+        public IEnumerable<T> GetArray()
         {
             for(int i = 0; i < Count; i++)
             {
