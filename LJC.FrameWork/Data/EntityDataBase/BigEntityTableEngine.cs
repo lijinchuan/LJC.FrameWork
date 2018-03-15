@@ -1054,6 +1054,50 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 int pos=new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem{
                     Key=key
                 },ref mid);
+
+                if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+                {
+                    return default(T);
+                }
+
+                var posstart = indexarr[mid].KeyOffset;
+                var posend = indexarr[mid + 1].KeyOffset;
+
+                BigEntityTableIndexItem findkeyitem = null;
+                using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+                {
+                    reader.SetPostion(posstart);
+                    while (true)
+                    {
+                        var item = reader.ReadObject<BigEntityTableIndexItem>();
+                        if (item == null || reader.ReadedPostion() > posend)
+                        {
+                            break;
+                        }
+                        if (item.Key.Equals(key))
+                        {
+                            findkeyitem = item;
+                            break;
+                        }
+                    }
+                }
+
+                if (findkeyitem != null)
+                {
+                    using (var reader = ObjTextReader.CreateReader(GetTableFile(tablename)))
+                    {
+                        reader.SetPostion(findkeyitem.Offset);
+                        var obj = reader.ReadObject<EntityTableItem<T>>();
+
+                        if (obj == null)
+                        {
+                            return default(T);
+                        }
+
+                        return obj.Data;
+                    }
+                }
+
                 return default(T);
             }
         }
