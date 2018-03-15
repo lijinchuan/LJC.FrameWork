@@ -236,10 +236,10 @@ namespace Test2
         static void TestBigLocaldb()
         {
             //Man 
-            BigEntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man), new[] { "IDCard", "Sex" });
+            BigEntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             DateTime time = DateTime.Now;
-            for (int i = 0; i < 100000; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 BigEntityTableEngine.LocalEngine.Insert("Man", new Man
                 {
@@ -322,7 +322,7 @@ namespace Test2
                 //    //Console.WriteLine(m.Name + " " + m.Sex);
                 //    cnt++;
                 //}
-                var m = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name8651");
+                var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name7851");
                 if(m!=null)
                 {
                     Console.WriteLine(m.Name + " " + m.Addr);
@@ -412,12 +412,13 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            TestSorteArray();
-            Console.Read();
-            return;
+            //TestSorteArray();
+            //Console.Read();
+            //return;
             //TestBigLocaldb();
             //TestBigLocaldbDel();
-            TestBigLocalUpdate();
+            //TestBigLocalUpdate();
+            BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
             TestBigLocaldbFind();
             Console.Read();
             return;
