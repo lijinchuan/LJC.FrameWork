@@ -312,24 +312,33 @@ namespace Test2
 
         static void TestBigLocaldbFind()
         {
-            
-            for (int i = 0; i < 10; i++)
+            Console.WriteLine("cnt:"+BigEntityTableEngine.LocalEngine.Count("Man"));
+            Console.Read();
+
+            int ccount = 0;
+            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 10000))
             {
-                var time = DateTime.Now;
-                int cnt = 0;
-                //foreach (var m in EntityTableEngine.LocalEngine.Find<Man>("Man", "Sex", "1"))
-                //{
-                //    //Console.WriteLine(m.Name + " " + m.Sex);
-                //    cnt++;
-                //}
-                var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name7851");
-                if(m!=null)
-                {
-                    Console.WriteLine(m.Name + " " + m.Addr);
-                    cnt++;
-                }
-                Console.WriteLine("读取完成:" + cnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
+                //Console.WriteLine(item.Name);
+                ccount++;
             }
+            Console.WriteLine("ccount:" + ccount);
+            Console.Read();
+            Console.Read();
+
+            var time = DateTime.Now;
+            int cnt = 0;
+            for (int i = 0; i < 10000; i++)
+            {
+             
+                var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name"+i);
+                if(m==null)
+                {
+                    cnt++;
+                    //Console.WriteLine("找不到用户:" + ("name" + i));
+                }
+                
+            }
+            Console.WriteLine("读取完成:" + cnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
             Console.Read();
         }
 
