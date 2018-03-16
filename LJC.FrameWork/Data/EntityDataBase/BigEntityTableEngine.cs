@@ -15,7 +15,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
     {
         Dictionary<string, EntityTableMeta> metadic = new Dictionary<string, EntityTableMeta>();
         ConcurrentDictionary<string, BigEntityTableIndexItem[]> keyindexarrdic = new ConcurrentDictionary<string, BigEntityTableIndexItem[]>();
-        ConcurrentDictionary<string, List<BigEntityTableIndexItem>> keyindexlistdic = new ConcurrentDictionary<string, List<BigEntityTableIndexItem>>();
+        ConcurrentDictionary<string, Dictionary<string, BigEntityTableIndexItem>> keyindexlistdic = new ConcurrentDictionary<string, Dictionary<string, BigEntityTableIndexItem>>();
         Dictionary<string, object> keylocker = new Dictionary<string, object>();
         /// <summary>
         /// 索引缓存
@@ -292,7 +292,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             LJC.FrameWork.Comm.SerializerHelper.SerializerToXML<EntityTableMeta>(meta, metafile, catchErr: true);
                             metadic.Add(tablename, meta);
 
-                            keyindexlistdic.TryAdd(tablename,new List<BigEntityTableIndexItem>());
+                            keyindexlistdic.TryAdd(tablename, new Dictionary<string, BigEntityTableIndexItem>());
                         }
                         else
                         {
@@ -554,14 +554,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     idx.SetPostion(indexmergeinfo.IndexMergePos);
                 }
-                var indexlist = keyindexlistdic[tablename];
+                var indexdic = keyindexlistdic[tablename];
               
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
                     if (!newindex.Del)
                     {
-
-                        indexlist.Add(newindex);
+                        indexdic.Add(newindex.Key,newindex);
                     }
                 }
             }
@@ -687,7 +686,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     if (!keyindexlistdic.ContainsKey(tablename))
                     {
-                        keyindexlistdic.TryAdd(tablename,new List<BigEntityTableIndexItem>());
+                        keyindexlistdic.TryAdd(tablename,new Dictionary<string,BigEntityTableIndexItem>());
                     }
                 }
             }
@@ -775,7 +774,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         len = (int)(offset.Item2 - offset.Item1)
                     };
 
-                    keylist.Add(newkey);
+                    keylist.Add(newkey.Key, newkey);
 
                     string keyindexfile = GetKeyFile(tablename);
                     ObjTextWriter keywriter = GetWriter(keyindexfile);
@@ -828,36 +827,38 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return Insert2(tablename, item, meta);
         }
 
-        public bool Delete(string tablename, string key)
+        public bool DeleteMem(string tablename, string key)
         {
             EntityTableMeta meta = GetMetaData(tablename);
-            List<BigEntityTableIndexItem> arr = keyindexlistdic[tablename];
+            var dic = keyindexlistdic[tablename];
 
             var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
             {
+                BigEntityTableIndexItem delitem=null;
+                if (!dic.TryGetValue(key, out delitem))
+                {
+                    return false;
+                }
+
                 string keyindexfile = GetKeyFile(tablename);
                 ObjTextWriter keywriter = GetWriter(keyindexfile);
                 lock (keywriter)
                 {
-                    foreach (var item in arr)
+                    delitem.Del = true;
+
+                    keywriter.SetPosition(delitem.KeyOffset);
+                    keywriter.AppendObject(delitem);
+
+                    foreach (var idx in meta.Indexs)
                     {
-                        var indexitem = item;
-                        indexitem.Del = true;
-
-                        keywriter.SetPosition(indexitem.KeyOffset);
-                        keywriter.AppendObject(indexitem);
-
-                        foreach (var idx in meta.Indexs)
-                        {
-                            string indexfile = GetIndexFile(tablename, idx);
-                            ObjTextWriter idxwriter = GetWriter(indexfile);
-                            lock (idxwriter)
-                            {
-                                indexitem.KeyOffset = idxwriter.GetWritePosition();
-                                idxwriter.AppendObject(indexitem);
-                            }
-                        }
+                        //string indexfile = GetIndexFile(tablename, idx);
+                        //ObjTextWriter idxwriter = GetWriter(indexfile);
+                        //lock (idxwriter)
+                        //{
+                        //    delitem.KeyOffset = idxwriter.GetWritePosition();
+                        //    idxwriter.AppendObject(delitem);
+                        //}
                     }
                 }
             }
@@ -865,7 +866,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return true;
         }
 
-        public bool Upsert<T>(string tablename, T item) where T : new()
+        public bool UpsertMem<T>(string tablename, T item) where T : new()
         {
             EntityTableMeta meta = GetMetaData(tablename);
 
@@ -881,8 +882,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             string key = keyobj.ToString();
-            List<BigEntityTableIndexItem> arr = keyindexlistdic[tablename];
-            if (arr.Count > 0)
+            var indexdic = keyindexlistdic[tablename];
+            BigEntityTableIndexItem upitem = null;
+            if (indexdic.TryGetValue(key, out upitem))
             {
                 return Update2(tablename, key, item, meta);
             }
@@ -895,14 +897,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
         private bool Update2<T>(string tablename, string key, T item, EntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
-            List<BigEntityTableIndexItem> arr = keyindexlistdic[tablename];
+            Dictionary<string,BigEntityTableIndexItem> dic = keyindexlistdic[tablename];
             Tuple<long, long> offset = null;
 
             var locker = GetKeyLocker(tablename, string.Empty);
             lock (locker)
             {
-                BigEntityTableIndexItem indexitem = arr.FirstOrDefault(p => p.Key.Equals(key));
-                if (indexitem == null)
+                BigEntityTableIndexItem indexitem = null;
+
+                if (!dic.TryGetValue(key, out indexitem))
                 {
                     throw new Exception(string.Format("更新失败，key为{0}的记录数为0", key));
                 }
@@ -951,7 +954,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     newkey.len = indexitem.len;
                 }
                 
-                arr.Add(newkey);
+                dic.Add(newkey.Key,newkey);
 
                 ObjTextWriter keyidxwriter = GetWriter(keyindexfile);
                 lock(keyidxwriter)
@@ -1007,8 +1010,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public bool Exists(string tablename, string key)
         {
             var meta = this.GetMetaData(tablename);
-            List<BigEntityTableIndexItem> val = keyindexlistdic[tablename];
-            return val.Any(p => p.Key.Equals(key));
+            Dictionary<string,BigEntityTableIndexItem> val = keyindexlistdic[tablename];
+            if(!val.ContainsKey(key))
+            {
+                return  FindDiskKey(tablename, key)!=null;
+            }
+
+            return false;
         }
 
         public IEnumerable<T> ListMemAll<T>(string tablename) where T:new()
@@ -1022,14 +1030,25 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public IEnumerable<T> ListMem<T>(string tablename,int pi,int ps) where T : new()
+        public IEnumerable<T> List<T>(string tablename,int pi,int ps) where T : new()
         {
-            var meta = this.GetMetaData(tablename);
-            var keys = keyindexlistdic[tablename];
-            keys = keys.Skip((pi - 1) * ps).Take(ps).ToList();
-            foreach (var key in keys)
+            int count = 0;
+            var start = (pi - 1) * ps;
+            var end = pi * ps;
+            using (var reader = ObjTextReader.CreateReader(GetTableFile(tablename)))
             {
-                yield return FindMem<T>(tablename, key.Key);
+                foreach(var item in reader.ReadObjectsWating<EntityTableItem<T>>(1))
+                {
+                    if (count++>start)
+                    {
+                        yield return item.Data;
+                    }
+
+                    if (count == end)
+                    {
+                        yield break;
+                    }
+                }
             }
         }
 
@@ -1038,6 +1057,65 @@ namespace LJC.FrameWork.Data.EntityDataBase
             var meta = this.GetMetaData(tablename);
             var keys = keyindexlistdic[tablename];
             return keys.Count;
+        }
+
+        public BigEntityTableIndexItem FindDiskKey(string tablename, string key)
+        {
+            var indexarr = keyindexarrdic[tablename];
+            int mid = -1;
+            int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
+            {
+                Key = key
+            }, ref mid);
+
+            BigEntityTableIndexItem findkeyitem = null;
+            if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+            {
+                return null;
+            }
+            else if (pos > -1)
+            {
+                findkeyitem = indexarr[pos];
+                if (findkeyitem.Del)
+                {
+                    return null;
+                }
+            }
+
+            if (findkeyitem == null)
+            {
+                var meta = GetMetaData(tablename);
+                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+                if (pos == -1 && keymergeinfo.LoadFactor == 1)
+                {
+                    return null;
+                }
+
+                var posstart = indexarr[mid].KeyOffset;
+                var posend = indexarr[mid + 1].KeyOffset;
+
+
+                using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+                {
+                    reader.SetPostion(posstart);
+                    while (true)
+                    {
+                        var item = reader.ReadObject<BigEntityTableIndexItem>();
+                        if (item == null || reader.ReadedPostion() > posend)
+                        {
+                            break;
+                        }
+                        if (item.Key.Equals(key))
+                        {
+                            findkeyitem = item;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return findkeyitem;
+
         }
 
         public T FindDisk<T>(string tablename,string key) where T:new()
@@ -1166,23 +1244,26 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             string tablefile = GetTableFile(tablename);
             EntityTableMeta meta = GetMetaData(tablename);
-            List<BigEntityTableIndexItem> arr = keyindexlistdic[tablename];
-            BigEntityTableIndexItem indexitem = arr.FirstOrDefault(p => p.Key.Equals(key));
-            if (indexitem != null && !indexitem.Del)
+            var dic = keyindexlistdic[tablename];
+            BigEntityTableIndexItem indexitem=null;
+            if (dic.TryGetValue(key, out indexitem))
             {
-                //先找到offset
-                using (ObjTextReader otw = ObjTextReader.CreateReader(tablefile))
+                if (indexitem != null && !indexitem.Del)
                 {
-                    otw.SetPostion(indexitem.Offset);
+                    //先找到offset
+                    using (ObjTextReader otw = ObjTextReader.CreateReader(tablefile))
+                    {
+                        otw.SetPostion(indexitem.Offset);
 
-                    var readobj = otw.ReadObject<EntityTableItem<T>>();
-                    if (readobj == null)
-                    {
-                        return default(T);
-                    }
-                    else
-                    {
-                        return readobj.Data;
+                        var readobj = otw.ReadObject<EntityTableItem<T>>();
+                        if (readobj == null)
+                        {
+                            return default(T);
+                        }
+                        else
+                        {
+                            return readobj.Data;
+                        }
                     }
                 }
             }

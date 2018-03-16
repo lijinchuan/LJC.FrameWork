@@ -351,7 +351,7 @@ namespace Test2
 
         static void TestBigLocaldbDel()
         {
-            var boo = BigEntityTableEngine.LocalEngine.Delete("Man", "name3991");
+            var boo = BigEntityTableEngine.LocalEngine.DeleteMem("Man", "name3991");
             Console.WriteLine("删除:" + boo);
 
             var items = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name3991");
