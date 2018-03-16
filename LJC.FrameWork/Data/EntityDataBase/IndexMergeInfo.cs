@@ -36,5 +36,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 _loadFactor = value;
             }
         }
+
+        public int TotalCount
+        {
+            get;
+            set;
+        }
     }
 }

@@ -119,7 +119,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         }
 
         [XmlIgnore]
-        public int NewCount
+        public int NewAddCount
         {
             get;
             set;

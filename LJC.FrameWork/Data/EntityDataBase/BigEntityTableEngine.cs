@@ -536,6 +536,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
             }
+            indexmergeinfo.TotalCount = i;
             if (lastreadindex != null)
             {
                 if (indexmergeinfo.LoadFactor > 1 && i % indexmergeinfo.LoadFactor != 1)
@@ -802,10 +803,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                     }
 
-                    meta.NewCount += 1;
-                    if (meta.NewCount > MERGE_TRIGGER_NEW_COUNT)
+                    meta.NewAddCount += 1;
+                    if (meta.NewAddCount > MERGE_TRIGGER_NEW_COUNT)
                     {
-                        meta.NewCount = 0;
+                        meta.NewAddCount = 0;
                         new Action(() => MergeIndex(tablename, meta.KeyName)).BeginInvoke(null, null);
                     }
                 }
@@ -825,6 +826,44 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             return Insert2(tablename, item, meta);
+        }
+
+        public bool Delete(string tablename, string key)
+        {
+            EntityTableMeta meta = GetMetaData(tablename);
+
+            var delkey=FindKey(tablename, key);
+            if (delkey == null)
+            {
+                return false;
+            }
+
+            var locker = GetKeyLocker(tablename, string.Empty);
+            lock (locker)
+            {
+                string keyindexfile = GetKeyFile(tablename);
+                ObjTextWriter keywriter = GetWriter(keyindexfile);
+                lock (keywriter)
+                {
+                    delkey.Del = true;
+
+                    keywriter.SetPosition(delkey.KeyOffset);
+                    keywriter.AppendObject(delkey);
+
+                    foreach (var idx in meta.Indexs)
+                    {
+                        //string indexfile = GetIndexFile(tablename, idx);
+                        //ObjTextWriter idxwriter = GetWriter(indexfile);
+                        //lock (idxwriter)
+                        //{
+                        //    delitem.KeyOffset = idxwriter.GetWritePosition();
+                        //    idxwriter.AppendObject(delitem);
+                        //}
+                    }
+                }
+            }
+
+            return true;
         }
 
         public bool DeleteMem(string tablename, string key)
@@ -1009,14 +1048,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public bool Exists(string tablename, string key)
         {
-            var meta = this.GetMetaData(tablename);
-            Dictionary<string,BigEntityTableIndexItem> val = keyindexlistdic[tablename];
-            if(!val.ContainsKey(key))
-            {
-                return  FindDiskKey(tablename, key)!=null;
-            }
-
-            return false;
+            return FindKey(tablename, key) != null;
         }
 
         public IEnumerable<T> ListMemAll<T>(string tablename) where T:new()
@@ -1052,11 +1084,76 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public int CountMem(string tablename)
+        public int Count(string tablename)
         {
             var meta = this.GetMetaData(tablename);
-            var keys = keyindexlistdic[tablename];
-            return keys.Count;
+            var memkeys = keyindexlistdic[tablename];
+            var mergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+            return memkeys.Count + (mergeinfo == null ? 0 : mergeinfo.TotalCount);
+        }
+
+        public BigEntityTableIndexItem FindKey(string tablename, string key)
+        {
+            var meta = GetMetaData(tablename);
+
+            BigEntityTableIndexItem findkeyitem = null;
+            if (keyindexlistdic[tablename].TryGetValue(key, out findkeyitem))
+            {
+                return findkeyitem;
+            }
+
+            var indexarr = keyindexarrdic[tablename];
+            int mid = -1;
+            int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
+            {
+                Key = key
+            }, ref mid);
+
+            if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+            {
+                return null;
+            }
+            else if (pos > -1)
+            {
+                findkeyitem = indexarr[pos];
+                if (findkeyitem.Del)
+                {
+                    return null;
+                }
+            }
+
+            if (findkeyitem == null)
+            {
+                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+                if (pos == -1 && keymergeinfo.LoadFactor == 1)
+                {
+                    return null;
+                }
+
+                var posstart = indexarr[mid].KeyOffset;
+                var posend = indexarr[mid + 1].KeyOffset;
+
+
+                using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+                {
+                    reader.SetPostion(posstart);
+                    while (true)
+                    {
+                        var item = reader.ReadObject<BigEntityTableIndexItem>();
+                        if (item == null || reader.ReadedPostion() > posend)
+                        {
+                            break;
+                        }
+                        if (item.Key.Equals(key))
+                        {
+                            findkeyitem = item;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return findkeyitem;
         }
 
         public BigEntityTableIndexItem FindDiskKey(string tablename, string key)
