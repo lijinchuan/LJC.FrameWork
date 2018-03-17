@@ -430,7 +430,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     lasmargepos = reader.ReadedPostion();
 
-                    listtemp = listtemp.OrderBy(p => p.Key).ToList();
+                    listtemp = listtemp.OrderBy(p => p).ToList();
 
                     newindexfile = (indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname)) + ".temp";
                     bool isall = false;
@@ -463,7 +463,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             var subtemplist = listtemp.Where(p => p.Key.CompareTo(listordered.Last().Key) < 0).ToList();
                             listordered.AddRange(subtemplist);
-                            listordered = listordered.OrderBy(p => p.Key).ToList();
+                            listordered = listordered.OrderBy(p => p).ToList();
 
                             //存储
 
@@ -487,13 +487,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
 
                     reader.SetPostion(lasmargepos);
-                    foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
                     {
-                        using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                         {
                             item.KeyOffset = newwriter.GetWritePosition();
                             newwriter.AppendObject(item);
                         }
+
+                        mergeinfo.IndexMergePos = newwriter.GetWritePosition();
                     }
                 }
 
@@ -504,10 +506,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     try
                     {
                         writer.Dispose();
+                        
                         File.Delete(indexfile);
                         File.Move(newindexfile, indexfile);
-
-                        mergeinfo.IndexMergePos = lasmargepos;
+                        
                         string metafile = GetMetaFile(tablename);
 
                         LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
@@ -571,28 +573,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
             keyindexarrdic.TryRemove(tablename, out oldindexitems);
             keyindexarrdic.TryAdd(tablename, list.ToArray());
 
-            var arr = list.ToArray();
-            for (int j = 0; j < arr.Length; j++)
-            {
-                if (arr[j].Key == "name999")
-                {
-                    for (var m = j - 10; m < j + 10; m++)
-                    {
-                        Console.WriteLine(arr[m].Key);
-                    }
-                    break;
-                }
-            }
-
-            using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
+            using (ObjTextReader idr = ObjTextReader.CreateReader(indexfile))
             {
                 if (indexmergeinfo.IndexMergePos > 0)
                 {
-                    idx.SetPostion(indexmergeinfo.IndexMergePos);
+                    idr.SetPostion(indexmergeinfo.IndexMergePos);
                 }
                 var indexdic = keyindexlistdic[tablename];
 
-                foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
                     if (!newindex.Del)
                     {
