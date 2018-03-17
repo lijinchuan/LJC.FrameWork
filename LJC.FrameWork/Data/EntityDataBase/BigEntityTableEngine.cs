@@ -457,6 +457,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         if (listordered.Count == 0)
                         {
                             listordered = listtemp;
+                            Console.WriteLine("--->"+listtemp.Count);
                             isall = true;
                         }
                         else
@@ -478,6 +479,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 item.KeyOffset = newwriter.GetWritePosition();
                                 newwriter.AppendObject(item);
                             }
+                            mergeinfo.IndexMergePos = newwriter.GetWritePosition();
                         }
 
                         if (isall)
@@ -494,8 +496,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             item.KeyOffset = newwriter.GetWritePosition();
                             newwriter.AppendObject(item);
                         }
-
-                        mergeinfo.IndexMergePos = newwriter.GetWritePosition();
                     }
                 }
 
@@ -551,6 +551,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     if (!newindex.Del)
                     {
+                        if (newindex.KeyOffset > indexmergeinfo.IndexMergePos)
+                        {
+                            break;
+                        }
                         if (indexmergeinfo.LoadFactor == 1 || i % indexmergeinfo.LoadFactor == 0)
                         {
                             list.Add(newindex);
