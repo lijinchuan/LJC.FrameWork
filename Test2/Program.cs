@@ -429,7 +429,7 @@ namespace Test2
             //TestBigLocaldb();
             //TestBigLocaldbDel();
             //TestBigLocalUpdate();
-            //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
+            BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
             TestBigLocaldbFind();
             Console.Read();
             return;
