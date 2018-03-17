@@ -240,7 +240,7 @@ namespace Test2
             //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             DateTime time = DateTime.Now;
             List<Man> newlist = new List<Man>();
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 100000; i++)
             {
                 var man=new Man
                 {
@@ -339,7 +339,7 @@ namespace Test2
 
             var time = DateTime.Now;
             int cnt = 0;
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 100000; i++)
             {
              
                 var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name"+i);
@@ -439,7 +439,7 @@ namespace Test2
             //TestBigLocaldb();
             //TestBigLocaldbDel();
             //TestBigLocalUpdate();
-            //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
+            BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
             TestBigLocaldbFind();
             Console.Read();
             return;

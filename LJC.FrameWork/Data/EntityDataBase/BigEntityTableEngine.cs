@@ -29,7 +29,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 10000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 100000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
@@ -184,7 +184,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     lock (o)
                     {
-                        if (DateTime.Now.Subtract((DateTime)_dic[_key].Tag).TotalSeconds > _locksecs)
+                        if (DateTime.Now.Subtract((DateTime)o.Tag).TotalSeconds > _locksecs)
                         {
                             lock (_dic)
                             {
