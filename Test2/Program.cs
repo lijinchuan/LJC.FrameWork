@@ -346,7 +346,7 @@ namespace Test2
                 if(m==null)
                 {
                     cnt++;
-                    //Console.WriteLine("找不到用户:" + ("name" + i));
+                    Console.WriteLine("找不到用户:" + ("name" + i));
                 }
                 
             }

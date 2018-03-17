@@ -378,134 +378,151 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             Console.WriteLine("开始整理索引");
             DateTime timestart = DateTime.Now;
+            IndexMergeInfo mergeinfo = null;
 
-            var mergeinfo = meta.IndexMergeInfos.Find(p => indexname.Equals(p.IndexName));
-            if (mergeinfo == null)
+            lock (meta)
             {
-                mergeinfo = new IndexMergeInfo();
-                mergeinfo.IndexName = indexname;
-                meta.IndexMergeInfos.Add(mergeinfo);
-            }
-            long lasmargepos = 0;
-            string newindexfile = string.Empty;
-            string indexfile =indexname.Equals(meta.KeyName)?GetKeyFile(tablename): GetIndexFile(tablename, indexname);
-            using (var reader = ObjTextReader.CreateReader(indexfile))
-            {
-                long readstartpostion = reader.ReadedPostion();
-                if (mergeinfo.IndexMergePos > 0)
+                mergeinfo = meta.IndexMergeInfos.Find(p => indexname.Equals(p.IndexName));
+                if (mergeinfo == null)
                 {
-                    reader.SetPostion(mergeinfo.IndexMergePos);
+                    mergeinfo = new IndexMergeInfo();
+                    mergeinfo.IndexName = indexname;
+                    meta.IndexMergeInfos.Add(mergeinfo);
                 }
 
-                var listtemp = new List<BigEntityTableIndexItem>();
-                int readcount = 0;
-                
-                foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                {
-                    listtemp.Add(obj);
-                    if (++readcount > 5000000)
-                    {
-                        break;
-                    }
-                }
-
-                if (readcount == 0)
+                if (mergeinfo.IsMergin)
                 {
                     return;
                 }
+                meta.NewAddCount = 0;
+                mergeinfo.IsMergin = true;
+            }
 
-                lasmargepos = reader.ReadedPostion();
-
-                listtemp = listtemp.OrderBy(p => p.Key).ToList();
-
-                newindexfile =(indexname.Equals(meta.KeyName)?GetKeyFile(tablename): GetIndexFile(tablename, indexname)) + ".temp";
-                bool isall = false;
-                while (true)
+            try
+            {
+                long lasmargepos = 0;
+                string newindexfile = string.Empty;
+                string indexfile = indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname);
+                using (var reader = ObjTextReader.CreateReader(indexfile))
                 {
-                    reader.SetPostion(readstartpostion);
-                    var listordered = new List<BigEntityTableIndexItem>();
-                    var loadcount = 0;
+                    long readstartpostion = reader.ReadedPostion();
+                    if (mergeinfo.IndexMergePos > 0)
+                    {
+                        reader.SetPostion(mergeinfo.IndexMergePos);
+                    }
+
+                    var listtemp = new List<BigEntityTableIndexItem>();
+                    int readcount = 0;
+
+                    foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    {
+                        listtemp.Add(obj);
+                        if (++readcount > 5000000)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (readcount == 0)
+                    {
+                        return;
+                    }
+
+                    lasmargepos = reader.ReadedPostion();
+
+                    listtemp = listtemp.OrderBy(p => p.Key).ToList();
+
+                    newindexfile = (indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname)) + ".temp";
+                    bool isall = false;
+                    while (true)
+                    {
+                        reader.SetPostion(readstartpostion);
+                        var listordered = new List<BigEntityTableIndexItem>();
+                        var loadcount = 0;
+                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                        {
+                            if (item.Offset >= mergeinfo.IndexMergePos)
+                            {
+                                break;
+                            }
+                            listordered.Add(item);
+                            if (++loadcount >= 1000000)
+                            {
+                                break;
+                            }
+                        }
+
+                        readstartpostion = reader.ReadedPostion();
+
+                        if (listordered.Count == 0)
+                        {
+                            listordered = listtemp;
+                            isall = true;
+                        }
+                        else
+                        {
+                            var subtemplist = listtemp.Where(p => p.Key.CompareTo(listordered.Last().Key) < 0).ToList();
+                            listordered.AddRange(subtemplist);
+                            listordered = listordered.OrderBy(p => p.Key).ToList();
+
+                            //存储
+
+                            listtemp = listtemp.Skip(subtemplist.Count).ToList();
+                        }
+
+
+                        using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                        {
+                            foreach (var item in listordered)
+                            {
+                                item.KeyOffset = newwriter.GetWritePosition();
+                                newwriter.AppendObject(item);
+                            }
+                        }
+
+                        if (isall)
+                        {
+                            break;
+                        }
+                    }
+
+                    reader.SetPostion(lasmargepos);
                     foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                     {
-                        if (item.Offset >= mergeinfo.IndexMergePos)
-                        {
-                            break;
-                        }
-                        listordered.Add(item);
-                        if (++loadcount >= 1000000)
-                        {
-                            break;
-                        }
-                    }
-
-                    readstartpostion = reader.ReadedPostion();
-
-                    if (listordered.Count == 0)
-                    {
-                        listordered = listtemp;
-                        isall = true;
-                    }
-                    else
-                    {
-                        var subtemplist = listtemp.Where(p => p.Key.CompareTo(listordered.Last().Key) < 0).ToList();
-                        listordered.AddRange(subtemplist);
-                        listordered = listordered.OrderBy(p => p.Key).ToList();
-
-                        //存储
-
-                        listtemp = listtemp.Skip(subtemplist.Count).ToList();
-                    }
-
-                    
-                    using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                    {
-                        foreach (var item in listordered)
+                        using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
                         {
                             item.KeyOffset = newwriter.GetWritePosition();
                             newwriter.AppendObject(item);
                         }
                     }
-
-                    if (isall)
-                    {
-                        break;
-                    }
                 }
 
-                reader.SetPostion(lasmargepos);
-                foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                int secs = 3600 * 24;
+                var writer = GetWriter(indexfile, secs);
+                lock (writer)
                 {
-                    using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                    try
                     {
-                        item.KeyOffset = newwriter.GetWritePosition();
-                        newwriter.AppendObject(item);
+                        writer.Dispose();
+                        File.Delete(indexfile);
+                        File.Move(newindexfile, indexfile);
+
+                        mergeinfo.IndexMergePos = lasmargepos;
+                        string metafile = GetMetaFile(tablename);
+
+                        LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
+
+                        Console.WriteLine("整理索引完成：" + (DateTime.Now.Subtract(timestart).TotalMilliseconds));
+                    }
+                    finally
+                    {
+                        writer.Tag = DateTime.Now.AddSeconds(secs);
                     }
                 }
-
-                
             }
-
-           int secs=3600*24;
-            var writer = GetWriter(indexfile,secs);
-            lock (writer)
+            finally
             {
-                try
-                {
-                    writer.Dispose();
-                    File.Delete(indexfile);
-                    File.Move(newindexfile, indexfile);
-
-                    mergeinfo.IndexMergePos = lasmargepos;
-                    string metafile = GetMetaFile(tablename);
-
-                    LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
-
-                    Console.WriteLine("整理索引完成："+(DateTime.Now.Subtract(timestart).TotalMilliseconds));
-                }
-                finally
-                {
-                    writer.Tag = DateTime.Now.AddSeconds(secs);
-                }
+                mergeinfo.IsMergin = false;
             }
         }
 
@@ -553,7 +570,20 @@ namespace LJC.FrameWork.Data.EntityDataBase
             BigEntityTableIndexItem[] oldindexitems = null;
             keyindexarrdic.TryRemove(tablename, out oldindexitems);
             keyindexarrdic.TryAdd(tablename, list.ToArray());
-    
+
+            var arr = list.ToArray();
+            for (int j = 0; j < arr.Length; j++)
+            {
+                if (arr[j].Key == "name999")
+                {
+                    for (var m = j - 10; m < j + 10; m++)
+                    {
+                        Console.WriteLine(arr[m].Key);
+                    }
+                    break;
+                }
+            }
+
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
                 if (indexmergeinfo.IndexMergePos > 0)
@@ -561,12 +591,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     idx.SetPostion(indexmergeinfo.IndexMergePos);
                 }
                 var indexdic = keyindexlistdic[tablename];
-              
+
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
                     if (!newindex.Del)
                     {
-                        indexdic.Add(newindex.Key,newindex);
+                        indexdic.Add(newindex.Key, newindex);
                     }
                 }
             }
@@ -813,9 +843,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
 
                     meta.NewAddCount += 1;
-                    if (meta.NewAddCount > MERGE_TRIGGER_NEW_COUNT)
+                    if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT)
                     {
-                        meta.NewAddCount = 0;
+                        //meta.NewAddCount = 0;
                         new Action(() => MergeIndex(tablename, meta.KeyName)).BeginInvoke(null, null);
                     }
                 }
@@ -1265,18 +1295,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
             else
             {
-                if (key == "name9")
-                {
-                    for(int i = 0; i < indexarr.Length; i++)
-                    {
-                        if (indexarr[i].Key.Equals(key))
-                        {
-                            Console.WriteLine(i);
-                        }
-                    }
-                    var fk = indexarr.Where(p => p.Key.Equals(key)).ToList();
-                }
-
                 int mid=-1;
                 int pos=new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem{
                     Key=key
