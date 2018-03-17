@@ -1,4 +1,5 @@
-﻿using LJC.FrameWork.Comm;
+﻿using LJC.FrameWork.Collections;
+using LJC.FrameWork.Comm;
 using LJC.FrameWork.Comm.Coroutine;
 using System;
 using System.Collections;
@@ -28,7 +29,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 8000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 10000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
@@ -173,7 +174,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void Exceute()
             {
-                var o = _dic[_key];
+                ObjTextWriter o;
+                if (!_dic.TryGetValue(_key, out o))
+                {
+                    _isdone = true;
+                    return;
+                }
                 if (o != null)
                 {
                     lock (o)
@@ -410,9 +416,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 lasmargepos = reader.ReadedPostion();
 
-                listtemp = listtemp.OrderBy(p => p.Key).ThenBy(p => p.Offset).ToList();
+                listtemp = listtemp.OrderBy(p => p.Key).ToList();
 
-                
                 newindexfile =(indexname.Equals(meta.KeyName)?GetKeyFile(tablename): GetIndexFile(tablename, indexname)) + ".temp";
                 bool isall = false;
                 while (true)
@@ -444,7 +449,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         var subtemplist = listtemp.Where(p => p.Key.CompareTo(listordered.Last().Key) < 0).ToList();
                         listordered.AddRange(subtemplist);
-                        listordered = listordered.OrderBy(p => p.Key).ThenBy(p => p.Offset).ToList();
+                        listordered = listordered.OrderBy(p => p.Key).ToList();
 
                         //存储
 
@@ -516,7 +521,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             //计算加载因子
-            indexmergeinfo.LoadFactor = 4;//(int)Math.Max(1, new FileInfo(indexfile).Length / MAX_KEYBUFFER);
+            indexmergeinfo.LoadFactor = (int)Math.Max(1, new FileInfo(indexfile).Length / MAX_KEYBUFFER);
 
             int i = 0;
             BigEntityTableIndexItem lastreadindex = null;
@@ -527,11 +532,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     if (!newindex.Del)
                     {
-                        if (indexmergeinfo.LoadFactor == 1 || (i++) % indexmergeinfo.LoadFactor == 0)
+                        if (indexmergeinfo.LoadFactor == 1 || i % indexmergeinfo.LoadFactor == 0)
                         {
                             list.Add(newindex);
                         }
-
+                        i++;
                         lastreadindex = newindex;
                     }
                 }
@@ -722,6 +727,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             writer.Tag = DateTime.Now;
                             return writer;
+                        }
+                        else
+                        {
+                            writerdic.Remove(filename);
                         }
                     }
                 }
@@ -1071,7 +1080,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 foreach(var item in reader.ReadObjectsWating<EntityTableItem<T>>(1))
                 {
-                    if (count++>start)
+                    if (count++>=start)
                     {
                         yield return item.Data;
                     }
@@ -1256,10 +1265,24 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
             else
             {
+                if (key == "name9")
+                {
+                    for(int i = 0; i < indexarr.Length; i++)
+                    {
+                        if (indexarr[i].Key.Equals(key))
+                        {
+                            Console.WriteLine(i);
+                        }
+                    }
+                    var fk = indexarr.Where(p => p.Key.Equals(key)).ToList();
+                }
+
                 int mid=-1;
                 int pos=new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem{
                     Key=key
                 },ref mid);
+
+                
 
                 BigEntityTableIndexItem findkeyitem = null;
                 if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))

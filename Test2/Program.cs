@@ -239,16 +239,28 @@ namespace Test2
             BigEntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             DateTime time = DateTime.Now;
+            List<Man> newlist = new List<Man>();
             for (int i = 0; i < 10000; i++)
             {
-                BigEntityTableEngine.LocalEngine.Insert("Man", new Man
+                var man=new Man
                 {
                     Addr = "addr" + Guid.NewGuid().ToString(),
                     IDCard = "id" + i,
                     Name = "name" + i,
                     Sex = new Random(Guid.NewGuid().GetHashCode()).Next(2)
-                });
+                };
+
+                newlist.Add(man);
+
+                BigEntityTableEngine.LocalEngine.Insert("Man",man);
             }
+
+            var manarr = newlist.OrderBy(p => p.Name).ToArray();
+            LJC.FrameWork.Collections.SorteArray<Man> sa = new SorteArray<Man>(manarr);
+            int mid=0;
+            var pos=sa.Find(new Man{Name="name9"},ref mid);
+
+            Console.Write("查找结果:" + pos);
 
             Console.WriteLine("写入完成:" + DateTime.Now.Subtract(time).TotalMilliseconds);
             Console.Read();
@@ -316,7 +328,7 @@ namespace Test2
             Console.Read();
 
             int ccount = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 10000))
+            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 100000))
             {
                 //Console.WriteLine(item.Name);
                 ccount++;
