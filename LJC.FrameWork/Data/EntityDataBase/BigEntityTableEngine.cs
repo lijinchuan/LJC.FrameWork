@@ -29,7 +29,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 100000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 10000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
@@ -376,8 +376,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public void MergeIndex(string tablename, string indexname, EntityTableMeta meta)
         {
-            Console.WriteLine("开始整理索引");
-            DateTime timestart = DateTime.Now;
+            //Console.WriteLine("开始整理索引");
+           
             IndexMergeInfo mergeinfo = null;
 
             lock (meta)
@@ -397,10 +397,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 meta.NewAddCount = 0;
                 mergeinfo.IsMergin = true;
             }
-
+            DateTime timestart = DateTime.Now;
             try
             {
                 long lasmargepos = 0;
+                long newIndexMergePos = 0;
                 string newindexfile = string.Empty;
                 string indexfile = indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname);
                 using (var reader = ObjTextReader.CreateReader(indexfile))
@@ -436,12 +437,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     bool isall = false;
                     while (true)
                     {
+                        Console.WriteLine("readstartpostion->" + readstartpostion);
                         reader.SetPostion(readstartpostion);
                         var listordered = new List<BigEntityTableIndexItem>();
                         var loadcount = 0;
                         foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                         {
-                            if (item.Offset >= mergeinfo.IndexMergePos)
+                            if (item.KeyOffset >= mergeinfo.IndexMergePos)
                             {
                                 break;
                             }
@@ -456,18 +458,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                         if (listordered.Count == 0)
                         {
+                            Console.WriteLine("顺序列表为空，无序列表条数:"+listtemp.Count);
+
                             listordered = listtemp;
-                            Console.WriteLine("--->"+listtemp.Count);
+                            Console.WriteLine("--->" + listtemp.Count);
                             isall = true;
                         }
                         else
                         {
+                            Console.WriteLine("顺序列表不为空:" + listordered.Count+ "，无序列表条数:" + listtemp.Count);
+
                             var subtemplist = listtemp.Where(p => p.Key.CompareTo(listordered.Last().Key) < 0).ToList();
                             listordered.AddRange(subtemplist);
                             listordered = listordered.OrderBy(p => p).ToList();
 
                             //存储
-
                             listtemp = listtemp.Skip(subtemplist.Count).ToList();
                         }
 
@@ -479,7 +484,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 item.KeyOffset = newwriter.GetWritePosition();
                                 newwriter.AppendObject(item);
                             }
-                            mergeinfo.IndexMergePos = newwriter.GetWritePosition();
+                            newIndexMergePos = newwriter.GetWritePosition();
                         }
 
                         if (isall)
@@ -487,17 +492,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             break;
                         }
                     }
-
-                    reader.SetPostion(lasmargepos);
-                    using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                    {
-                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                        {
-                            item.KeyOffset = newwriter.GetWritePosition();
-                            newwriter.AppendObject(item);
-                        }
-                    }
                 }
+
+                mergeinfo.IndexMergePos = newIndexMergePos;
 
                 int secs = 3600 * 24;
                 var writer = GetWriter(indexfile, secs);
@@ -506,21 +503,39 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     try
                     {
                         writer.Dispose();
-                        
+
+                        using (var reader = ObjTextReader.CreateReader(indexfile))
+                        {
+                            reader.SetPostion(lasmargepos);
+                            using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                            {
+                                foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                                {
+                                    item.KeyOffset = newwriter.GetWritePosition();
+                                    newwriter.AppendObject(item);
+                                }
+                            }
+                        }
+
                         File.Delete(indexfile);
                         File.Move(newindexfile, indexfile);
-                        
+
                         string metafile = GetMetaFile(tablename);
 
                         LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
 
                         Console.WriteLine("整理索引完成：" + (DateTime.Now.Subtract(timestart).TotalMilliseconds));
                     }
+                    catch(Exception ex)
+                    {
+                        Console.WriteLine("整理出错"+ex.ToString());
+                    }
                     finally
                     {
                         writer.Tag = DateTime.Now.AddSeconds(secs);
                     }
                 }
+
             }
             finally
             {
@@ -781,7 +796,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             lock (keylocker)
             {
-                if (keyindexlistdic[tablename].Any(p => string.Equals(p.Key, keystr)))
+                if (keyindexlistdic[tablename].ContainsKey(keystr))
                 {
                     throw new Exception(string.Format("key:{0}不可重复", keystr));
                 }
