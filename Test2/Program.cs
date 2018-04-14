@@ -324,8 +324,6 @@ namespace Test2
                 ccount++;
             }
             Console.WriteLine("ccount:" + ccount);
-            //Console.Read();
-            Console.Read();
 
             var time = DateTime.Now;
             int cnt = 0;
@@ -429,7 +427,7 @@ namespace Test2
             //TestBigLocaldb();
             //TestBigLocaldbDel();
             //TestBigLocalUpdate();
-            BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
+            //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
             TestBigLocaldbFind();
             Console.Read();
             return;
