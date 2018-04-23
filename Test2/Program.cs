@@ -239,19 +239,21 @@ namespace Test2
             BigEntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             DateTime time = DateTime.Now;
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 100000; i++)
             {
-                BigEntityTableEngine.LocalEngine.Insert("Man", new Man
+                var man=new Man
                 {
                     Addr = "addr" + Guid.NewGuid().ToString(),
                     IDCard = "id" + i,
                     Name = "name" + i,
                     Sex = new Random(Guid.NewGuid().GetHashCode()).Next(2)
-                });
-            }
+                };
 
+                BigEntityTableEngine.LocalEngine.Insert("Man",man);
+            }
+           
             Console.WriteLine("写入完成:" + DateTime.Now.Subtract(time).TotalMilliseconds);
-            Console.Read();
+           // Console.Read();
         }
 
         static void TestLocaldb2()
@@ -313,28 +315,26 @@ namespace Test2
         static void TestBigLocaldbFind()
         {
             Console.WriteLine("cnt:"+BigEntityTableEngine.LocalEngine.Count("Man"));
-            Console.Read();
+            //Console.Read();
 
             int ccount = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 10000))
+            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 100000))
             {
                 //Console.WriteLine(item.Name);
                 ccount++;
             }
             Console.WriteLine("ccount:" + ccount);
-            Console.Read();
-            Console.Read();
 
             var time = DateTime.Now;
             int cnt = 0;
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 100000; i++)
             {
              
                 var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name"+i);
                 if(m==null)
                 {
                     cnt++;
-                    //Console.WriteLine("找不到用户:" + ("name" + i));
+                    Console.WriteLine("找不到用户:" + ("name" + i));
                 }
                 
             }
@@ -427,7 +427,7 @@ namespace Test2
             //TestBigLocaldb();
             //TestBigLocaldbDel();
             //TestBigLocalUpdate();
-            BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
+            //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
             TestBigLocaldbFind();
             Console.Read();
             return;

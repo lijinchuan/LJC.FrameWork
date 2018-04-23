@@ -1,4 +1,5 @@
-﻿using LJC.FrameWork.Comm;
+﻿using LJC.FrameWork.Collections;
+using LJC.FrameWork.Comm;
 using LJC.FrameWork.Comm.Coroutine;
 using System;
 using System.Collections;
@@ -14,7 +15,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
     public class BigEntityTableEngine
     {
         Dictionary<string, EntityTableMeta> metadic = new Dictionary<string, EntityTableMeta>();
+        //磁盘索引
         ConcurrentDictionary<string, BigEntityTableIndexItem[]> keyindexarrdic = new ConcurrentDictionary<string, BigEntityTableIndexItem[]>();
+        //内存索引
         ConcurrentDictionary<string, Dictionary<string, BigEntityTableIndexItem>> keyindexlistdic = new ConcurrentDictionary<string, Dictionary<string, BigEntityTableIndexItem>>();
         Dictionary<string, object> keylocker = new Dictionary<string, object>();
         /// <summary>
@@ -28,7 +31,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 8000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 10000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
@@ -173,12 +176,17 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void Exceute()
             {
-                var o = _dic[_key];
+                ObjTextWriter o;
+                if (!_dic.TryGetValue(_key, out o))
+                {
+                    _isdone = true;
+                    return;
+                }
                 if (o != null)
                 {
                     lock (o)
                     {
-                        if (DateTime.Now.Subtract((DateTime)_dic[_key].Tag).TotalSeconds > _locksecs)
+                        if (DateTime.Now.Subtract((DateTime)o.Tag).TotalSeconds > _locksecs)
                         {
                             lock (_dic)
                             {
@@ -292,6 +300,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             LJC.FrameWork.Comm.SerializerHelper.SerializerToXML<EntityTableMeta>(meta, metafile, catchErr: true);
                             metadic.Add(tablename, meta);
 
+                            keyindexarrdic.TryAdd(tablename, new BigEntityTableIndexItem[0]);
                             keyindexlistdic.TryAdd(tablename, new Dictionary<string, BigEntityTableIndexItem>());
                         }
                         else
@@ -370,137 +379,180 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public void MergeIndex(string tablename, string indexname, EntityTableMeta meta)
         {
-            Console.WriteLine("开始整理索引");
-            DateTime timestart = DateTime.Now;
+            //Console.WriteLine("开始整理索引");
+           
+            IndexMergeInfo mergeinfo = null;
 
-            var mergeinfo = meta.IndexMergeInfos.Find(p => indexname.Equals(p.IndexName));
-            if (mergeinfo == null)
+            lock (meta)
             {
-                mergeinfo = new IndexMergeInfo();
-                mergeinfo.IndexName = indexname;
-                meta.IndexMergeInfos.Add(mergeinfo);
-            }
-            long lasmargepos = 0;
-            string newindexfile = string.Empty;
-            string indexfile =indexname.Equals(meta.KeyName)?GetKeyFile(tablename): GetIndexFile(tablename, indexname);
-            using (var reader = ObjTextReader.CreateReader(indexfile))
-            {
-                long readstartpostion = reader.ReadedPostion();
-                if (mergeinfo.IndexMergePos > 0)
+                mergeinfo = meta.IndexMergeInfos.Find(p => indexname.Equals(p.IndexName));
+                if (mergeinfo == null)
                 {
-                    reader.SetPostion(mergeinfo.IndexMergePos);
+                    mergeinfo = new IndexMergeInfo();
+                    mergeinfo.IndexName = indexname;
+                    meta.IndexMergeInfos.Add(mergeinfo);
                 }
 
-                var listtemp = new List<BigEntityTableIndexItem>();
-                int readcount = 0;
-                
-                foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                {
-                    listtemp.Add(obj);
-                    if (++readcount > 5000000)
-                    {
-                        break;
-                    }
-                }
-
-                if (readcount == 0)
+                if (mergeinfo.IsMergin)
                 {
                     return;
                 }
-
-                lasmargepos = reader.ReadedPostion();
-
-                listtemp = listtemp.OrderBy(p => p.Key).ThenBy(p => p.Offset).ToList();
-
-                
-                newindexfile =(indexname.Equals(meta.KeyName)?GetKeyFile(tablename): GetIndexFile(tablename, indexname)) + ".temp";
-                bool isall = false;
-                while (true)
-                {
-                    reader.SetPostion(readstartpostion);
-                    var listordered = new List<BigEntityTableIndexItem>();
-                    var loadcount = 0;
-                    foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                    {
-                        if (item.Offset >= mergeinfo.IndexMergePos)
-                        {
-                            break;
-                        }
-                        listordered.Add(item);
-                        if (++loadcount >= 1000000)
-                        {
-                            break;
-                        }
-                    }
-
-                    readstartpostion = reader.ReadedPostion();
-
-                    if (listordered.Count == 0)
-                    {
-                        listordered = listtemp;
-                        isall = true;
-                    }
-                    else
-                    {
-                        var subtemplist = listtemp.Where(p => p.Key.CompareTo(listordered.Last().Key) < 0).ToList();
-                        listordered.AddRange(subtemplist);
-                        listordered = listordered.OrderBy(p => p.Key).ThenBy(p => p.Offset).ToList();
-
-                        //存储
-
-                        listtemp = listtemp.Skip(subtemplist.Count).ToList();
-                    }
-
-                    
-                    using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                    {
-                        foreach (var item in listordered)
-                        {
-                            item.KeyOffset = newwriter.GetWritePosition();
-                            newwriter.AppendObject(item);
-                        }
-                    }
-
-                    if (isall)
-                    {
-                        break;
-                    }
-                }
-
-                reader.SetPostion(lasmargepos);
-                foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                {
-                    using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                    {
-                        item.KeyOffset = newwriter.GetWritePosition();
-                        newwriter.AppendObject(item);
-                    }
-                }
-
-                
+                meta.NewAddCount = 0;
+                mergeinfo.IsMergin = true;
             }
-
-           int secs=3600*24;
-            var writer = GetWriter(indexfile,secs);
-            lock (writer)
+            DateTime timestart = DateTime.Now;
+            try
             {
-                try
+                long lasmargepos = 0;
+                long newIndexMergePos = 0;
+                string newindexfile = string.Empty;
+                string indexfile = indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname);
+                using (var reader = ObjTextReader.CreateReader(indexfile))
                 {
-                    writer.Dispose();
-                    File.Delete(indexfile);
-                    File.Move(newindexfile, indexfile);
+                    long readstartpostion = reader.ReadedPostion();
+                    if (mergeinfo.IndexMergePos > 0)
+                    {
+                        reader.SetPostion(mergeinfo.IndexMergePos);
+                    }
 
-                    mergeinfo.IndexMergePos = lasmargepos;
-                    string metafile = GetMetaFile(tablename);
+                    var listtemp = new List<BigEntityTableIndexItem>();
+                    int readcount = 0;
 
-                    LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
+                    foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    {
+                        listtemp.Add(obj);
+                        if (++readcount > 5000000)
+                        {
+                            break;
+                        }
+                    }
 
-                    Console.WriteLine("整理索引完成："+(DateTime.Now.Subtract(timestart).TotalMilliseconds));
+                    if (readcount == 0)
+                    {
+                        return;
+                    }
+
+                    lasmargepos = reader.ReadedPostion();
+
+                    listtemp = listtemp.OrderBy(p => p).ToList();
+
+                    newindexfile = (indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname)) + ".temp";
+                    bool isall = false;
+                    while (true)
+                    {
+                        Console.WriteLine("readstartpostion->" + readstartpostion);
+                        reader.SetPostion(readstartpostion);
+                        var listordered = new List<BigEntityTableIndexItem>();
+                        var loadcount = 0;
+                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                        {
+                            if (item.KeyOffset >= mergeinfo.IndexMergePos)
+                            {
+                                break;
+                            }
+                            listordered.Add(item);
+                            if (++loadcount >= 1000000)
+                            {
+                                break;
+                            }
+                        }
+
+                        readstartpostion = reader.ReadedPostion();
+
+                        if (listordered.Count == 0)
+                        {
+                            Console.WriteLine("顺序列表为空，无序列表条数:"+listtemp.Count);
+
+                            listordered = listtemp;
+                            Console.WriteLine("--->" + listtemp.Count);
+                            isall = true;
+                        }
+                        else
+                        {
+                            Console.WriteLine("顺序列表不为空:" + listordered.Count+ "，无序列表条数:" + listtemp.Count);
+
+                            var subtemplist = listtemp.Where(p => p.CompareTo(listordered.Last()) < 0).ToList();
+                            listordered.AddRange(subtemplist);
+                            listordered = listordered.OrderBy(p => p).ToList();
+
+                            //存储
+                            listtemp = listtemp.Skip(subtemplist.Count).ToList();
+                        }
+
+                        int mid = 0;
+                        var pos = new LJC.FrameWork.Collections.SorteArray<BigEntityTableIndexItem>(listordered.ToArray()).Find(new BigEntityTableIndexItem { Key = "name7" }, ref mid);
+                        if (pos == -1)
+                        {
+                            Console.WriteLine("查不到");
+                        }
+                        else
+                        {
+                            Console.WriteLine("能查到");
+                        }
+
+                        using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                        {
+                            foreach (var item in listordered)
+                            {
+                                item.KeyOffset = newwriter.GetWritePosition();
+                                newwriter.AppendObject(item);
+                            }
+                            newIndexMergePos = newwriter.GetWritePosition();
+                        }
+
+                        if (isall)
+                        {
+                            break;
+                        }
+                    }
                 }
-                finally
+
+                mergeinfo.IndexMergePos = newIndexMergePos;
+
+                int secs = 3600 * 24;
+                var writer = GetWriter(indexfile, secs);
+                lock (writer)
                 {
-                    writer.Tag = DateTime.Now.AddSeconds(secs);
+                    try
+                    {
+                        writer.Dispose();
+
+                        using (var reader = ObjTextReader.CreateReader(indexfile))
+                        {
+                            reader.SetPostion(lasmargepos);
+                            using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                            {
+                                foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                                {
+                                    item.KeyOffset = newwriter.GetWritePosition();
+                                    newwriter.AppendObject(item);
+                                }
+                            }
+                        }
+
+                        File.Delete(indexfile);
+                        File.Move(newindexfile, indexfile);
+
+                        string metafile = GetMetaFile(tablename);
+
+                        LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
+
+                        Console.WriteLine("整理索引完成：" + (DateTime.Now.Subtract(timestart).TotalMilliseconds));
+                    }
+                    catch(Exception ex)
+                    {
+                        Console.WriteLine("整理出错"+ex.ToString());
+                    }
+                    finally
+                    {
+                        writer.Tag = DateTime.Now.AddSeconds(secs);
+                    }
                 }
+
+            }
+            finally
+            {
+                mergeinfo.IsMergin = false;
             }
         }
 
@@ -516,7 +568,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             //计算加载因子
-            indexmergeinfo.LoadFactor = 4;//(int)Math.Max(1, new FileInfo(indexfile).Length / MAX_KEYBUFFER);
+            indexmergeinfo.LoadFactor = (int)Math.Max(4, new FileInfo(indexfile).Length / MAX_KEYBUFFER);
 
             int i = 0;
             BigEntityTableIndexItem lastreadindex = null;
@@ -525,43 +577,48 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
+                    if (newindex.KeyOffset == indexmergeinfo.IndexMergePos)
+                    {
+                        //list.Add(newindex);
+                        if (list.Count > 0)
+                        {
+                            if (list.Last().KeyOffset != lastreadindex.KeyOffset)
+                            {
+                                list.Add(lastreadindex);
+                            }
+                        }
+                        break;
+                    }
                     if (!newindex.Del)
                     {
-                        if (indexmergeinfo.LoadFactor == 1 || (i++) % indexmergeinfo.LoadFactor == 0)
+                        if (indexmergeinfo.LoadFactor == 1 || i % indexmergeinfo.LoadFactor == 0)
                         {
                             list.Add(newindex);
                         }
-
+                        i++;
                         lastreadindex = newindex;
                     }
                 }
             }
             indexmergeinfo.TotalCount = i;
-            if (lastreadindex != null)
-            {
-                if (indexmergeinfo.LoadFactor > 1 && i % indexmergeinfo.LoadFactor != 1)
-                {
-                    list.Add(lastreadindex);
-                }
-            }
 
             BigEntityTableIndexItem[] oldindexitems = null;
             keyindexarrdic.TryRemove(tablename, out oldindexitems);
             keyindexarrdic.TryAdd(tablename, list.ToArray());
-    
-            using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
+
+            using (ObjTextReader idr = ObjTextReader.CreateReader(indexfile))
             {
                 if (indexmergeinfo.IndexMergePos > 0)
                 {
-                    idx.SetPostion(indexmergeinfo.IndexMergePos);
+                    idr.SetPostion(indexmergeinfo.IndexMergePos);
                 }
                 var indexdic = keyindexlistdic[tablename];
-              
-                foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
+
+                foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
                     if (!newindex.Del)
                     {
-                        indexdic.Add(newindex.Key,newindex);
+                        indexdic.Add(newindex.Key, newindex);
                     }
                 }
             }
@@ -640,61 +697,70 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 return meta;
             }
 
-            string metafile = GetMetaFile(tablename);
-            if (!File.Exists(metafile))
+            var locker = GetKeyLocker(tablename, "GetMetaData");
+            lock (locker)
             {
-                throw new Exception("找不到元文件:" + tablename);
-            }
-
-            meta = LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<EntityTableMeta>(metafile, true);
-            if (meta.Indexs == null)
-            {
-                meta.Indexs = new string[] { };
-            }
-            meta.KeyProperty = new PropertyInfoEx(meta.TType.GetProperty(meta.KeyName));
-
-            if (meta.Indexs != null)
-            {
-                foreach (var idx in meta.Indexs)
+                if (metadic.TryGetValue(tablename, out meta))
                 {
-                    var idxpp = meta.TType.GetProperty(idx);
-                    if (idxpp == null)
-                    {
-                        throw new Exception("找不到索引:" + idx);
-                    }
+                    return meta;
+                }
 
-                    if (!meta.IndexProperties.ContainsKey(idx))
+                string metafile = GetMetaFile(tablename);
+                if (!File.Exists(metafile))
+                {
+                    throw new Exception("找不到元文件:" + tablename);
+                }
+
+                meta = LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<EntityTableMeta>(metafile, true);
+                if (meta.Indexs == null)
+                {
+                    meta.Indexs = new string[] { };
+                }
+                meta.KeyProperty = new PropertyInfoEx(meta.TType.GetProperty(meta.KeyName));
+
+                if (meta.Indexs != null)
+                {
+                    foreach (var idx in meta.Indexs)
                     {
-                        meta.IndexProperties.Add(idx, new PropertyInfoEx(idxpp));
+                        var idxpp = meta.TType.GetProperty(idx);
+                        if (idxpp == null)
+                        {
+                            throw new Exception("找不到索引:" + idx);
+                        }
+
+                        if (!meta.IndexProperties.ContainsKey(idx))
+                        {
+                            meta.IndexProperties.Add(idx, new PropertyInfoEx(idxpp));
+                        }
                     }
                 }
-            }
 
-            if(!metadic.ContainsKey(tablename))
-            {
-                lock (metadic)
+                if (!metadic.ContainsKey(tablename))
                 {
-                    if (!metadic.ContainsKey(tablename))
+                    lock (metadic)
                     {
-                        metadic.Add(tablename, meta);
+                        if (!metadic.ContainsKey(tablename))
+                        {
+                            metadic.Add(tablename, meta);
+                        }
                     }
                 }
-            }
 
-            if (!keyindexlistdic.ContainsKey(tablename))
-            {
-                lock (keyindexlistdic)
+                if (!keyindexlistdic.ContainsKey(tablename))
                 {
-                    if (!keyindexlistdic.ContainsKey(tablename))
+                    lock (keyindexlistdic)
                     {
-                        keyindexlistdic.TryAdd(tablename,new Dictionary<string,BigEntityTableIndexItem>());
+                        if (!keyindexlistdic.ContainsKey(tablename))
+                        {
+                            keyindexlistdic.TryAdd(tablename, new Dictionary<string, BigEntityTableIndexItem>());
+                        }
                     }
                 }
+
+                LoadKey(tablename, meta);
+
+                return meta;
             }
-
-            LoadKey(tablename,meta);
-
-            return meta;
         }
 
         private ObjTextWriter GetWriter(string filename,int locksecs=1)
@@ -723,6 +789,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             writer.Tag = DateTime.Now;
                             return writer;
                         }
+                        else
+                        {
+                            writerdic.Remove(filename);
+                        }
                     }
                 }
 
@@ -749,7 +819,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             lock (keylocker)
             {
-                if (keyindexlistdic[tablename].Any(p => string.Equals(p.Key, keystr)))
+                if (keyindexlistdic[tablename].ContainsKey(keystr))
                 {
                     throw new Exception(string.Format("key:{0}不可重复", keystr));
                 }
@@ -804,9 +874,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
 
                     meta.NewAddCount += 1;
-                    if (meta.NewAddCount > MERGE_TRIGGER_NEW_COUNT)
+                    if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT)
                     {
-                        meta.NewAddCount = 0;
+                        //meta.NewAddCount = 0;
                         new Action(() => MergeIndex(tablename, meta.KeyName)).BeginInvoke(null, null);
                     }
                 }
@@ -1071,7 +1141,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 foreach(var item in reader.ReadObjectsWating<EntityTableItem<T>>(1))
                 {
-                    if (count++>start)
+                    if (item == null)
+                    {
+                        yield break;
+                    }
+
+                    if (count++>=start)
                     {
                         yield return item.Data;
                     }
@@ -1157,7 +1232,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         }
 
         public BigEntityTableIndexItem FindDiskKey(string tablename, string key)
-        {
+        {   
             var indexarr = keyindexarrdic[tablename];
             int mid = -1;
             int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
@@ -1260,6 +1335,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 int pos=new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem{
                     Key=key
                 },ref mid);
+
+                
 
                 BigEntityTableIndexItem findkeyitem = null;
                 if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))

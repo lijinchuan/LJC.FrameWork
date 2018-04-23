@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Serialization;
 
 namespace LJC.FrameWork.Data.EntityDataBase
 {
@@ -41,6 +42,20 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             get;
             set;
+        }
+
+        private bool _ismergin = false;
+        [XmlIgnore]
+        public bool IsMergin
+        {
+            get
+            {
+                return _ismergin;
+            }
+            set
+            {
+                _ismergin = value;
+            }
         }
     }
 }
