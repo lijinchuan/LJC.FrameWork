@@ -759,10 +759,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     throw new Exception(string.Format("更新失败，key为{0}的记录数为0", key));
                 }
-
-                indexpos = arr.Count - 1;
                 string keyindexfile = GetKeyFile(tablename);
-                EntityTableIndexItem indexitem = (EntityTableIndexItem)arr[indexpos];
+                EntityTableIndexItem indexitem = (EntityTableIndexItem)arr.Last().Value;
                 //using (ObjTextWriter keywriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf))
                 ObjTextWriter keywriter = GetWriter(keyindexfile);
                 {
