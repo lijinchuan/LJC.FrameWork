@@ -14,11 +14,18 @@ namespace LJC.FrameWork.Comm
         /// </summary>
         /// <param name="fromObj"></param>
         /// <returns></returns>
-        public static string Serialize(T fromObj)
+        public static string Serialize(T fromObj, bool prettify=false)
         {
             string result = string.Empty;
 
-            result = JsonConvert.SerializeObject(fromObj);
+            if (prettify)
+            {
+                result = JsonConvert.SerializeObject(fromObj, new JsonSerializerSettings() { Formatting = Formatting.Indented });
+            }
+            else
+            {
+                result = JsonConvert.SerializeObject(fromObj);
+            }
 
             return result;
         }
@@ -39,6 +46,20 @@ namespace LJC.FrameWork.Comm
             else
             {
                 result = JsonConvert.DeserializeObject<T>(jsonStr, settings);
+            }
+            return result;
+        }
+
+        public static object Deserialize(string jsonStr,Type destType, JsonSerializerSettings settings = null)
+        {
+            object result = null;
+            if (null == settings)
+            {
+                result = JsonConvert.DeserializeObject(jsonStr,destType);
+            }
+            else
+            {
+                result = JsonConvert.DeserializeObject(jsonStr,destType, settings);
             }
             return result;
         }
