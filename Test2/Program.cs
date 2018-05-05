@@ -325,20 +325,24 @@ namespace Test2
             }
             Console.WriteLine("ccount:" + ccount);
 
-            var time = DateTime.Now;
-            int cnt = 0;
-            for (int i = 0; i < 100000; i++)
+            for (int c = 0; c < 3; c++)
             {
-             
-                var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name"+i);
-                if(m==null)
+                var time = DateTime.Now;
+                int cnt = 0;
+                for (int i = 0; i < 100000; i++)
                 {
-                    cnt++;
-                    Console.WriteLine("找不到用户:" + ("name" + i));
+
+                    var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name" + i);
+                    if (m == null)
+                    {
+                        cnt++;
+                        Console.WriteLine("找不到用户:" + ("name" + i));
+                    }
+
                 }
-                
+                Console.WriteLine("读取完成:" + cnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
+
             }
-            Console.WriteLine("读取完成:" + cnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
             Console.Read();
         }
 

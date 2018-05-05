@@ -1336,8 +1336,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     Key=key
                 },ref mid);
 
-                
-
                 BigEntityTableIndexItem findkeyitem = null;
                 if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
                 {
@@ -1366,7 +1364,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
-                        reader.SetPostion(posstart);
+                        reader.SetPostion(posstart);        
+
                         while (true)
                         {
                             var item = reader.ReadObject<BigEntityTableIndexItem>();
@@ -1388,6 +1387,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     using (var reader = ObjTextReader.CreateReader(GetTableFile(tablename)))
                     {
                         reader.SetPostion(findkeyitem.Offset);
+
                         var obj = reader.ReadObject<EntityTableItem<T>>();
 
                         if (obj == null)
