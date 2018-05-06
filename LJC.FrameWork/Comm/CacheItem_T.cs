@@ -44,6 +44,7 @@ namespace LJC.FrameWork.Comm
                 if (value < 1)
                     value = 1;
                 _cachMinis = value;
+                Expired = DateTime.Now.AddMinutes(value);
             }
         }
     }

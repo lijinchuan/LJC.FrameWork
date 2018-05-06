@@ -172,7 +172,6 @@ namespace LJC.FrameWork.Comm
 
                     if (!object.Equals(val.Item, default(T)))
                     {
-                        val.Expired = DateTime.Now.AddMinutes(cachedMins);
                         lock (_cacheLock)
                         {
                             _cacheDiction.Remove(key);
@@ -233,7 +232,6 @@ namespace LJC.FrameWork.Comm
 
                         if (object.Equals(val.Item, default(T)) && !object.Equals(val.Item = reflashFunc(), default(T)))
                         {
-                            val.Expired = DateTime.Now.AddMinutes(cachedMins);
                             new Action(() => SerializerHelper.BinarySave(cachfile, val.Item)).BeginInvoke(null, null);
                         }
 
