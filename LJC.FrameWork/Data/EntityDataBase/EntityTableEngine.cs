@@ -680,7 +680,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                     }
                 }
-                catch (Exception ex)
+                finally
                 {
                     otw.Dispose();
                     keywriter.Dispose();
@@ -688,7 +688,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         kv.Value.Dispose();
                     }
-                    throw ex;
                 }
 
             }
