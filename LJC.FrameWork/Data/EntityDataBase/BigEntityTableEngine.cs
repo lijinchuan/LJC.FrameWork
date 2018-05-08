@@ -25,7 +25,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         /// </summary>
         ConcurrentDictionary<string, BigEntityTableIndexItemBag> indexdic = new ConcurrentDictionary<string, BigEntityTableIndexItemBag>();
 
-        string dirbase = System.AppDomain.CurrentDomain.BaseDirectory+"\\localdb\\";
+        string dirbase = System.AppDomain.CurrentDomain.BaseDirectory + "\\localdb\\";
 
         Dictionary<string, ObjTextWriter> writerdic = new Dictionary<string, ObjTextWriter>();
 
@@ -58,8 +58,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 return false;
             }
 
-          
-            public LockerDestroy(Dictionary<string,object> lockerdic,string lockkey)
+
+            public LockerDestroy(Dictionary<string, object> lockerdic, string lockkey)
             {
                 this._lockerdic = lockerdic;
                 this._lockerkey = lockkey;
@@ -67,7 +67,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void Exceute()
             {
-                if(DateTime.Now.Subtract(_timeadd).TotalSeconds>60)
+                if (DateTime.Now.Subtract(_timeadd).TotalSeconds > 60)
                 {
                     _isdone = true;
                 }
@@ -117,7 +117,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void Exceute()
             {
-                BigEntityTableIndexItemBag val=null;
+                BigEntityTableIndexItemBag val = null;
                 _dic.TryGetValue(_key, out val);
                 if (val != null)
                 {
@@ -141,13 +141,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             public void CallBack(CoroutineCallBackEventArgs args)
             {
-               
+
             }
         }
 
         class WriterDestroy : ICoroutineUnit
         {
-            private Dictionary<string,ObjTextWriter> _dic;
+            private Dictionary<string, ObjTextWriter> _dic;
             private string _key;
             private int _locksecs = 1;
             public bool IsSuccess()
@@ -167,7 +167,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
 
-            public WriterDestroy(Dictionary<string, ObjTextWriter> dic, string key,int locksecs=1)
+            public WriterDestroy(Dictionary<string, ObjTextWriter> dic, string key, int locksecs = 1)
             {
                 this._dic = dic;
                 this._key = key;
@@ -324,7 +324,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         if (indexs != null)
                         {
                             foreach (var idx in indexs)
-                            {                              
+                            {
                                 var indexfile = GetIndexFile(tablename, idx);
                                 using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                                 //ObjTextWriter idxwriter = GetWriter(indexfile);
@@ -346,10 +346,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private object GetKeyLocker(string table,string key)
+        private object GetKeyLocker(string table, string key)
         {
-            string totalkey=string.Format("{0}:{1}",table,key);
-            object locker=null;
+            string totalkey = string.Format("{0}:{1}", table, key);
+            object locker = null;
             if (keylocker.TryGetValue(totalkey, out locker))
             {
                 return locker;
@@ -380,7 +380,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public void MergeIndex(string tablename, string indexname, EntityTableMeta meta)
         {
             //Console.WriteLine("开始整理索引");
-           
+
             IndexMergeInfo mergeinfo = null;
 
             lock (meta)
@@ -461,7 +461,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                         if (listordered.Count == 0)
                         {
-                            Console.WriteLine("顺序列表为空，无序列表条数:"+listtemp.Count);
+                            Console.WriteLine("顺序列表为空，无序列表条数:" + listtemp.Count);
 
                             listordered = listtemp;
                             Console.WriteLine("--->" + listtemp.Count);
@@ -469,7 +469,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                         else
                         {
-                            Console.WriteLine("顺序列表不为空:" + listordered.Count+ "，无序列表条数:" + listtemp.Count);
+                            Console.WriteLine("顺序列表不为空:" + listordered.Count + "，无序列表条数:" + listtemp.Count);
 
                             var subtemplist = listtemp.Where(p => p.CompareTo(listordered.Last()) < 0).ToList();
                             listordered.AddRange(subtemplist);
@@ -490,14 +490,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             Console.WriteLine("能查到");
                         }
 
-                        using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                        using (var nw = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
                         {
                             foreach (var item in listordered)
                             {
-                                item.KeyOffset = newwriter.GetWritePosition();
-                                newwriter.AppendObject(item);
+                                item.KeyOffset = nw.GetWritePosition();
+                                nw.AppendObject(item);
                             }
-                            newIndexMergePos = newwriter.GetWritePosition();
+                            newIndexMergePos = nw.GetWritePosition();
                         }
 
                         if (isall)
@@ -509,44 +509,55 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 mergeinfo.IndexMergePos = newIndexMergePos;
 
-                int secs = 3600 * 24;
-                using (var writer = ObjTextWriter.CreateWriter(indexfile,ObjTextReaderWriterEncodeType.entitybuf))
+                string tablefile = GetTableFile(tablename);
+                var locker = GetKeyLocker(tablename, string.Empty);
+                //using (var writer = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
                 //var writer = GetWriter(indexfile, secs);
                 //lock (writer)
-                {
-                    try
-                    {
-                        writer.Dispose();
 
-                        using (var reader = ObjTextReader.CreateReader(indexfile))
+                var idxreader = ObjTextReader.CreateReader(indexfile);
+                var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf);
+                try
+                {
+                    idxreader.SetPostion(lasmargepos);
+                    foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    {
+                        item.KeyOffset = newwriter.GetWritePosition();
+                        newwriter.AppendObject(item);
+                    }
+
+                    lock (locker)
+                    {
+                        foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                         {
-                            reader.SetPostion(lasmargepos);
-                            using (var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                            {
-                                foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                                {
-                                    item.KeyOffset = newwriter.GetWritePosition();
-                                    newwriter.AppendObject(item);
-                                }
-                            }
+                            item.KeyOffset = newwriter.GetWritePosition();
+                            newwriter.AppendObject(item);
                         }
+
+                        idxreader.Dispose();
+                        idxreader = null;
+                        newwriter.Dispose();
 
                         File.Delete(indexfile);
                         File.Move(newindexfile, indexfile);
-
-                        string metafile = GetMetaFile(tablename);
-
-                        LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
-
-                        Console.WriteLine("整理索引完成：" + (DateTime.Now.Subtract(timestart).TotalMilliseconds));
                     }
-                    catch(Exception ex)
+                    
+
+                    string metafile = GetMetaFile(tablename);
+
+                    LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
+
+                    Console.WriteLine("整理索引完成：" + (DateTime.Now.Subtract(timestart).TotalMilliseconds));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("整理出错" + ex.ToString());
+                }
+                finally
+                {
+                    if (idxreader != null)
                     {
-                        Console.WriteLine("整理出错"+ex.ToString());
-                    }
-                    finally
-                    {
-                        writer.Tag = DateTime.Now.AddSeconds(secs);
+                        idxreader.Dispose();
                     }
                 }
 
@@ -557,10 +568,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private void LoadKey(string tablename,EntityTableMeta meta)
+        private void LoadKey(string tablename, EntityTableMeta meta)
         {
             string indexfile = GetKeyFile(tablename);
-             var indexmergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+            var indexmergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
             if (indexmergeinfo == null)
             {
                 indexmergeinfo = new IndexMergeInfo();
@@ -629,7 +640,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             string key = string.Format("{0}##{1}", tablename, indexname);
             BigEntityTableIndexItemBag temp = null;
-            if(indexdic.TryGetValue(key,out temp))
+            if (indexdic.TryGetValue(key, out temp))
             {
                 temp.LastUsed = DateTime.Now;
             }
@@ -671,11 +682,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         else
                         {
                             al.Add(newindex.Offset, newindex);
-                        }                      
+                        }
                     }
                 }
 
-                if (temp.LastUsed==DateTime.MinValue)
+                if (temp.LastUsed == DateTime.MinValue)
                 {
                     temp.LastUsed = DateTime.Now;
                     indexdic.TryAdd(key, temp);
@@ -692,8 +703,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         private EntityTableMeta GetMetaData(string tablename)
         {
-            EntityTableMeta meta=null;
-            if(metadic.TryGetValue(tablename,out meta))
+            EntityTableMeta meta = null;
+            if (metadic.TryGetValue(tablename, out meta))
             {
                 return meta;
             }
@@ -764,10 +775,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private ObjTextWriter GetWriter(string filename,int locksecs=1)
+        private ObjTextWriter GetWriter(string filename, int locksecs = 1)
         {
-            ObjTextWriter writer=null;
-            if(writerdic.TryGetValue(filename,out writer))
+            ObjTextWriter writer = null;
+            if (writerdic.TryGetValue(filename, out writer))
             {
                 lock (writer)
                 {
@@ -801,12 +812,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 writer.Tag = DateTime.Now;
                 writerdic.Add(filename, writer);
 
-                LJC.FrameWork.Comm.Coroutine.CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new WriterDestroy(writerdic, filename,locksecs));
+                LJC.FrameWork.Comm.Coroutine.CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new WriterDestroy(writerdic, filename, locksecs));
             }
             return writer;
         }
 
-        private bool Insert2<T>(string tablename,IEnumerable<T> items, EntityTableMeta meta) where T : new()
+        private bool Insert2<T>(string tablename, IEnumerable<T> items, EntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
             var locker = GetKeyLocker(tablename, string.Empty);
@@ -928,6 +939,23 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             return Insert2(tablename, new T[] { item }, meta);
+        }
+
+        public bool InsertBatch<T>(string tablename, IEnumerable<T> items) where T : new()
+        {
+            if (items == null || items.Count() == 0)
+            {
+                return false;
+            }
+
+            EntityTableMeta meta = GetMetaData(tablename);
+
+            if (meta.TType != items.First().GetType())
+            {
+                throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
+            }
+
+            return Insert2(tablename, items, meta);
         }
 
         public bool Delete(string tablename, string key)
