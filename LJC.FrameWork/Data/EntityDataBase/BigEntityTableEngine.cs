@@ -256,9 +256,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 try
                 {
-                    //using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
-                    ObjTextWriter otw = GetWriter(tablefile);
-                    lock(otw)
+                    using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
+                    //ObjTextWriter otw = GetWriter(tablefile);
+                    //lock(otw)
                     {
                         string metafile = GetMetaFile(tablename);
                         if (!File.Exists(metafile))
@@ -316,8 +316,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                         //索引
                         string keyfile = GetKeyFile(tablename);
-                        //using (ObjTextWriter keyidxwriter = ObjTextWriter.CreateWriter(keyfile, ObjTextReaderWriterEncodeType.entitybuf))
-                        ObjTextWriter keyidxwriter = GetWriter(keyfile);
+                        using (ObjTextWriter keyidxwriter = ObjTextWriter.CreateWriter(keyfile, ObjTextReaderWriterEncodeType.entitybuf))
+                        //ObjTextWriter keyidxwriter = GetWriter(keyfile);
                         {
                         }
 
@@ -326,8 +326,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             foreach (var idx in indexs)
                             {                              
                                 var indexfile = GetIndexFile(tablename, idx);
-                                //using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                                ObjTextWriter idxwriter = GetWriter(indexfile);
+                                using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                                //ObjTextWriter idxwriter = GetWriter(indexfile);
                                 {
                                 }
                             }
@@ -510,8 +510,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 mergeinfo.IndexMergePos = newIndexMergePos;
 
                 int secs = 3600 * 24;
-                var writer = GetWriter(indexfile, secs);
-                lock (writer)
+                using (var writer = ObjTextWriter.CreateWriter(indexfile,ObjTextReaderWriterEncodeType.entitybuf))
+                //var writer = GetWriter(indexfile, secs);
+                //lock (writer)
                 {
                     try
                     {
@@ -805,79 +806,110 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return writer;
         }
 
-        private bool Insert2<T>(string tablename, T item, EntityTableMeta meta) where T : new()
+        private bool Insert2<T>(string tablename,IEnumerable<T> items, EntityTableMeta meta) where T : new()
         {
-            var keyvalue = item.Eval(meta.KeyProperty);
-            if (keyvalue == null)
-            {
-                throw new Exception("key值不能为空");
-            }
-
-            var keystr = keyvalue.ToString();
-
-            var keylocker = GetKeyLocker(tablename, keystr);
-
-            lock (keylocker)
-            {
-                if (keyindexlistdic[tablename].ContainsKey(keystr))
-                {
-                    throw new Exception(string.Format("key:{0}不可重复", keystr));
-                }
-            }
-
             string tablefile = GetTableFile(tablename);
-            var tableitem = new EntityTableItem<T>(item);
-            tableitem.Flag = EntityTableItemFlag.Ok;
             var locker = GetKeyLocker(tablename, string.Empty);
+            string keyindexfile = GetKeyFile(tablename);
+
             lock (locker)
             {
-                var otw = GetWriter(tablefile);
-                lock(otw)
+                var otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf);
+                ObjTextWriter keywriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf);
+                Dictionary<string, ObjTextWriter> idxwriterdic = new Dictionary<string, ObjTextWriter>();
+                try
                 {
-                    var offset = otw.AppendObject(tableitem);
-
-                    var keylist = keyindexlistdic[tablename];
-
-                    var newkey = new BigEntityTableIndexItem
+                    foreach (var item in items)
                     {
-                        Key = keystr,
-                        Offset = offset.Item1,
-                        len = (int)(offset.Item2 - offset.Item1)
-                    };
-
-                    keylist.Add(newkey.Key, newkey);
-
-                    string keyindexfile = GetKeyFile(tablename);
-                    ObjTextWriter keywriter = GetWriter(keyindexfile);
-                    lock(keywriter)
-                    {
-                        newkey.KeyOffset = keywriter.GetWritePosition();
-                        keywriter.AppendObject(newkey);
-                    }
-
-                    foreach (var idx in meta.Indexs)
-                    {
-                        string indexfile = GetIndexFile(tablename, idx);
-                        var indexvalue = item.Eval(meta.IndexProperties[idx]);
-                        var newindex = new BigEntityTableIndexItem
+                        var keyvalue = item.Eval(meta.KeyProperty);
+                        if (keyvalue == null)
                         {
-                            Key = indexvalue == null ? string.Empty : indexvalue.ToString(),
-                            Offset = offset.Item1,
-                            len = (int)(offset.Item2 - offset.Item1)
-                        };
-                        ObjTextWriter idxwriter = GetWriter(indexfile);
-                        lock(idxwriter)
+                            throw new Exception("key值不能为空");
+                        }
+
+                        var keystr = keyvalue.ToString();
+
+                        var keylocker = GetKeyLocker(tablename, keystr);
+
+                        lock (keylocker)
                         {
-                            newindex.KeyOffset = idxwriter.GetWritePosition();
-                            idxwriter.AppendObject(newindex);
+                            if (keyindexlistdic[tablename].ContainsKey(keystr))
+                            {
+                                throw new Exception(string.Format("key:{0}不可重复", keystr));
+                            }
+                        }
+
+
+                        var tableitem = new EntityTableItem<T>(item);
+                        tableitem.Flag = EntityTableItemFlag.Ok;
+
+                        //var otw = GetWriter(tablefile);
+                        //lock(otw)
+                        {
+                            var offset = otw.AppendObject(tableitem);
+
+                            var keylist = keyindexlistdic[tablename];
+
+                            var newkey = new BigEntityTableIndexItem
+                            {
+                                Key = keystr,
+                                Offset = offset.Item1,
+                                len = (int)(offset.Item2 - offset.Item1)
+                            };
+
+                            keylist.Add(newkey.Key, newkey);
+
+                            //string keyindexfile = GetKeyFile(tablename);
+                            //ObjTextWriter keywriter = GetWriter(keyindexfile);
+                            //lock (keywriter)
+                            {
+                                newkey.KeyOffset = keywriter.GetWritePosition();
+                                keywriter.AppendObject(newkey);
+                            }
+
+                            foreach (var idx in meta.Indexs)
+                            {
+                                string indexfile = GetIndexFile(tablename, idx);
+                                var indexvalue = item.Eval(meta.IndexProperties[idx]);
+                                var newindex = new BigEntityTableIndexItem
+                                {
+                                    Key = indexvalue == null ? string.Empty : indexvalue.ToString(),
+                                    Offset = offset.Item1,
+                                    len = (int)(offset.Item2 - offset.Item1)
+                                };
+
+                                ObjTextWriter idxwriter = null;
+                                if (!idxwriterdic.TryGetValue(indexfile, out idxwriter))
+                                {
+                                    idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf);
+                                    idxwriterdic.Add(indexfile, idxwriter);
+                                }
+
+                                //ObjTextWriter idxwriter = GetWriter(indexfile);
+                                //lock (idxwriter)
+                                {
+                                    newindex.KeyOffset = idxwriter.GetWritePosition();
+                                    idxwriter.AppendObject(newindex);
+                                }
+                            }
                         }
                     }
 
-                    meta.NewAddCount += 1;
+                    meta.NewAddCount += items.Count();
                     if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT)
                     {
                         //meta.NewAddCount = 0;
                         new Action(() => MergeIndex(tablename, meta.KeyName)).BeginInvoke(null, null);
+                    }
+                }
+                finally
+                {
+                    otw.Dispose();
+                    keywriter.Dispose();
+
+                    foreach (var kv in idxwriterdic)
+                    {
+                        kv.Value.Dispose();
                     }
                 }
             }
@@ -895,7 +927,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
             }
 
-            return Insert2(tablename, item, meta);
+            return Insert2(tablename, new T[] { item }, meta);
         }
 
         public bool Delete(string tablename, string key)
@@ -912,8 +944,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
             lock (locker)
             {
                 string keyindexfile = GetKeyFile(tablename);
-                ObjTextWriter keywriter = GetWriter(keyindexfile);
-                lock (keywriter)
+                using (ObjTextWriter keywriter=ObjTextWriter.CreateWriter(keyindexfile,ObjTextReaderWriterEncodeType.entitybuf))
+                //ObjTextWriter keywriter = GetWriter(keyindexfile);
+                //lock (keywriter)
                 {
                     delkey.Del = true;
 
@@ -951,8 +984,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
 
                 string keyindexfile = GetKeyFile(tablename);
-                ObjTextWriter keywriter = GetWriter(keyindexfile);
-                lock (keywriter)
+                using (ObjTextWriter keywriter=ObjTextWriter.CreateWriter(keyindexfile,ObjTextReaderWriterEncodeType.entitybuf))
+                //ObjTextWriter keywriter = GetWriter(keyindexfile);
+                //lock (keywriter)
                 {
                     delitem.Del = true;
 
@@ -999,7 +1033,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
             else
             {
-                return Insert2(tablename, item, meta);
+                return Insert2(tablename, new T[] { item }, meta);
             }
         }
 
@@ -1020,9 +1054,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
 
                 string keyindexfile = GetKeyFile(tablename);
-                ObjTextWriter keywriter = GetWriter(keyindexfile);
                 indexitem.Del = true;
-                lock (keywriter)
+                //ObjTextWriter keywriter = GetWriter(keyindexfile);
+                using(ObjTextWriter keywriter=ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                //lock (keywriter)
                 {
                     keywriter.SetPosition(indexitem.KeyOffset);
                     keywriter.AppendObject(indexitem);
@@ -1035,7 +1070,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 var tableitem = new EntityTableItem<T>(item);
                 tableitem.Flag = EntityTableItemFlag.Ok;
-                ObjTextWriter otw = GetWriter(tablefile);
+                //ObjTextWriter otw = GetWriter(tablefile);
+                using(ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                 {
                     offset = otw.PreAppendObject(tableitem, (s1, s2) =>
                     {
@@ -1065,8 +1101,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 
                 dic.Add(newkey.Key,newkey);
 
-                ObjTextWriter keyidxwriter = GetWriter(keyindexfile);
-                lock(keyidxwriter)
+                using(ObjTextWriter keyidxwriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                //ObjTextWriter keyidxwriter = GetWriter(keyindexfile);
+                //lock(keyidxwriter)
                 {
                     newkey.KeyOffset = keyidxwriter.GetWritePosition();
                     keyidxwriter.AppendObject(newkey);
@@ -1083,8 +1120,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         len = (int)(offset.Item2 - offset.Item1),
                         Del = false
                     };
-                    ObjTextWriter idxwriter = GetWriter(indexfile);
-                    lock(idxwriter)
+                    using(ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                    //ObjTextWriter idxwriter = GetWriter(indexfile);
+                    //lock(idxwriter)
                     {
                         newindex.KeyOffset = idxwriter.GetWritePosition();
                         idxwriter.AppendObject(newindex);
