@@ -366,7 +366,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 locker = new object();
                 keylocker.Add(totalkey, locker);
 
-                CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new LockerDestroy(keylocker, totalkey));
+                //CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new LockerDestroy(keylocker, totalkey));
             }
 
             return locker;
@@ -529,16 +529,20 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     lock (locker)
                     {
-                        foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                        using (newwriter)
                         {
-                            item.KeyOffset = newwriter.GetWritePosition();
-                            newwriter.AppendObject(item);
+                            using (idxreader)
+                            {
+                                foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                                {
+                                    item.KeyOffset = newwriter.GetWritePosition();
+                                    newwriter.AppendObject(item);
+                                }
+
+                            }
                         }
 
-                        idxreader.Dispose();
-                        
                         idxreader = null;
-                        newwriter.Dispose();
 
                         Console.WriteLine("删除源索引文件");
 
@@ -927,12 +931,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 finally
                 {
-                    otw.Dispose();
-                    keywriter.Dispose();
+                    using (otw) { };
+                    using (keywriter) { };
 
                     foreach (var kv in idxwriterdic)
                     {
-                        kv.Value.Dispose();
+                        using (kv.Value) { }
                     }
                 }
             }
@@ -1347,7 +1351,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                 {
-                    Console.WriteLine("finddiskkey");
                     reader.SetPostion(posstart);
                     while (true)
                     {
@@ -1443,7 +1446,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
-                        Console.WriteLine("finddisk");
                         reader.SetPostion(posstart);        
 
                         while (true)

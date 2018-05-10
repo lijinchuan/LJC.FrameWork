@@ -339,6 +339,7 @@ namespace Test2
             {
                 var time = DateTime.Now;
                 int cnt = 0;
+                int readcnt = 0;
                 for (int i = 0; i < 1000000; i++)
                 {
 
@@ -349,8 +350,8 @@ namespace Test2
                         Console.WriteLine("找不到用户:" + ("name" + i));
                         Console.Read();
                     }
-
-                    if (cnt % 10000 == 0)
+                    readcnt++;
+                    if (readcnt % 10000 == 0)
                     {
                         Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
                     }
