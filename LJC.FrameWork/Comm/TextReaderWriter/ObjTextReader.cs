@@ -415,6 +415,7 @@ namespace LJC.FrameWork.Comm
             if (_sr != null)
             {
                 _sr.Close();
+                _sr.Dispose();
                 _sr = null;
             }
         }

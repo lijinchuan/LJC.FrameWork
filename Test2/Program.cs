@@ -349,9 +349,10 @@ namespace Test2
                         Console.WriteLine("找不到用户:" + ("name" + i));
                         Console.Read();
                     }
-                    else
+
+                    if (cnt % 10000 == 0)
                     {
-                        Console.WriteLine(m.Name);
+                        Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
                     }
 
                 }
@@ -440,14 +441,24 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            //TestSorteArray();
-            //Console.Read();
-            //return;
-            TestBigLocaldb();
-            //TestBigLocaldbDel();
-            //TestBigLocalUpdate();
-            //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
-            TestBigLocaldbFind();
+            Console.WriteLine("选择操作 1-写库 2-读库");
+            var cmd = Console.ReadLine();
+
+            if (cmd == "1")
+            {
+                //TestSorteArray();
+                //Console.Read();
+                //return;
+                TestBigLocaldb();
+            }
+
+            if (cmd == "2")
+            {
+                //TestBigLocaldbDel();
+                //TestBigLocalUpdate();
+                //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
+                TestBigLocaldbFind();
+            }
             Console.Read();
             return;
 

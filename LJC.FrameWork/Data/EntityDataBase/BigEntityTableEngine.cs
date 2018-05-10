@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LJC.FrameWork.Data.EntityDataBase
@@ -535,10 +536,16 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
 
                         idxreader.Dispose();
+                        
                         idxreader = null;
                         newwriter.Dispose();
 
+                        Console.WriteLine("删除源索引文件");
+
                         File.Delete(indexfile);
+
+                        
+                        Console.WriteLine("更改源文件");
                         File.Move(newindexfile, indexfile);
                     }
                     
@@ -587,6 +594,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
             List<BigEntityTableIndexItem> list = new List<BigEntityTableIndexItem>();
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
+                Console.WriteLine("loadkey");
+
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
                     if (newindex.KeyOffset == indexmergeinfo.IndexMergePos)
@@ -620,6 +629,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             using (ObjTextReader idr = ObjTextReader.CreateReader(indexfile))
             {
+                Console.WriteLine("loadkey2");
+
                 if (indexmergeinfo.IndexMergePos > 0)
                 {
                     idr.SetPostion(indexmergeinfo.IndexMergePos);
@@ -660,6 +671,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 using (ObjTextReader idxreader = ObjTextReader.CreateReader(indexfile))
                 {
+                    Console.WriteLine("loadindex");
                     if (temp.LastOffset > 0)
                     {
                         idxreader.SetPostion(temp.LastOffset);
@@ -1335,6 +1347,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                 {
+                    Console.WriteLine("finddiskkey");
                     reader.SetPostion(posstart);
                     while (true)
                     {
@@ -1430,6 +1443,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
+                        Console.WriteLine("finddisk");
                         reader.SetPostion(posstart);        
 
                         while (true)
