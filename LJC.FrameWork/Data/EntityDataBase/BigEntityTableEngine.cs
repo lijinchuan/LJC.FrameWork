@@ -1496,6 +1496,157 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return t;
         }
 
+        public IEnumerable<T> FindBatch<T>(string tablename, IEnumerable<string> keys) where T : new()
+        {
+            string tablefile = GetTableFile(tablename);
+            EntityTableMeta meta = GetMetaData(tablename);
+            var dic = keyindexlistdic[tablename];
+            BigEntityTableIndexItem indexitem = null;
+            var indexarr = keyindexarrdic[tablename];
+
+            using (ObjTextReader otr = ObjTextReader.CreateReader(tablefile))
+            {
+                using (var keyreader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+                {
+                    foreach (var key in keys)
+                    {
+                        if (dic.TryGetValue(key, out indexitem))
+                        {
+                            if (indexitem != null && !indexitem.Del)
+                            {
+                                otr.SetPostion(indexitem.Offset);
+
+                                var readobj = otr.ReadObject<EntityTableItem<T>>();
+                                if (readobj != null)
+                                {
+                                    yield return readobj.Data;
+                                    continue;
+                                }
+                                else
+                                {
+                                    yield return default(T);
+                                    continue;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (indexarr.Length == 0)
+                            {
+                                yield return default(T);
+                                continue;
+                            }
+
+                            if (indexarr.Length == 1)
+                            {
+                                var index = indexarr.FirstOrDefault();
+                                if (index == null || index.Del)
+                                {
+                                    yield return default(T);
+                                    continue;
+                                }
+
+                                if (index.Key.Equals(key))
+                                {
+                                    //先找到offset
+                                    otr.SetPostion(index.Offset);
+
+                                    var readobj = otr.ReadObject<EntityTableItem<T>>();
+                                    if (readobj == null)
+                                    {
+                                        yield return default(T);
+                                        continue;
+                                    }
+                                    else
+                                    {
+                                        yield return readobj.Data;
+                                        continue;
+                                    }
+                                }
+                                else
+                                {
+                                    yield return default(T);
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                int mid = -1;
+                                int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
+                                {
+                                    Key = key
+                                }, ref mid);
+
+                                BigEntityTableIndexItem findkeyitem = null;
+                                if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+                                {
+                                    yield return default(T);
+                                    continue;
+                                }
+                                else if (pos > -1)
+                                {
+                                    findkeyitem = indexarr[pos];
+                                    if (findkeyitem.Del)
+                                    {
+                                        yield return default(T);
+                                        continue;
+                                    }
+                                }
+
+                                if (findkeyitem == null)
+                                {
+                                    var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+                                    if (pos == -1 && keymergeinfo.LoadFactor == 1)
+                                    {
+                                        yield return default(T);
+                                        continue;
+                                    }
+
+                                    var posstart = indexarr[mid].KeyOffset;
+                                    var posend = indexarr[mid + 1].KeyOffset;
+
+                                    keyreader.SetPostion(posstart);
+
+                                    while (true)
+                                    {
+                                        var item = keyreader.ReadObject<BigEntityTableIndexItem>();
+                                        if (item == null || keyreader.ReadedPostion() > posend)
+                                        {
+                                            break;
+                                        }
+                                        if (item.Key.Equals(key))
+                                        {
+                                            findkeyitem = item;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (findkeyitem != null)
+                                {
+                                    otr.SetPostion(findkeyitem.Offset);
+
+                                    var obj = otr.ReadObject<EntityTableItem<T>>();
+
+                                    if (obj == null)
+                                    {
+                                        yield return default(T);
+                                        continue;
+                                    }
+
+                                    yield return obj.Data;
+                                    continue;
+                                }
+
+                                yield return default(T);
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public T FindMem<T>(string tablename, string key) where T : new()
         {
             string tablefile = GetTableFile(tablename);

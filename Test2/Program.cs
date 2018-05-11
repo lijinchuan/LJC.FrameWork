@@ -363,6 +363,61 @@ namespace Test2
             Console.Read();
         }
 
+        static void TestBigLocaldbFindBatch()
+        {
+            //Console.WriteLine("cnt:"+BigEntityTableEngine.LocalEngine.Count("Man"));
+            //Console.Read();
+
+            int ccount = 0;
+            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 100000))
+            {
+                //Console.WriteLine(item.Name);
+                ccount++;
+            }
+            Console.WriteLine("ccount:" + ccount);
+
+            for (int c = 0; c < 3; c++)
+            {
+                var time = DateTime.Now;
+                int cnt = 0;
+                int readcnt = 0;
+
+                var findkeylist = new List<string>();
+                for (int i = 0; i < 1000000; i++)
+                {
+                    var key = "name" + i;
+
+                    findkeylist.Add(key);
+
+                    if (findkeylist.Count >= 10000)
+                    {
+                        DateTime timenow = DateTime.Now;
+                        var findvallist = BigEntityTableEngine.LocalEngine.FindBatch<Man>("Man", findkeylist).ToList();
+                        
+                        cnt += findvallist.Where(p => p == null).Count();
+                        readcnt += findkeylist.Count;
+                        Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(timenow).TotalMilliseconds+"，未找到记录数:"+cnt);
+                        findkeylist.Clear();
+                    }
+
+                }
+
+                if (findkeylist.Count > 0)
+                {
+                    DateTime timenow = DateTime.Now;
+                    var findvallist = BigEntityTableEngine.LocalEngine.FindBatch<Man>("Man", findkeylist).ToList();
+
+                    cnt += findvallist.Where(p => p == null).Count();
+                    readcnt += findkeylist.Count;
+                    Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(timenow).TotalMilliseconds + "，未找到记录数:" + cnt);
+                    findkeylist.Clear();
+                }
+                Console.WriteLine("读取完成:" + readcnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
+
+            }
+            Console.Read();
+        }
+
         static void TestBigLocalUpdate()
         {
             var man1920=BigEntityTableEngine.LocalEngine.FindMem<Man>("Man","name1920");
@@ -458,7 +513,7 @@ namespace Test2
                 //TestBigLocaldbDel();
                 //TestBigLocalUpdate();
                 //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
-                TestBigLocaldbFind();
+                TestBigLocaldbFindBatch();
             }
             Console.Read();
             return;
