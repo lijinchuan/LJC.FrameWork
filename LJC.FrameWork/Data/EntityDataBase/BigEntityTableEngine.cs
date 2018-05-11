@@ -544,12 +544,25 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                         idxreader = null;
 
-                        Console.WriteLine("删除源索引文件");
+                        int trycount = 0;
+                        while (true)
+                        {
+                            try
+                            {
+                                File.Delete(indexfile);
+                                break;
+                            }
+                            catch (System.IO.IOException ex)
+                            {
+                                Thread.Sleep(1);
+                                trycount++;
+                                if (trycount > 1000)
+                                {
+                                    throw ex;
+                                }
+                            }
+                        }
 
-                        File.Delete(indexfile);
-
-                        
-                        Console.WriteLine("更改源文件");
                         File.Move(newindexfile, indexfile);
                     }
                     
