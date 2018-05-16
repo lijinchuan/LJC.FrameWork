@@ -32,7 +32,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 10000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 10000000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>

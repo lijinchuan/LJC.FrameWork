@@ -105,7 +105,7 @@ namespace LJC.FrameWork.Comm
                     else if (ObjTextReaderWriterEncodeType.entitybuf == this._encodeType
                         || ObjTextReaderWriterEncodeType.entitybufex == this._encodeType)
                     {
-                        var buf = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj);
+                        var buf = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj,false);
                         offset = Append(tempms.BaseStream, buf, true);
                     }
                     else
@@ -173,7 +173,7 @@ namespace LJC.FrameWork.Comm
             else if (ObjTextReaderWriterEncodeType.entitybuf == this._encodeType
                 || ObjTextReaderWriterEncodeType.entitybufex == this._encodeType)
             {
-                var buf = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj);
+                var buf = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj,false);
                 offset = Append(buf, true);
             }
             else
