@@ -240,7 +240,7 @@ namespace Test2
             //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             DateTime time = DateTime.Now;
             List<Man> list = new List<Man>();
-            for (int i = 0; i < 1000000; i++)
+            for (int i = 0; i < 10000000; i++)
             {
                 
                 var man=new Man
@@ -251,7 +251,7 @@ namespace Test2
                     Sex = new Random(Guid.NewGuid().GetHashCode()).Next(2)
                 };
                 list.Add(man);
-                if (list.Count > 100)
+                if (list.Count > 1000)
                 {
                     BigEntityTableEngine.LocalEngine.InsertBatch("Man", list);
                     list.Clear();
@@ -328,19 +328,19 @@ namespace Test2
             //Console.Read();
 
             int ccount = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 100000))
+            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 10000000))
             {
                 //Console.WriteLine(item.Name);
                 ccount++;
             }
             Console.WriteLine("ccount:" + ccount);
 
-            for (int c = 0; c < 3; c++)
+            for (int c = 0; c < 1; c++)
             {
                 var time = DateTime.Now;
                 int cnt = 0;
                 int readcnt = 0;
-                for (int i = 0; i < 1000000; i++)
+                for (int i = 0; i < 10000000; i++)
                 {
 
                     var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name" + i);
@@ -369,27 +369,27 @@ namespace Test2
             //Console.Read();
 
             int ccount = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 100000))
+            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 10000000))
             {
                 //Console.WriteLine(item.Name);
                 ccount++;
             }
             Console.WriteLine("ccount:" + ccount);
 
-            for (int c = 0; c < 3; c++)
+            for (int c = 0; c < 1; c++)
             {
                 var time = DateTime.Now;
                 int cnt = 0;
                 int readcnt = 0;
 
                 var findkeylist = new List<string>();
-                for (int i = 0; i < 1000000; i++)
+                for (int i = 0; i < 10000000; i++)
                 {
                     var key = "name" + i;
 
                     findkeylist.Add(key);
 
-                    if (findkeylist.Count >= 10000)
+                    if (findkeylist.Count >= 100000)
                     {
                         DateTime timenow = DateTime.Now;
                         var findvallist = BigEntityTableEngine.LocalEngine.FindBatch<Man>("Man", findkeylist).ToList();
@@ -514,6 +514,11 @@ namespace Test2
                 //TestBigLocalUpdate();
                 //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
                 TestBigLocaldbFindBatch();
+            }
+
+            if (cmd == "3")
+            {
+                BigEntityTableEngine.LocalEngine.MergeIndex("Man", "Name");
             }
             Console.Read();
             return;

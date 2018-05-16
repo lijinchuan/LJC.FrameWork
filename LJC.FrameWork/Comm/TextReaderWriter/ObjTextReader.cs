@@ -90,7 +90,7 @@ namespace LJC.FrameWork.Comm
                     case ObjTextReaderWriterEncodeType.entitybufex:
                     case ObjTextReaderWriterEncodeType.entitybuf:
                         {
-                            return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte);
+                            return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte,false);
                         }
                     default:
                         {
@@ -225,7 +225,7 @@ namespace LJC.FrameWork.Comm
                 //扫过分隔符
                 s.Position += 2;
 
-                return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte);
+                return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte,false);
             }
             else if (_encodeType == ObjTextReaderWriterEncodeType.jsongzip)
             {
