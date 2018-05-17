@@ -240,7 +240,7 @@ namespace Test2
             //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             DateTime time = DateTime.Now;
             List<Man> list = new List<Man>();
-            for (int i = 0; i < 10000000; i++)
+            for (int i = 0; i < 1000000; i++)
             {
                 
                 var man=new Man
@@ -369,21 +369,21 @@ namespace Test2
             //Console.Read();
 
             int ccount = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 10000000))
+            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 1000000))
             {
                 //Console.WriteLine(item.Name);
                 ccount++;
             }
             Console.WriteLine("ccount:" + ccount);
 
-            for (int c = 0; c < 3; c++)
+            for (int c = 0; c < 1; c++)
             {
                 var time = DateTime.Now;
                 int cnt = 0;
                 int readcnt = 0;
 
                 var findkeylist = new List<string>();
-                for (int i = 0; i < 10000000; i++)
+                for (int i = 0; i < 1000000; i++)
                 {
                     var key = "name" + i;
 
@@ -393,10 +393,22 @@ namespace Test2
                     {
                         DateTime timenow = DateTime.Now;
                         var findvallist = BigEntityTableEngine.LocalEngine.FindBatch<Man>("Man", findkeylist).ToList();
-                        
-                        cnt += findvallist.Where(p => p == null).Count();
+
+                        int nullcount = findvallist.Where(p => p == null).Count();
+                        cnt += nullcount;
+                        if (nullcount > 0)
+                        {
+                            for (int ii = 0; ii < findvallist.Count; ii++)
+                            {
+                                if (findvallist[ii] == null)
+                                {
+                                    Console.WriteLine("key->" + findkeylist[ii]);
+                                }
+                            }
+                            Console.Read();
+                        }
                         readcnt += findkeylist.Count;
-                        Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(timenow).TotalMilliseconds+"，未找到记录数:"+cnt);
+                        Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(timenow).TotalMilliseconds + "，未找到记录数:" + cnt);
                         findkeylist.Clear();
                     }
 
@@ -406,8 +418,19 @@ namespace Test2
                 {
                     DateTime timenow = DateTime.Now;
                     var findvallist = BigEntityTableEngine.LocalEngine.FindBatch<Man>("Man", findkeylist).ToList();
-
-                    cnt += findvallist.Where(p => p == null).Count();
+                    int nullcount = findvallist.Where(p => p == null).Count();
+                    cnt += nullcount;
+                    if (nullcount > 0)
+                    {
+                        for (int i = 0; i < findvallist.Count; i++)
+                        {
+                            if (findvallist[i] == null)
+                            {
+                                Console.WriteLine("key->" + findkeylist[i]);
+                            }
+                        }
+                        Console.Read();
+                    }
                     readcnt += findkeylist.Count;
                     Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(timenow).TotalMilliseconds + "，未找到记录数:" + cnt);
                     findkeylist.Clear();

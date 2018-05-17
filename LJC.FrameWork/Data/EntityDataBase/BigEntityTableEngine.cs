@@ -32,7 +32,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 10000000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 1000000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
@@ -427,7 +427,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                     {
                         listtemp.Add(obj);
-                        if (++readcount > 5000000)
+                        if (++readcount > 500000)
                         {
                             break;
                         }
@@ -572,7 +572,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     
 
                     string metafile = GetMetaFile(tablename);
-
                     LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
 
                     ProcessTraceUtil.Trace("更新元文件，更新索引完成");
@@ -644,6 +643,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         i++;
                         lastreadindex = newindex;
                     }
+                }
+
+                if (list.Last().KeyOffset != lastreadindex.KeyOffset)
+                {
+                    list.Add(lastreadindex);
                 }
             }
             indexmergeinfo.TotalCount = i;
