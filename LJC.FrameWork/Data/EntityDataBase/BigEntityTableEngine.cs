@@ -32,7 +32,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 10000000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 1000000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
@@ -381,6 +381,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public void MergeIndex(string tablename, string indexname, EntityTableMeta meta)
         {
             //Console.WriteLine("开始整理索引");
+            ProcessTraceUtil.StartTrace();
 
             IndexMergeInfo mergeinfo = null;
 
@@ -404,6 +405,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
             DateTime timestart = DateTime.Now;
             try
             {
+                ProcessTraceUtil.Trace("开始");
+
                 long lasmargepos = 0;
                 long newIndexMergePos = 0;
                 string newindexfile = string.Empty;
@@ -414,6 +417,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     if (mergeinfo.IndexMergePos > 0)
                     {
                         reader.SetPostion(mergeinfo.IndexMergePos);
+
+                        ProcessTraceUtil.Trace("设置读取索引文件的开始位置->"+mergeinfo.IndexMergePos);
                     }
 
                     var listtemp = new List<BigEntityTableIndexItem>();
@@ -422,11 +427,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                     {
                         listtemp.Add(obj);
-                        if (++readcount > 5000000)
+                        if (++readcount > 500000)
                         {
                             break;
                         }
                     }
+
+                    ProcessTraceUtil.Trace("读取索引后面的数据，共"+readcount+"条");
 
                     if (readcount == 0)
                     {
@@ -439,9 +446,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     newindexfile = (indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname)) + ".temp";
                     bool isall = false;
+                    ProcessTraceUtil.Trace("读取前面的数据");
                     while (true)
                     {
-                        Console.WriteLine("readstartpostion->" + readstartpostion);
                         reader.SetPostion(readstartpostion);
                         var listordered = new List<BigEntityTableIndexItem>();
                         var loadcount = 0;
@@ -462,7 +469,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                         if (listordered.Count == 0)
                         {
-                            Console.WriteLine("顺序列表为空，无序列表条数:" + listtemp.Count);
+                            ProcessTraceUtil.Trace("顺序列表为空，无序列表条数:" + listtemp.Count);
 
                             listordered = listtemp;
                             Console.WriteLine("--->" + listtemp.Count);
@@ -470,7 +477,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                         else
                         {
-                            Console.WriteLine("顺序列表不为空:" + listordered.Count + "，无序列表条数:" + listtemp.Count);
+                            ProcessTraceUtil.Trace("顺序列表不为空:" + listordered.Count + "，无序列表条数:" + listtemp.Count);
 
                             var subtemplist = listtemp.Where(p => p.CompareTo(listordered.Last()) < 0).ToList();
                             listordered.AddRange(subtemplist);
@@ -480,17 +487,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             listtemp = listtemp.Skip(subtemplist.Count).ToList();
                         }
 
-                        int mid = 0;
-                        var pos = new LJC.FrameWork.Collections.SorteArray<BigEntityTableIndexItem>(listordered.ToArray()).Find(new BigEntityTableIndexItem { Key = "name7" }, ref mid);
-                        if (pos == -1)
-                        {
-                            Console.WriteLine("查不到");
-                        }
-                        else
-                        {
-                            Console.WriteLine("能查到");
-                        }
-
+                        ProcessTraceUtil.Trace("写入到新索引文件");
                         using (var nw = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
                         {
                             foreach (var item in listordered)
@@ -500,6 +497,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             }
                             newIndexMergePos = nw.GetWritePosition();
                         }
+                        ProcessTraceUtil.Trace("写入到新索引文件完成");
 
                         if (isall)
                         {
@@ -520,15 +518,18 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf);
                 try
                 {
+                    ProcessTraceUtil.Trace("读取后面的数据->"+lasmargepos);
                     idxreader.SetPostion(lasmargepos);
                     foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                     {
                         item.KeyOffset = newwriter.GetWritePosition();
                         newwriter.AppendObject(item);
                     }
+                    ProcessTraceUtil.Trace("读取后面的数据完成");
 
                     lock (locker)
                     {
+                        ProcessTraceUtil.Trace("读取后面的数据->" + lasmargepos);
                         using (newwriter)
                         {
                             using (idxreader)
@@ -541,6 +542,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                             }
                         }
+                        ProcessTraceUtil.Trace("读取后面的数据完成");
 
                         idxreader = null;
 
@@ -564,14 +566,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
 
                         File.Move(newindexfile, indexfile);
+
+                        ProcessTraceUtil.Trace("删除旧文件，重命名新文件完成");
                     }
                     
 
                     string metafile = GetMetaFile(tablename);
-
                     LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
 
-                    Console.WriteLine("整理索引完成：" + (DateTime.Now.Subtract(timestart).TotalMilliseconds));
+                    ProcessTraceUtil.Trace("更新元文件，更新索引完成");
                 }
                 catch (Exception ex)
                 {
@@ -589,7 +592,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
             finally
             {
                 mergeinfo.IsMergin = false;
+
+                Console.WriteLine(ProcessTraceUtil.PrintTrace());
+                ProcessTraceUtil.StartTrace();
             }
+
         }
 
         private void LoadKey(string tablename, EntityTableMeta meta)
@@ -636,6 +643,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         i++;
                         lastreadindex = newindex;
                     }
+                }
+
+                if (list.Last().KeyOffset != lastreadindex.KeyOffset)
+                {
+                    list.Add(lastreadindex);
                 }
             }
             indexmergeinfo.TotalCount = i;
