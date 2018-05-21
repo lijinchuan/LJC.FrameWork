@@ -36,5 +36,40 @@ namespace LJC.FrameWork.Comm
                 }
             }
         }
+
+        public static void CopyFile(string source, string dest,FileMode destmode, long begin, long end)
+        {
+            if (begin < 0 || end < begin)
+            {
+                return;
+            }
+            byte[] buffer = new byte[1024 * 1024];
+            int offset=0;
+            using (System.IO.FileStream fs = new FileStream(dest,destmode))
+            {
+                using (System.IO.FileStream fs2 = new FileStream(source, FileMode.Open))
+                {
+                    if (end > fs2.Length)
+                    {
+                        end = fs2.Length;
+                    }
+                    fs2.Position = begin;
+                    while (true)
+                    {
+                        var copylen = Math.Min(end - begin - offset, buffer.Length);
+                        if (copylen <= 0)
+                        {
+                            break;
+                        }
+                        var readlen = fs2.Read(buffer, 0, (int)copylen);
+                        if (readlen > 0)
+                        {
+                            fs.Write(buffer, 0, readlen);
+                        }
+                        offset += readlen;
+                    }
+                }
+            }
+        }
     }
 }

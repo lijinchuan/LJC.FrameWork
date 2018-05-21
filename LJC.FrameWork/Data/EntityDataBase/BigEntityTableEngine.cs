@@ -13,6 +13,10 @@ using System.Threading.Tasks;
 
 namespace LJC.FrameWork.Data.EntityDataBase
 {
+    /// <summary>
+    /// 需要优化的地方：
+    /// 1、多索引一次生成
+    /// </summary>
     public class BigEntityTableEngine
     {
         Dictionary<string, EntityTableMeta> metadic = new Dictionary<string, EntityTableMeta>();
@@ -570,6 +574,253 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         ProcessTraceUtil.Trace("删除旧文件，重命名新文件完成");
                     }
                     
+
+                    string metafile = GetMetaFile(tablename);
+                    LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
+
+                    ProcessTraceUtil.Trace("更新元文件，更新索引完成");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("整理出错" + ex.ToString());
+                }
+                finally
+                {
+                    if (idxreader != null)
+                    {
+                        idxreader.Dispose();
+                    }
+                }
+
+            }
+            finally
+            {
+                mergeinfo.IsMergin = false;
+
+                Console.WriteLine(ProcessTraceUtil.PrintTrace());
+                ProcessTraceUtil.StartTrace();
+            }
+
+        }
+
+        public void MergeIndex2(string tablename, string indexname, EntityTableMeta meta)
+        {
+            //Console.WriteLine("开始整理索引");
+            ProcessTraceUtil.StartTrace();
+
+            IndexMergeInfo mergeinfo = null;
+
+            lock (meta)
+            {
+                mergeinfo = meta.IndexMergeInfos.Find(p => indexname.Equals(p.IndexName));
+                if (mergeinfo == null)
+                {
+                    mergeinfo = new IndexMergeInfo();
+                    mergeinfo.IndexName = indexname;
+                    meta.IndexMergeInfos.Add(mergeinfo);
+                }
+
+                if (mergeinfo.IsMergin)
+                {
+                    return;
+                }
+                meta.NewAddCount = 0;
+                mergeinfo.IsMergin = true;
+            }
+            DateTime timestart = DateTime.Now;
+            try
+            {
+                ProcessTraceUtil.Trace("开始");
+
+                long lasmargepos = 0;
+                long newIndexMergePos = 0;
+                string newindexfile = string.Empty;
+                string indexfile = indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname);
+                using (var reader = ObjTextReader.CreateReader(indexfile))
+                {
+                    long readstartpostion = reader.ReadedPostion();
+                    if (mergeinfo.IndexMergePos > 0)
+                    {
+                        reader.SetPostion(mergeinfo.IndexMergePos);
+
+                        ProcessTraceUtil.Trace("设置读取索引文件的开始位置->" + mergeinfo.IndexMergePos);
+                    }
+
+                    var listtemp = new List<BigEntityTableIndexItem>();
+                    int readcount = 0;
+
+                    foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    {
+                        listtemp.Add(obj);
+                        if (++readcount > 500000)
+                        {
+                            break;
+                        }
+                    }
+
+                    ProcessTraceUtil.Trace("读取索引后面的数据，共" + readcount + "条");
+
+                    if (readcount == 0)
+                    {
+                        return;
+                    }
+
+                    lasmargepos = reader.ReadedPostion();
+
+                    listtemp = listtemp.OrderBy(p => p).ToList();
+
+                    //优化确定哪些部分是不需要一个个读入的
+                    long copystart = 0;
+                    var indexarray=keyindexarrdic[tablename];
+                    var sortarray = new Collections.SorteArray<BigEntityTableIndexItem>(indexarray);
+                    int mid = -1;
+                    int pos = sortarray.Find(new BigEntityTableIndexItem { Key = listtemp.First().Key }, ref mid);
+                    if (pos == -1)
+                    {
+                        //小于最小的
+                        if (mid != -1)
+                        {
+                            copystart = indexarray[mid].KeyOffset;
+                        }
+                    }
+                    else
+                    {
+                        copystart = indexarray[pos].KeyOffset;
+                    }
+
+                    newindexfile = (indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname)) + ".temp";
+                    //快速copy
+                    if (copystart > 0)
+                    {
+                        IOUtil.CopyFile(indexfile, newindexfile, FileMode.Create, 0, copystart - 1);
+                        readstartpostion = copystart;
+                    }
+                    
+                    bool isall = false;
+                    ProcessTraceUtil.Trace("读取前面的数据");
+                    while (true)
+                    {
+                        reader.SetPostion(readstartpostion);
+                        var listordered = new List<BigEntityTableIndexItem>();
+                        var loadcount = 0;
+                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                        {
+                            if (item.KeyOffset >= mergeinfo.IndexMergePos)
+                            {
+                                break;
+                            }
+                            listordered.Add(item);
+                            if (++loadcount >= 1000000)
+                            {
+                                break;
+                            }
+                        }
+
+                        readstartpostion = reader.ReadedPostion();
+
+                        if (listordered.Count == 0)
+                        {
+                            ProcessTraceUtil.Trace("顺序列表为空，无序列表条数:" + listtemp.Count);
+
+                            listordered = listtemp;
+                            Console.WriteLine("--->" + listtemp.Count);
+                            isall = true;
+                        }
+                        else
+                        {
+                            ProcessTraceUtil.Trace("顺序列表不为空:" + listordered.Count + "，无序列表条数:" + listtemp.Count);
+
+                            var subtemplist = listtemp.Where(p => p.CompareTo(listordered.Last()) < 0).ToList();
+                            listordered.AddRange(subtemplist);
+                            listordered = listordered.OrderBy(p => p).ToList();
+
+                            //存储
+                            listtemp = listtemp.Skip(subtemplist.Count).ToList();
+                        }
+
+                        ProcessTraceUtil.Trace("写入到新索引文件");
+                        using (var nw = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                        {
+                            foreach (var item in listordered)
+                            {
+                                item.KeyOffset = nw.GetWritePosition();
+                                nw.AppendObject(item);
+                            }
+                            newIndexMergePos = nw.GetWritePosition();
+                        }
+                        ProcessTraceUtil.Trace("写入到新索引文件完成");
+
+                        if (isall)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                mergeinfo.IndexMergePos = newIndexMergePos;
+
+                string tablefile = GetTableFile(tablename);
+                var locker = GetKeyLocker(tablename, string.Empty);
+                //using (var writer = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                //var writer = GetWriter(indexfile, secs);
+                //lock (writer)
+
+                var idxreader = ObjTextReader.CreateReader(indexfile);
+                var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf);
+                try
+                {
+                    ProcessTraceUtil.Trace("读取后面的数据->" + lasmargepos);
+                    idxreader.SetPostion(lasmargepos);
+                    foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    {
+                        item.KeyOffset = newwriter.GetWritePosition();
+                        newwriter.AppendObject(item);
+                    }
+                    ProcessTraceUtil.Trace("读取后面的数据完成");
+
+                    lock (locker)
+                    {
+                        ProcessTraceUtil.Trace("读取后面的数据->" + lasmargepos);
+                        using (newwriter)
+                        {
+                            using (idxreader)
+                            {
+                                foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                                {
+                                    item.KeyOffset = newwriter.GetWritePosition();
+                                    newwriter.AppendObject(item);
+                                }
+
+                            }
+                        }
+                        ProcessTraceUtil.Trace("读取后面的数据完成");
+
+                        idxreader = null;
+
+                        int trycount = 0;
+                        while (true)
+                        {
+                            try
+                            {
+                                File.Delete(indexfile);
+                                break;
+                            }
+                            catch (System.IO.IOException ex)
+                            {
+                                Thread.Sleep(1);
+                                trycount++;
+                                if (trycount > 1000)
+                                {
+                                    throw ex;
+                                }
+                            }
+                        }
+
+                        File.Move(newindexfile, indexfile);
+
+                        ProcessTraceUtil.Trace("删除旧文件，重命名新文件完成");
+                    }
+
 
                     string metafile = GetMetaFile(tablename);
                     LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
