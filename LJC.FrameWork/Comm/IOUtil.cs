@@ -49,14 +49,14 @@ namespace LJC.FrameWork.Comm
             {
                 using (System.IO.FileStream fs2 = new FileStream(source, FileMode.Open))
                 {
-                    if (end > fs2.Length)
+                    if (end >= fs2.Length)
                     {
-                        end = fs2.Length;
+                        end = fs2.Length-1;
                     }
                     fs2.Position = begin;
                     while (true)
                     {
-                        var copylen = Math.Min(end - begin - offset, buffer.Length);
+                        var copylen = Math.Min(end - begin - offset + 1, buffer.Length);
                         if (copylen <= 0)
                         {
                             break;

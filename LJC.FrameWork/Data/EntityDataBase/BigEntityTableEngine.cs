@@ -379,7 +379,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public void MergeIndex(string tablename, string indexname)
         {
             var meta = GetMetaData(tablename);
-            MergeIndex(tablename, indexname, meta);
+            MergeIndex2(tablename, indexname, meta);
         }
 
         public void MergeIndex(string tablename, string indexname, EntityTableMeta meta)
@@ -578,6 +578,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     string metafile = GetMetaFile(tablename);
                     LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
 
+                    LoadKey(tablename, meta);
                     ProcessTraceUtil.Trace("更新元文件，更新索引完成");
                 }
                 catch (Exception ex)
@@ -671,19 +672,16 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     //优化确定哪些部分是不需要一个个读入的
                     long copystart = 0;
-                    var indexarray=keyindexarrdic[tablename];
+                    var indexarray = keyindexarrdic[tablename];
                     var sortarray = new Collections.SorteArray<BigEntityTableIndexItem>(indexarray);
                     int mid = -1;
                     int pos = sortarray.Find(new BigEntityTableIndexItem { Key = listtemp.First().Key }, ref mid);
-                    if (pos == -1)
+                    if (pos == -1 && mid != -1)
                     {
                         //小于最小的
-                        if (mid != -1)
-                        {
-                            copystart = indexarray[mid].KeyOffset;
-                        }
+                        copystart = indexarray[mid].KeyOffset;
                     }
-                    else
+                    else if (pos != -1)
                     {
                         copystart = indexarray[pos].KeyOffset;
                     }
@@ -695,7 +693,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         IOUtil.CopyFile(indexfile, newindexfile, FileMode.Create, 0, copystart - 1);
                         readstartpostion = copystart;
                     }
-                    
+
                     bool isall = false;
                     ProcessTraceUtil.Trace("读取前面的数据");
                     while (true)
@@ -809,7 +807,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             {
                                 Thread.Sleep(1);
                                 trycount++;
-                                if (trycount > 1000)
+                                if (trycount > 1000)  
                                 {
                                     throw ex;
                                 }
@@ -825,6 +823,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     string metafile = GetMetaFile(tablename);
                     LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
 
+                    LoadKey(tablename, meta);
+
                     ProcessTraceUtil.Trace("更新元文件，更新索引完成");
                 }
                 catch (Exception ex)
@@ -839,6 +839,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
 
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
             }
             finally
             {
@@ -915,7 +919,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     idr.SetPostion(indexmergeinfo.IndexMergePos);
                 }
-                var indexdic = keyindexlistdic[tablename];
+                Dictionary<string, BigEntityTableIndexItem> indexdic = new Dictionary<string, BigEntityTableIndexItem>();
+                //keyindexlistdic[tablename];
 
                 foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1))
                 {
@@ -923,6 +928,19 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         indexdic.Add(newindex.Key, newindex);
                     }
+                }
+
+                var tabkey = GetKeyLocker(tablename, string.Empty);
+                lock (tabkey)
+                {
+                    foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    {
+                        if (!newindex.Del)
+                        {
+                            indexdic.Add(newindex.Key, newindex);
+                        }
+                    }
+                    keyindexlistdic[tablename] = indexdic;
                 }
             }
         }

@@ -90,7 +90,10 @@ namespace LJC.FrameWork.Collections
             mid = 0;
 
             if (Count == 0)
+            {
+                mid = -1;
                 return -1;
+            }
 
             if (Count == 1)
             {

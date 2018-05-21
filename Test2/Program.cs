@@ -520,30 +520,32 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            Console.WriteLine("选择操作 1-写库 2-读库");
-            var cmd = Console.ReadLine();
-
-            if (cmd == "1")
+            while (true)
             {
-                //TestSorteArray();
-                //Console.Read();
-                //return;
-                TestBigLocaldb();
-            }
+                Console.WriteLine("选择操作 1-写库 2-读库 3-整理索引");
+                var cmd = Console.ReadLine();
 
-            if (cmd == "2")
-            {
-                //TestBigLocaldbDel();
-                //TestBigLocalUpdate();
-                //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
-                TestBigLocaldbFindBatch();
-            }
+                if (cmd == "1")
+                {
+                    //TestSorteArray();
+                    //Console.Read();
+                    //return;
+                    TestBigLocaldb();
+                }
 
-            if (cmd == "3")
-            {
-                BigEntityTableEngine.LocalEngine.MergeIndex("Man", "Name");
+                if (cmd == "2")
+                {
+                    //TestBigLocaldbDel();
+                    //TestBigLocalUpdate();
+                    //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
+                    TestBigLocaldbFindBatch();
+                }
+
+                if (cmd == "3")
+                {
+                    BigEntityTableEngine.LocalEngine.MergeIndex("Man", "Name");
+                }
             }
-            Console.Read();
             return;
 
             TestLocaldb();
