@@ -47,7 +47,7 @@ namespace LJC.FrameWork.Comm
             int offset=0;
             using (System.IO.FileStream fs = new FileStream(dest,destmode))
             {
-                using (System.IO.FileStream fs2 = new FileStream(source, FileMode.Open))
+                using (System.IO.FileStream fs2 = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
                     if (end >= fs2.Length)
                     {

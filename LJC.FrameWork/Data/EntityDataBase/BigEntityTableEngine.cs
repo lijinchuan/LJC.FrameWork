@@ -15,7 +15,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 {
     /// <summary>
     /// 需要优化的地方：
-    /// 1、多索引一次生成
+    /// 1、merge的同时生成索引
+    /// 2、merge后面使用copy
     /// </summary>
     public class BigEntityTableEngine
     {
@@ -41,6 +42,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
         /// 最大单个key占用内存
         /// </summary>
         private const long MAX_KEYBUFFER = 500 * 1000 * 1000;
+
+        private System.Threading.Timer _margetimer = null;
 
         class LockerDestroy : ICoroutineUnit
         {
@@ -219,6 +222,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
+        static BigEntityTableEngine()
+        {
+
+        }
+
         public BigEntityTableEngine(string dir)
         {
             if (!string.IsNullOrWhiteSpace(dir))
@@ -227,6 +235,32 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             IOUtil.MakeDirs(this.dirbase);
+
+            _margetimer = new Timer(new TimerCallback((o) =>
+            {
+                _margetimer.Change(Timeout.Infinite, Timeout.Infinite);
+                try
+                {
+                    foreach (var tablename in metadic.Keys)
+                    {
+                        EntityTableMeta meta = metadic[tablename];
+                        if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT||
+                        (keyindexlistdic.ContainsKey(tablename) && keyindexlistdic[tablename].Count>= MERGE_TRIGGER_NEW_COUNT))
+                        {
+                            //meta.NewAddCount = 0;
+                            MergeIndex(tablename, meta.KeyName);
+                        }
+                    }
+
+                }catch(Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+                finally
+                {
+                    _margetimer.Change(1000, 1000);
+                }
+            }), null, 1000, 1000);
         }
 
         private string GetTableFile(string tablename)
@@ -431,7 +465,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                     {
                         listtemp.Add(obj);
-                        if (++readcount > 500000)
+                        if (++readcount > 5000000)
                         {
                             break;
                         }
@@ -653,7 +687,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                     {
                         listtemp.Add(obj);
-                        if (++readcount > 500000)
+                        if (++readcount > 5000000)
                         {
                             break;
                         }
@@ -690,8 +724,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     //快速copy
                     if (copystart > 0)
                     {
+                        ProcessTraceUtil.Trace("copy前面的数据:"+copystart);
                         IOUtil.CopyFile(indexfile, newindexfile, FileMode.Create, 0, copystart - 1);
                         readstartpostion = copystart;
+                        ProcessTraceUtil.Trace("copy数据完成");
                     }
 
                     bool isall = false;
@@ -756,6 +792,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
 
                 mergeinfo.IndexMergePos = newIndexMergePos;
+
+                //后面copy
 
                 string tablefile = GetTableFile(tablename);
                 var locker = GetKeyLocker(tablename, string.Empty);
@@ -1217,11 +1255,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
 
                     meta.NewAddCount += items.Count();
-                    if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT)
-                    {
-                        //meta.NewAddCount = 0;
-                        new Action(() => MergeIndex(tablename, meta.KeyName)).BeginInvoke(null, null);
-                    }
                 }
                 finally
                 {

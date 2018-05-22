@@ -235,12 +235,13 @@ namespace Test2
 
         static void TestBigLocaldb()
         {
+            int insertcount = 10000000;
             //Man 
             BigEntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             DateTime time = DateTime.Now;
             List<Man> list = new List<Man>();
-            for (int i = 0; i < 1000000; i++)
+            for (int i = 0; i < insertcount; i++)
             {
                 
                 var man=new Man
@@ -251,7 +252,7 @@ namespace Test2
                     Sex = new Random(Guid.NewGuid().GetHashCode()).Next(2)
                 };
                 list.Add(man);
-                if (list.Count > 1000)
+                if (list.Count > 10000)
                 {
                     BigEntityTableEngine.LocalEngine.InsertBatch("Man", list);
                     list.Clear();
@@ -326,9 +327,9 @@ namespace Test2
         {
             //Console.WriteLine("cnt:"+BigEntityTableEngine.LocalEngine.Count("Man"));
             //Console.Read();
-
+            int insertcount = 10000000;
             int ccount = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 10000000))
+            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, insertcount))
             {
                 //Console.WriteLine(item.Name);
                 ccount++;
@@ -340,7 +341,7 @@ namespace Test2
                 var time = DateTime.Now;
                 int cnt = 0;
                 int readcnt = 0;
-                for (int i = 0; i < 10000000; i++)
+                for (int i = 0; i < insertcount; i++)
                 {
 
                     var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name" + i);
@@ -368,13 +369,15 @@ namespace Test2
             //Console.WriteLine("cnt:"+BigEntityTableEngine.LocalEngine.Count("Man"));
             //Console.Read();
 
+            int insertcount = 10000000;
             int ccount = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, 1000000))
+            var start = DateTime.Now;
+            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, insertcount))
             {
                 //Console.WriteLine(item.Name);
                 ccount++;
             }
-            Console.WriteLine("ccount:" + ccount);
+            Console.WriteLine("ccount:" + ccount+",用时:"+(DateTime.Now.Subtract(start).TotalSeconds)+"秒");
 
             for (int c = 0; c < 1; c++)
             {
@@ -383,7 +386,7 @@ namespace Test2
                 int readcnt = 0;
 
                 var findkeylist = new List<string>();
-                for (int i = 0; i < 1000000; i++)
+                for (int i = 0; i < insertcount; i++)
                 {
                     var key = "name" + i;
 
