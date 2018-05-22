@@ -805,29 +805,50 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf);
                 try
                 {
+                    long nextcopypos = 0;
                     ProcessTraceUtil.Trace("读取后面的数据->" + lasmargepos);
                     idxreader.SetPostion(lasmargepos);
                     foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                     {
+                        if(item.KeyOffset == newwriter.GetWritePosition())
+                        {
+                            nextcopypos = newwriter.GetWritePosition();
+                            break;
+                        }
+
                         item.KeyOffset = newwriter.GetWritePosition();
                         newwriter.AppendObject(item);
+                    }
+
+                    if (nextcopypos > 0)
+                    {
+                        ProcessTraceUtil.Trace("copy后面的数据->" + nextcopypos);
+                        nextcopypos = IOUtil.CopyFile(indexfile, newindexfile, FileMode.Append, nextcopypos, long.MaxValue);
                     }
                     ProcessTraceUtil.Trace("读取后面的数据完成");
 
                     lock (locker)
                     {
                         ProcessTraceUtil.Trace("读取后面的数据->" + lasmargepos);
-                        using (newwriter)
+                        if (nextcopypos <= 0)
                         {
-                            using (idxreader)
+                            using (newwriter)
                             {
-                                foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                                using (idxreader)
                                 {
-                                    item.KeyOffset = newwriter.GetWritePosition();
-                                    newwriter.AppendObject(item);
-                                }
+                                    foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                                    {
+                                        item.KeyOffset = newwriter.GetWritePosition();
+                                        newwriter.AppendObject(item);
+                                    }
 
+                                }
                             }
+                        }
+                        else
+                        {
+                            nextcopypos=IOUtil.CopyFile(indexfile, newindexfile, FileMode.Append, nextcopypos, long.MaxValue);
+                            ProcessTraceUtil.Trace("继续copy后面的数据->" + nextcopypos);
                         }
                         ProcessTraceUtil.Trace("读取后面的数据完成");
 

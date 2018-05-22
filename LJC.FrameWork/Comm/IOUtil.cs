@@ -37,11 +37,12 @@ namespace LJC.FrameWork.Comm
             }
         }
 
-        public static void CopyFile(string source, string dest,FileMode destmode, long begin, long end)
+        public static long CopyFile(string source, string dest,FileMode destmode, long begin, long end)
         {
+            long pos = -1;
             if (begin < 0 || end < begin)
             {
-                return;
+                return pos;
             }
             byte[] buffer = new byte[1024 * 1024];
             int offset=0;
@@ -52,6 +53,7 @@ namespace LJC.FrameWork.Comm
                     if (end >= fs2.Length)
                     {
                         end = fs2.Length-1;
+                        pos = end;
                     }
                     fs2.Position = begin;
                     while (true)
@@ -70,6 +72,9 @@ namespace LJC.FrameWork.Comm
                     }
                 }
             }
+
+            pos = begin + offset;
+            return pos;
         }
     }
 }
