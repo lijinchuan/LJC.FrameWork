@@ -37,11 +37,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 1000000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 100000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
-        private const long MAX_KEYBUFFER = 500 * 1000 * 1000;
+        private const long MAX_KEYBUFFER = 100 * 1000 * 1000;
 
         private System.Threading.Timer _margetimer = null;
 
