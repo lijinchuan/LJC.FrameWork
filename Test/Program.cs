@@ -13,6 +13,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using LJC.FrameWork.SocketApplication.SocketSTD;
 using LJC.FrameWork.Data.EntityDataBase;
+using LJC.FrameWork.Collections;
 
 namespace Test
 {
@@ -180,6 +181,15 @@ namespace Test
 
         static void Main(string[] args)
         {
+            SortTool<int> sort = new QuickSortTool<int>(new int[] { 6 , 1,  2 ,7 , 9 , 3,  4,  5 ,10 , 8 });
+            foreach (var ii in sort.Sort())
+            {
+                Console.Write(ii + " ");
+            }
+
+            Console.Read();
+            return;
+
             TestLocaldb();
             TestLocaldbRead();
 
