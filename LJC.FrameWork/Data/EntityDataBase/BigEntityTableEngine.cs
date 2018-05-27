@@ -702,7 +702,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     lasmargepos = reader.ReadedPostion();
 
-                    listtemp = listtemp.OrderBy(p => p).ToList();
+                    ProcessTraceUtil.Trace("排序");
+                   
+                    //listtemp = listtemp.OrderBy(p => p).ToList();
+                    listtemp= new QuickSortTool<BigEntityTableIndexItem>(listtemp.ToArray()).Sort().ToList();
+                    ProcessTraceUtil.Trace("排序完成");
 
                     //优化确定哪些部分是不需要一个个读入的
                     long copystart = 0;

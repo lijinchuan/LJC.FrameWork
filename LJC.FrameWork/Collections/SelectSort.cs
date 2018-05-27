@@ -9,18 +9,18 @@ namespace LJC.FrameWork.Collections
     {
         public SelectSortTool(IEnumerable<T> data)
         {
-            this.sortlist = data;
+            this.sortarray = data.ToArray();
         }
 
         public override IEnumerable<T> Sort()
         {
-            for (int i = 0; i < this.sortlist.Count(); i++)
+            for (int i = 0; i < this.sortarray.Count(); i++)
             {
                 int min = i;
-                for (int j = i + 1; j < this.sortlist.Count(); j++)
+                for (int j = i + 1; j < this.sortarray.Count(); j++)
                 {
-                    var item = this.sortlist.ElementAt(j);
-                    if (Compare(this.sortlist.ElementAt(min), item) > 0)
+                    var item = this.sortarray.ElementAt(j);
+                    if (Compare(this.sortarray.ElementAt(min), item) > 0)
                     {
                         min = j;
                     }
@@ -31,7 +31,7 @@ namespace LJC.FrameWork.Collections
                 }
             }
 
-            return this.sortlist;
+            return this.sortarray;
         }
     }
 }

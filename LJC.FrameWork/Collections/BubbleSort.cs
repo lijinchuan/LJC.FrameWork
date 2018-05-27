@@ -9,22 +9,22 @@ namespace LJC.FrameWork.Collections
     {
         public BubbleSortTool(IEnumerable<T> data)
         {
-            this.sortlist = data;
+            this.sortarray = data.ToArray();
         }
 
         public override IEnumerable<T> Sort()
         {
-            if (sortlist == null)
+            if (sortarray == null)
             {
-                return sortlist;
+                return sortarray;
             }
 
-            for (var i = 0; i < sortlist.Count() - 1; i++)
+            for (var i = 0; i < sortarray.Count() - 1; i++)
             {
-                for (var j = 1; j < sortlist.Count(); j++)
+                for (var j = 1; j < sortarray.Count(); j++)
                 {
-                    var itemi = sortlist.ElementAt(j - 1);
-                    var itemj = sortlist.ElementAt(j);
+                    var itemi = sortarray.ElementAt(j - 1);
+                    var itemj = sortarray.ElementAt(j);
 
                     var compare = Compare(itemi, itemj);
                     if (compare > 0)
@@ -34,7 +34,7 @@ namespace LJC.FrameWork.Collections
                 }
             }
 
-            return sortlist;
+            return sortarray;
         }
     }
 }

@@ -181,14 +181,27 @@ namespace Test
 
         static void Main(string[] args)
         {
-            SortTool<int> sort = new QuickSortTool<int>(new int[] { 6 , 1,  2 ,7 , 9 , 3,  4,  5 ,10 , 8 });
-            foreach (var ii in sort.Sort())
-            {
-                Console.Write(ii + " ");
-            }
+            //foreach (var item in new ShellSortTool<int>(new[] { 100, 2, 4, 5, 1, 3, 6, 9, 7, 8, 0, 4 }).Sort())
+            //{
+            //    Console.Write(item + " ");
+            //}
 
+            //Console.Read();
+            //return;
+            List<string> names = new List<string>();
+            for (int ii = 0; ii < 100000; ii++)
+            {
+                names.Add("name" + ii);
+            }
+            SortTool<string> ss = new ShellSortTool<string>(names);
+            
+            DateTime time = DateTime.Now;
+            //names= names.OrderBy(p => p).ToList();
+            ss.Sort();
+            Console.WriteLine("用时:" + DateTime.Now.Subtract(time).TotalMilliseconds + ",比较次数:" + ss.CompareCount + ",置换次数:" + ss.ExchangeCount);
             Console.Read();
             return;
+
 
             TestLocaldb();
             TestLocaldbRead();

@@ -115,6 +115,7 @@
     <Compile Include="Collections\ISortTool.cs" />
     <Compile Include="Collections\QuickSort.cs" />
     <Compile Include="Collections\SelectSort.cs" />
+    <Compile Include="Collections\ShellSort.cs" />
     <Compile Include="Collections\SortArrayList.cs" />
     <Compile Include="Collections\SorteArray.cs" />
     <Compile Include="Collections\SortedList.cs" />
