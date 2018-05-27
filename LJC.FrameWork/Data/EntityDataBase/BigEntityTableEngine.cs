@@ -704,8 +704,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     ProcessTraceUtil.Trace("排序");
                    
-                    //listtemp = listtemp.OrderBy(p => p).ToList();
-                    listtemp= new QuickSortTool<BigEntityTableIndexItem>(listtemp.ToArray()).Sort().ToList();
+                    listtemp = listtemp.OrderBy(p => p).ToList();
+                    //listtemp= new ShellSortTool<BigEntityTableIndexItem>(listtemp.ToArray()).Sort().ToList();
                     ProcessTraceUtil.Trace("排序完成");
 
                     //优化确定哪些部分是不需要一个个读入的
@@ -725,6 +725,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
 
                     newindexfile = (indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname)) + ".temp";
+                    if (File.Exists(newindexfile))
+                    {
+                        File.Delete(newindexfile);
+                    }
                     //快速copy
                     if (copystart > 0)
                     {
@@ -795,8 +799,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
 
-                mergeinfo.IndexMergePos = newIndexMergePos;
-
                 //后面copy
 
                 string tablefile = GetTableFile(tablename);
@@ -826,6 +828,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     if (nextcopypos > 0)
                     {
+                        newwriter.Dispose();
                         ProcessTraceUtil.Trace("copy后面的数据->" + nextcopypos);
                         nextcopypos = IOUtil.CopyFile(indexfile, newindexfile, FileMode.Append, nextcopypos, long.MaxValue);
                     }
@@ -884,6 +887,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
 
                     string metafile = GetMetaFile(tablename);
+                    mergeinfo.IndexMergePos = newIndexMergePos;
                     LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
 
                     LoadKey(tablename, meta);
@@ -893,6 +897,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 catch (Exception ex)
                 {
                     Console.WriteLine("整理出错" + ex.ToString());
+                    if (newwriter != null && !newwriter.Isdispose)
+                    {
+                        newwriter.Dispose();
+                    }
+
+                    if (File.Exists(newindexfile))
+                    {
+                        File.Delete(newindexfile);
+                    }
                 }
                 finally
                 {
