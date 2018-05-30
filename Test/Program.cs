@@ -181,7 +181,7 @@ namespace Test
 
         static void Main(string[] args)
         {
-            //foreach (var item in new ShellSortTool<int>(new[] { 100, 2, 4, 5, 1, 3, 6, 9, 7, 8, 0, 4 }).Sort())
+            //foreach (var item in new HeapSortTool<int>(new[] { 100, 2, 4, 5, 1, 3, 6, 9, 7, 8, 0, 4 }).Sort())
             //{
             //    Console.Write(item + " ");
             //}
@@ -193,12 +193,17 @@ namespace Test
             {
                 names.Add("name" + ii);
             }
-            SortTool<string> ss = new ShellSortTool<string>(names);
+            SortTool<string> ss = new HeapSortTool<string>(names);
             
             DateTime time = DateTime.Now;
             //names= names.OrderBy(p => p).ToList();
-            ss.Sort();
+            var results=ss.Sort();
             Console.WriteLine("用时:" + DateTime.Now.Subtract(time).TotalMilliseconds + ",比较次数:" + ss.CompareCount + ",置换次数:" + ss.ExchangeCount);
+            foreach (var item in results)
+            {
+                Console.WriteLine(item);
+                Thread.Sleep(100);
+            }
             Console.Read();
             return;
 

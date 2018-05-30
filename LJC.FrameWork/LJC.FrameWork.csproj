@@ -112,6 +112,7 @@
     <Compile Include="CodeExpression\Sign\VarSign.cs" />
     <Compile Include="CodeExpression\SystemFunction\SysFun.cs" />
     <Compile Include="Collections\BubbleSort.cs" />
+    <Compile Include="Collections\HeapSort.cs" />
     <Compile Include="Collections\ISortTool.cs" />
     <Compile Include="Collections\QuickSort.cs" />
     <Compile Include="Collections\SelectSort.cs" />
