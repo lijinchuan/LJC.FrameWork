@@ -37,7 +37,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 100000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 1000000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
@@ -480,7 +480,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     lasmargepos = reader.ReadedPostion();
 
-                    listtemp = listtemp.OrderBy(p => p).ToList();
+                    listtemp =new HeapSortTool<BigEntityTableIndexItem>(listtemp).Sort().ToList(); //listtemp.OrderBy(p => p).ToList();
 
                     newindexfile = (indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname)) + ".temp";
                     bool isall = false;
@@ -519,7 +519,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                             var subtemplist = listtemp.Where(p => p.CompareTo(listordered.Last()) < 0).ToList();
                             listordered.AddRange(subtemplist);
-                            listordered = listordered.OrderBy(p => p).ToList();
+                            listordered = new HeapSortTool<BigEntityTableIndexItem>(listordered).Sort().ToList(); //listordered.OrderBy(p => p).ToList();
 
                             //存储
                             listtemp = listtemp.Skip(subtemplist.Count).ToList();
@@ -687,7 +687,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                     {
                         listtemp.Add(obj);
-                        if (++readcount > 5000000)
+                        if (++readcount > MERGE_TRIGGER_NEW_COUNT*1.5)
                         {
                             break;
                         }
@@ -704,8 +704,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     ProcessTraceUtil.Trace("排序");
                    
-                    listtemp = listtemp.OrderBy(p => p).ToList();
-                    //listtemp= new ShellSortTool<BigEntityTableIndexItem>(listtemp.ToArray()).Sort().ToList();
+                    //listtemp = listtemp.OrderBy(p => p).ToList();
+                    listtemp= new HeapSortTool<BigEntityTableIndexItem>(listtemp).Sort().ToList();
                     ProcessTraceUtil.Trace("排序完成");
 
                     //优化确定哪些部分是不需要一个个读入的
@@ -774,7 +774,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                             var subtemplist = listtemp.Where(p => p.CompareTo(listordered.Last()) < 0).ToList();
                             listordered.AddRange(subtemplist);
-                            listordered = listordered.OrderBy(p => p).ToList();
+                            listordered = new HeapSortTool<BigEntityTableIndexItem>(listordered).Sort().ToList();//listordered.OrderBy(p => p).ToList();
 
                             //存储
                             listtemp = listtemp.Skip(subtemplist.Count).ToList();
