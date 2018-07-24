@@ -6,9 +6,9 @@ using System.Text;
 
 namespace LJC.FrameWork.Collections
 {
-    public class SorteArray<T> where T : IComparable<T>
+    public class SorteArray<T> : IDisposable where T : IComparable<T>
     {
-        private const UInt16 CapLargerCount = 2;
+        private const int CapLargerCount = 10000;
         private T[] ListSort = null;
         int Count = 0;
 
@@ -42,13 +42,17 @@ namespace LJC.FrameWork.Collections
                         ListSort[i + 1] = ListSort[i];
                     }
 
-                    ListSort[0]=value;
+                    ListSort[0] = value;
                 }
                 else
                 {
-                    if (ListSort[md].CompareTo(value) < 0)
+                    if (md < 0)
                     {
-                        md = (UInt16)(md + 1);
+                        md = 0;
+                    }
+                    else if (ListSort[md].CompareTo(value) < 0)
+                    {
+                        md = md + 1;
                     }
 
                     for (int i = Count - 1; i >= md; i--)
@@ -74,7 +78,7 @@ namespace LJC.FrameWork.Collections
                 {
                     largerSize += 1000000;
                 }
-                
+
 
                 var newListSort = new T[largerSize];
                 for (int i = 0; i < Count; i++)
@@ -85,6 +89,12 @@ namespace LJC.FrameWork.Collections
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="mid">当结果为-1时，mid返回-1:小于最小的 等于长度-1：大于最大的 中间：位置应在mid之后</param>
+        /// <returns>-1没找到</returns>
         public int Find(T key, ref int mid)
         {
             mid = 0;
@@ -97,28 +107,34 @@ namespace LJC.FrameWork.Collections
 
             if (Count == 1)
             {
-                return ListSort[0].CompareTo(key)==0 ? 0 : -1;
+                var compare = ListSort[0].CompareTo(key);
+                if (compare > 0)
+                {
+                    mid = -1;
+                }
+                return compare == 0 ? 0 : -1;
             }
 
             int lt = 0, rt = Count - 1;
+            int comparetoLt = ListSort[lt].CompareTo(key);
 
-            if (ListSort[lt].CompareTo(key)==0)
+            if (comparetoLt == 0)
             {
                 return lt;
             }
-
-            if (ListSort[rt].CompareTo(key)==0)
+            int comparetoRt = ListSort[rt].CompareTo(key);
+            if (comparetoRt == 0)
             {
                 return rt;
             }
 
-            if (ListSort[lt].CompareTo(key)>0)
+            if (comparetoLt > 0)
             {
                 mid = -1;
                 return -1;
             }
 
-            if (ListSort[rt].CompareTo(key)<0)
+            if (comparetoRt < 0)
             {
                 mid = rt;
                 return -1;
@@ -127,11 +143,12 @@ namespace LJC.FrameWork.Collections
             int md = (lt + (rt - lt) / 2);
             while (lt < md && md < rt)
             {
-                if (ListSort[md].CompareTo(key)==0)
+                var compareTomd = ListSort[md].CompareTo(key);
+                if (compareTomd == 0)
                 {
                     return md;
                 }
-                else if (ListSort[md].CompareTo(key)>0)
+                else if (compareTomd > 0)
                 {
                     rt = md;
                     md = (lt + (rt - lt) / 2);
@@ -150,9 +167,17 @@ namespace LJC.FrameWork.Collections
 
         public IEnumerable<T> GetArray()
         {
-            for(int i = 0; i < Count; i++)
+            for (int i = 0; i < Count; i++)
             {
                 yield return ListSort[i];
+            }
+        }
+
+        public void Dispose()
+        {
+            if (ListSort != null)
+            {
+                ListSort = null;
             }
         }
     }

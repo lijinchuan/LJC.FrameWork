@@ -13,27 +13,21 @@ using System.Threading.Tasks;
 
 namespace LJC.FrameWork.Data.EntityDataBase
 {
-    /// <summary>
-    /// 需要优化的地方：
-    /// 1、merge的同时生成索引
-    /// 2、merge后面使用copy
-    /// </summary>
-    public class BigEntityTableEngine
+    public partial class BigEntityTableEngine
     {
+        #region 基本数据
         Dictionary<string, EntityTableMeta> metadic = new Dictionary<string, EntityTableMeta>();
         //磁盘索引
-        ConcurrentDictionary<string, BigEntityTableIndexItem[]> keyindexarrdic = new ConcurrentDictionary<string, BigEntityTableIndexItem[]>();
+        ConcurrentDictionary<string, BigEntityTableIndexItem[]> keyindexdisklist = new ConcurrentDictionary<string, BigEntityTableIndexItem[]>();
+
         //内存索引
-        ConcurrentDictionary<string, Dictionary<string, BigEntityTableIndexItem>> keyindexlistdic = new ConcurrentDictionary<string, Dictionary<string, BigEntityTableIndexItem>>();
-        Dictionary<string, object> keylocker = new Dictionary<string, object>();
-        /// <summary>
-        /// 索引缓存
-        /// </summary>
-        ConcurrentDictionary<string, BigEntityTableIndexItemBag> indexdic = new ConcurrentDictionary<string, BigEntityTableIndexItemBag>();
+        ConcurrentDictionary<string, SortArrayList<BigEntityTableIndexItem>> keyindexmemlist = new ConcurrentDictionary<string, SortArrayList<BigEntityTableIndexItem>>();
+        ConcurrentDictionary<string, SortArrayList<BigEntityTableIndexItem>> keyindexmemtemplist = new ConcurrentDictionary<string, SortArrayList<BigEntityTableIndexItem>>();
+
+        Dictionary<string, ReaderWriterLockSlim> keylocker = new Dictionary<string, ReaderWriterLockSlim>();
 
         string dirbase = System.AppDomain.CurrentDomain.BaseDirectory + "\\localdb\\";
-
-        Dictionary<string, ObjTextWriter> writerdic = new Dictionary<string, ObjTextWriter>();
+        #endregion
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
@@ -45,222 +39,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         private System.Threading.Timer _margetimer = null;
 
-        class LockerDestroy : ICoroutineUnit
-        {
-            private DateTime _timeadd = DateTime.Now;
-            private Dictionary<string, object> _lockerdic;
-            private string _lockerkey;
-            public bool IsSuccess()
-            {
-                return false;
-            }
-
-            private bool _isdone = false;
-            public bool IsDone()
-            {
-                return _isdone;
-            }
-
-            public bool IsTimeOut()
-            {
-                return false;
-            }
-
-
-            public LockerDestroy(Dictionary<string, object> lockerdic, string lockkey)
-            {
-                this._lockerdic = lockerdic;
-                this._lockerkey = lockkey;
-            }
-
-            public void Exceute()
-            {
-                if (DateTime.Now.Subtract(_timeadd).TotalSeconds > 60)
-                {
-                    _isdone = true;
-                }
-            }
-
-            private object _result = null;
-            public object GetResult()
-            {
-                return _result;
-            }
-
-            public void CallBack(CoroutineCallBackEventArgs args)
-            {
-                lock (this._lockerdic)
-                {
-                    this._lockerdic.Remove(this._lockerkey);
-                }
-            }
-        }
-
-        class IndexDestroy : ICoroutineUnit
-        {
-            private ConcurrentDictionary<string, BigEntityTableIndexItemBag> _dic;
-            private string _key;
-            public bool IsSuccess()
-            {
-                return false;
-            }
-
-            private bool _isdone = false;
-            public bool IsDone()
-            {
-                return _isdone;
-            }
-
-            public bool IsTimeOut()
-            {
-                return false;
-            }
-
-
-            public IndexDestroy(ConcurrentDictionary<string, BigEntityTableIndexItemBag> dic, string key)
-            {
-                this._dic = dic;
-                this._key = key;
-            }
-
-            public void Exceute()
-            {
-                BigEntityTableIndexItemBag val = null;
-                _dic.TryGetValue(_key, out val);
-                if (val != null)
-                {
-                    lock (val)
-                    {
-                        if (DateTime.Now.Subtract(val.LastUsed).TotalSeconds > 30)
-                        {
-                            BigEntityTableIndexItemBag val0;
-                            _dic.TryRemove(_key, out val0);
-                            _isdone = true;
-                        }
-                    }
-                }
-            }
-
-            private object _result = null;
-            public object GetResult()
-            {
-                return _result;
-            }
-
-            public void CallBack(CoroutineCallBackEventArgs args)
-            {
-
-            }
-        }
-
-        class WriterDestroy : ICoroutineUnit
-        {
-            private Dictionary<string, ObjTextWriter> _dic;
-            private string _key;
-            private int _locksecs = 1;
-            public bool IsSuccess()
-            {
-                return false;
-            }
-
-            private bool _isdone = false;
-            public bool IsDone()
-            {
-                return _isdone;
-            }
-
-            public bool IsTimeOut()
-            {
-                return false;
-            }
-
-
-            public WriterDestroy(Dictionary<string, ObjTextWriter> dic, string key, int locksecs = 1)
-            {
-                this._dic = dic;
-                this._key = key;
-                this._locksecs = locksecs;
-            }
-
-            public void Exceute()
-            {
-                ObjTextWriter o;
-                if (!_dic.TryGetValue(_key, out o))
-                {
-                    _isdone = true;
-                    return;
-                }
-                if (o != null)
-                {
-                    lock (o)
-                    {
-                        if (DateTime.Now.Subtract((DateTime)o.Tag).TotalSeconds > _locksecs)
-                        {
-                            lock (_dic)
-                            {
-                                o.Dispose();
-                                _dic.Remove(_key);
-                            }
-                            _isdone = true;
-                        }
-                    }
-                }
-                else
-                {
-                    _isdone = true;
-                }
-            }
-
-            private object _result = null;
-            public object GetResult()
-            {
-                return _result;
-            }
-
-            public void CallBack(CoroutineCallBackEventArgs args)
-            {
-            }
-        }
+        private static bool HasDBError = false;
 
         static BigEntityTableEngine()
         {
 
-        }
-
-        public BigEntityTableEngine(string dir)
-        {
-            if (!string.IsNullOrWhiteSpace(dir))
-            {
-                this.dirbase = dir;
-            }
-
-            IOUtil.MakeDirs(this.dirbase);
-
-            _margetimer = new Timer(new TimerCallback((o) =>
-            {
-                _margetimer.Change(Timeout.Infinite, Timeout.Infinite);
-                try
-                {
-                    foreach (var tablename in metadic.Keys)
-                    {
-                        EntityTableMeta meta = metadic[tablename];
-                        if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT||
-                        (keyindexlistdic.ContainsKey(tablename) && keyindexlistdic[tablename].Count>= MERGE_TRIGGER_NEW_COUNT))
-                        {
-                            //meta.NewAddCount = 0;
-                            MergeIndex(tablename, meta.KeyName);
-                        }
-                    }
-
-                }catch(Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-                finally
-                {
-                    _margetimer.Change(1000, 1000);
-                }
-            }), null, 1000, 1000);
         }
 
         private string GetTableFile(string tablename)
@@ -313,6 +96,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 throw new Exception("找不到主键:" + keyname);
                             }
                             meta.KeyProperty = new PropertyInfoEx(pp);
+                            meta.EntityTypeDic.Add(keyname, EntityBuf2.EntityBufCore2.GetTypeBufType(pp.PropertyType).Item1.EntityType);
 
                             if (indexs != null && indexs.Length > 0)
                             {
@@ -333,14 +117,19 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     {
                                         meta.IndexProperties.Add(idx, new PropertyInfoEx(idxpp));
                                     }
+                                    if (!meta.EntityTypeDic.ContainsKey(idx))
+                                    {
+                                        meta.EntityTypeDic.Add(idx, EntityBuf2.EntityBufCore2.GetTypeBufType(idxpp.PropertyType).Item1.EntityType);
+                                    }
                                 }
                             }
 
                             LJC.FrameWork.Comm.SerializerHelper.SerializerToXML<EntityTableMeta>(meta, metafile, catchErr: true);
                             metadic.Add(tablename, meta);
 
-                            keyindexarrdic.TryAdd(tablename, new BigEntityTableIndexItem[0]);
-                            keyindexlistdic.TryAdd(tablename, new Dictionary<string, BigEntityTableIndexItem>());
+                            keyindexdisklist.TryAdd(tablename, new BigEntityTableIndexItem[0]);
+                            keyindexmemlist.TryAdd(tablename, new SortArrayList<BigEntityTableIndexItem>());
+                            keyindexmemtemplist.TryAdd(tablename, new SortArrayList<BigEntityTableIndexItem>());
                         }
                         else
                         {
@@ -351,11 +140,32 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                                 throw new Exception("meta文件内容检查不一致");
                             }
+
+                            var pp = ttype.GetProperty(keyname);
+                            meta.KeyProperty = new PropertyInfoEx(pp);
+
+                            if (indexs != null && indexs.Length > 0)
+                            {
+                                indexs = indexs.Distinct().ToArray();
+                                foreach (var idx in indexs)
+                                {
+                                    var idxpp = ttype.GetProperty(idx);
+
+                                    if (!meta.IndexProperties.ContainsKey(idx))
+                                    {
+                                        meta.IndexProperties.Add(idx, new PropertyInfoEx(idxpp));
+                                    }
+                                    if (!meta.EntityTypeDic.ContainsKey(idx))
+                                    {
+                                        meta.EntityTypeDic.Add(idx, EntityBuf2.EntityBufCore2.GetTypeBufType(idxpp.PropertyType).Item1.EntityType);
+                                    }
+                                }
+                            }
                         }
 
                         //索引
                         string keyfile = GetKeyFile(tablename);
-                        using (ObjTextWriter keyidxwriter = ObjTextWriter.CreateWriter(keyfile, ObjTextReaderWriterEncodeType.entitybuf))
+                        using (ObjTextWriter keyidxwriter = ObjTextWriter.CreateWriter(keyfile, ObjTextReaderWriterEncodeType.entitybuf2))
                         //ObjTextWriter keyidxwriter = GetWriter(keyfile);
                         {
                         }
@@ -364,8 +174,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             foreach (var idx in indexs)
                             {
+                                var idxkey = tablename + ":" + idx;
+                                keyindexdisklist.TryAdd(idxkey, new BigEntityTableIndexItem[0]);
+                                keyindexmemlist.TryAdd(idxkey, new SortArrayList<BigEntityTableIndexItem>());
+                                keyindexmemtemplist.TryAdd(idxkey, new SortArrayList<BigEntityTableIndexItem>());
+
                                 var indexfile = GetIndexFile(tablename, idx);
-                                using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
+                                using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf2))
                                 //ObjTextWriter idxwriter = GetWriter(indexfile);
                                 {
                                 }
@@ -385,708 +200,61 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private object GetKeyLocker(string table, string key)
+        public BigEntityTableEngine(string dir)
         {
-            string totalkey = string.Format("{0}:{1}", table, key);
-            object locker = null;
-            if (keylocker.TryGetValue(totalkey, out locker))
+            if (!string.IsNullOrWhiteSpace(dir))
             {
-                return locker;
+                this.dirbase = dir;
             }
 
-            lock (keylocker)
+            IOUtil.MakeDirs(this.dirbase);
+
+            _margetimer = new Timer(new TimerCallback((o) =>
             {
-                if (keylocker.TryGetValue(totalkey, out locker))
-                {
-                    return locker;
-                }
-
-                locker = new object();
-                keylocker.Add(totalkey, locker);
-
-                //CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new LockerDestroy(keylocker, totalkey));
-            }
-
-            return locker;
-        }
-
-        public void MergeIndex(string tablename, string indexname)
-        {
-            var meta = GetMetaData(tablename);
-            MergeIndex2(tablename, indexname, meta);
-        }
-
-        public void MergeIndex(string tablename, string indexname, EntityTableMeta meta)
-        {
-            //Console.WriteLine("开始整理索引");
-            ProcessTraceUtil.StartTrace();
-
-            IndexMergeInfo mergeinfo = null;
-
-            lock (meta)
-            {
-                mergeinfo = meta.IndexMergeInfos.Find(p => indexname.Equals(p.IndexName));
-                if (mergeinfo == null)
-                {
-                    mergeinfo = new IndexMergeInfo();
-                    mergeinfo.IndexName = indexname;
-                    meta.IndexMergeInfos.Add(mergeinfo);
-                }
-
-                if (mergeinfo.IsMergin)
-                {
-                    return;
-                }
-                meta.NewAddCount = 0;
-                mergeinfo.IsMergin = true;
-            }
-            DateTime timestart = DateTime.Now;
-            try
-            {
-                ProcessTraceUtil.Trace("开始");
-
-                long lasmargepos = 0;
-                long newIndexMergePos = 0;
-                string newindexfile = string.Empty;
-                string indexfile = indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname);
-                using (var reader = ObjTextReader.CreateReader(indexfile))
-                {
-                    long readstartpostion = reader.ReadedPostion();
-                    if (mergeinfo.IndexMergePos > 0)
-                    {
-                        reader.SetPostion(mergeinfo.IndexMergePos);
-
-                        ProcessTraceUtil.Trace("设置读取索引文件的开始位置->"+mergeinfo.IndexMergePos);
-                    }
-
-                    var listtemp = new List<BigEntityTableIndexItem>();
-                    int readcount = 0;
-
-                    foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                    {
-                        listtemp.Add(obj);
-                        if (++readcount > 5000000)
-                        {
-                            break;
-                        }
-                    }
-
-                    ProcessTraceUtil.Trace("读取索引后面的数据，共"+readcount+"条");
-
-                    if (readcount == 0)
-                    {
-                        return;
-                    }
-
-                    lasmargepos = reader.ReadedPostion();
-
-                    listtemp =new HeapSortTool<BigEntityTableIndexItem>(listtemp).Sort().ToList(); //listtemp.OrderBy(p => p).ToList();
-
-                    newindexfile = (indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname)) + ".temp";
-                    bool isall = false;
-                    ProcessTraceUtil.Trace("读取前面的数据");
-                    while (true)
-                    {
-                        reader.SetPostion(readstartpostion);
-                        var listordered = new List<BigEntityTableIndexItem>();
-                        var loadcount = 0;
-                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                        {
-                            if (item.KeyOffset >= mergeinfo.IndexMergePos)
-                            {
-                                break;
-                            }
-                            listordered.Add(item);
-                            if (++loadcount >= 1000000)
-                            {
-                                break;
-                            }
-                        }
-
-                        readstartpostion = reader.ReadedPostion();
-
-                        if (listordered.Count == 0)
-                        {
-                            ProcessTraceUtil.Trace("顺序列表为空，无序列表条数:" + listtemp.Count);
-
-                            listordered = listtemp;
-                            Console.WriteLine("--->" + listtemp.Count);
-                            isall = true;
-                        }
-                        else
-                        {
-                            ProcessTraceUtil.Trace("顺序列表不为空:" + listordered.Count + "，无序列表条数:" + listtemp.Count);
-
-                            var subtemplist = listtemp.Where(p => p.CompareTo(listordered.Last()) < 0).ToList();
-                            listordered.AddRange(subtemplist);
-                            listordered = new HeapSortTool<BigEntityTableIndexItem>(listordered).Sort().ToList(); //listordered.OrderBy(p => p).ToList();
-
-                            //存储
-                            listtemp = listtemp.Skip(subtemplist.Count).ToList();
-                        }
-
-                        ProcessTraceUtil.Trace("写入到新索引文件");
-                        using (var nw = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                        {
-                            foreach (var item in listordered)
-                            {
-                                item.KeyOffset = nw.GetWritePosition();
-                                nw.AppendObject(item);
-                            }
-                            newIndexMergePos = nw.GetWritePosition();
-                        }
-                        ProcessTraceUtil.Trace("写入到新索引文件完成");
-
-                        if (isall)
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                mergeinfo.IndexMergePos = newIndexMergePos;
-
-                string tablefile = GetTableFile(tablename);
-                var locker = GetKeyLocker(tablename, string.Empty);
-                //using (var writer = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                //var writer = GetWriter(indexfile, secs);
-                //lock (writer)
-
-                var idxreader = ObjTextReader.CreateReader(indexfile);
-                var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf);
+                _margetimer.Change(Timeout.Infinite, Timeout.Infinite);
                 try
                 {
-                    ProcessTraceUtil.Trace("读取后面的数据->"+lasmargepos);
-                    idxreader.SetPostion(lasmargepos);
-                    foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    foreach (var tablename in metadic.Keys)
                     {
-                        item.KeyOffset = newwriter.GetWritePosition();
-                        newwriter.AppendObject(item);
-                    }
-                    ProcessTraceUtil.Trace("读取后面的数据完成");
-
-                    lock (locker)
-                    {
-                        ProcessTraceUtil.Trace("读取后面的数据->" + lasmargepos);
-                        using (newwriter)
+                        EntityTableMeta meta = metadic[tablename];
+                        if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT ||
+                        (this.keyindexmemlist.ContainsKey(tablename) && keyindexmemlist[tablename].Length() >= MERGE_TRIGGER_NEW_COUNT))
                         {
-                            using (idxreader)
+                            //meta.NewAddCount = 0;
+                            MergeKey(tablename, meta.KeyName);
+                        }
+
+                        if (meta.Indexs != null && meta.Indexs.Length > 0)
+                        {
+                            foreach (var index in meta.Indexs)
                             {
-                                foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                                var indexkey = tablename + ":" + index;
+                                if (this.keyindexmemlist.ContainsKey(indexkey) && keyindexmemlist[indexkey].Length() >= MERGE_TRIGGER_NEW_COUNT)
                                 {
-                                    item.KeyOffset = newwriter.GetWritePosition();
-                                    newwriter.AppendObject(item);
+                                    MergeIndex(tablename, index);
                                 }
 
                             }
                         }
-                        ProcessTraceUtil.Trace("读取后面的数据完成");
-
-                        idxreader = null;
-
-                        int trycount = 0;
-                        while (true)
-                        {
-                            try
-                            {
-                                File.Delete(indexfile);
-                                break;
-                            }
-                            catch (System.IO.IOException ex)
-                            {
-                                Thread.Sleep(1);
-                                trycount++;
-                                if (trycount > 1000)
-                                {
-                                    throw ex;
-                                }
-                            }
-                        }
-
-                        File.Move(newindexfile, indexfile);
-
-                        ProcessTraceUtil.Trace("删除旧文件，重命名新文件完成");
                     }
-                    
 
-                    string metafile = GetMetaFile(tablename);
-                    LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
-
-                    LoadKey(tablename, meta);
-                    ProcessTraceUtil.Trace("更新元文件，更新索引完成");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("整理出错" + ex.ToString());
+                    Console.WriteLine(ex.ToString());
                 }
                 finally
                 {
-                    if (idxreader != null)
-                    {
-                        idxreader.Dispose();
-                    }
+                    _margetimer.Change(1000, 1000);
                 }
-
-            }
-            finally
-            {
-                mergeinfo.IsMergin = false;
-
-                Console.WriteLine(ProcessTraceUtil.PrintTrace());
-                ProcessTraceUtil.StartTrace();
-            }
-
+            }), null, 1000, 1000);
         }
 
-        public void MergeIndex2(string tablename, string indexname, EntityTableMeta meta)
-        {
-            //Console.WriteLine("开始整理索引");
-            ProcessTraceUtil.StartTrace();
-
-            IndexMergeInfo mergeinfo = null;
-
-            lock (meta)
-            {
-                mergeinfo = meta.IndexMergeInfos.Find(p => indexname.Equals(p.IndexName));
-                if (mergeinfo == null)
-                {
-                    mergeinfo = new IndexMergeInfo();
-                    mergeinfo.IndexName = indexname;
-                    meta.IndexMergeInfos.Add(mergeinfo);
-                }
-
-                if (mergeinfo.IsMergin)
-                {
-                    return;
-                }
-                meta.NewAddCount = 0;
-                mergeinfo.IsMergin = true;
-            }
-            DateTime timestart = DateTime.Now;
-            try
-            {
-                ProcessTraceUtil.Trace("开始");
-
-                long lasmargepos = 0;
-                long newIndexMergePos = 0;
-                string newindexfile = string.Empty;
-                string indexfile = indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname);
-                using (var reader = ObjTextReader.CreateReader(indexfile))
-                {
-                    long readstartpostion = reader.ReadedPostion();
-                    if (mergeinfo.IndexMergePos > 0)
-                    {
-                        reader.SetPostion(mergeinfo.IndexMergePos);
-
-                        ProcessTraceUtil.Trace("设置读取索引文件的开始位置->" + mergeinfo.IndexMergePos);
-                    }
-
-                    var listtemp = new List<BigEntityTableIndexItem>();
-                    int readcount = 0;
-
-                    foreach (var obj in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                    {
-                        listtemp.Add(obj);
-                        if (++readcount > MERGE_TRIGGER_NEW_COUNT*1.5)
-                        {
-                            break;
-                        }
-                    }
-
-                    ProcessTraceUtil.Trace("读取索引后面的数据，共" + readcount + "条");
-
-                    if (readcount == 0)
-                    {
-                        return;
-                    }
-
-                    lasmargepos = reader.ReadedPostion();
-
-                    ProcessTraceUtil.Trace("排序");
-                   
-                    //listtemp = listtemp.OrderBy(p => p).ToList();
-                    listtemp= new HeapSortTool<BigEntityTableIndexItem>(listtemp).Sort().ToList();
-                    ProcessTraceUtil.Trace("排序完成");
-
-                    //优化确定哪些部分是不需要一个个读入的
-                    long copystart = 0;
-                    var indexarray = keyindexarrdic[tablename];
-                    var sortarray = new Collections.SorteArray<BigEntityTableIndexItem>(indexarray);
-                    int mid = -1;
-                    int pos = sortarray.Find(new BigEntityTableIndexItem { Key = listtemp.First().Key }, ref mid);
-                    if (pos == -1 && mid != -1)
-                    {
-                        //小于最小的
-                        copystart = indexarray[mid].KeyOffset;
-                    }
-                    else if (pos != -1)
-                    {
-                        copystart = indexarray[pos].KeyOffset;
-                    }
-
-                    newindexfile = (indexname.Equals(meta.KeyName) ? GetKeyFile(tablename) : GetIndexFile(tablename, indexname)) + ".temp";
-                    if (File.Exists(newindexfile))
-                    {
-                        File.Delete(newindexfile);
-                    }
-                    //快速copy
-                    if (copystart > 0)
-                    {
-                        ProcessTraceUtil.Trace("copy前面的数据:"+copystart);
-                        IOUtil.CopyFile(indexfile, newindexfile, FileMode.Create, 0, copystart - 1);
-                        readstartpostion = copystart;
-                        ProcessTraceUtil.Trace("copy数据完成");
-                    }
-
-                    bool isall = false;
-                    ProcessTraceUtil.Trace("读取前面的数据");
-                    while (true)
-                    {
-                        reader.SetPostion(readstartpostion);
-                        var listordered = new List<BigEntityTableIndexItem>();
-                        var loadcount = 0;
-                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                        {
-                            if (item.KeyOffset >= mergeinfo.IndexMergePos)
-                            {
-                                break;
-                            }
-                            listordered.Add(item);
-                            if (++loadcount >= 1000000)
-                            {
-                                break;
-                            }
-                        }
-
-                        readstartpostion = reader.ReadedPostion();
-
-                        if (listordered.Count == 0)
-                        {
-                            ProcessTraceUtil.Trace("顺序列表为空，无序列表条数:" + listtemp.Count);
-
-                            listordered = listtemp;
-                            Console.WriteLine("--->" + listtemp.Count);
-                            isall = true;
-                        }
-                        else
-                        {
-                            ProcessTraceUtil.Trace("顺序列表不为空:" + listordered.Count + "，无序列表条数:" + listtemp.Count);
-
-                            var subtemplist = listtemp.Where(p => p.CompareTo(listordered.Last()) < 0).ToList();
-                            listordered.AddRange(subtemplist);
-                            listordered = new HeapSortTool<BigEntityTableIndexItem>(listordered).Sort().ToList();//listordered.OrderBy(p => p).ToList();
-
-                            //存储
-                            listtemp = listtemp.Skip(subtemplist.Count).ToList();
-                        }
-
-                        ProcessTraceUtil.Trace("写入到新索引文件");
-                        using (var nw = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                        {
-                            foreach (var item in listordered)
-                            {
-                                item.KeyOffset = nw.GetWritePosition();
-                                nw.AppendObject(item);
-                            }
-                            newIndexMergePos = nw.GetWritePosition();
-                        }
-                        ProcessTraceUtil.Trace("写入到新索引文件完成");
-
-                        if (isall)
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                //后面copy
-
-                string tablefile = GetTableFile(tablename);
-                var locker = GetKeyLocker(tablename, string.Empty);
-                //using (var writer = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                //var writer = GetWriter(indexfile, secs);
-                //lock (writer)
-
-                var idxreader = ObjTextReader.CreateReader(indexfile);
-                var newwriter = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf);
-                try
-                {
-                    long nextcopypos = 0;
-                    ProcessTraceUtil.Trace("读取后面的数据->" + lasmargepos);
-                    idxreader.SetPostion(lasmargepos);
-                    foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                    {
-                        if(item.KeyOffset == newwriter.GetWritePosition())
-                        {
-                            nextcopypos = newwriter.GetWritePosition();
-                            break;
-                        }
-
-                        item.KeyOffset = newwriter.GetWritePosition();
-                        newwriter.AppendObject(item);
-                    }
-
-                    if (nextcopypos > 0)
-                    {
-                        newwriter.Dispose();
-                        ProcessTraceUtil.Trace("copy后面的数据->" + nextcopypos);
-                        nextcopypos = IOUtil.CopyFile(indexfile, newindexfile, FileMode.Append, nextcopypos, long.MaxValue);
-                    }
-                    ProcessTraceUtil.Trace("读取后面的数据完成");
-
-                    lock (locker)
-                    {
-                        ProcessTraceUtil.Trace("读取后面的数据->" + lasmargepos);
-                        if (nextcopypos <= 0)
-                        {
-                            using (newwriter)
-                            {
-                                using (idxreader)
-                                {
-                                    foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                                    {
-                                        item.KeyOffset = newwriter.GetWritePosition();
-                                        newwriter.AppendObject(item);
-                                    }
-
-                                }
-                            }
-                        }
-                        else
-                        {
-                            nextcopypos=IOUtil.CopyFile(indexfile, newindexfile, FileMode.Append, nextcopypos, long.MaxValue);
-                            ProcessTraceUtil.Trace("继续copy后面的数据->" + nextcopypos);
-                        }
-                        ProcessTraceUtil.Trace("读取后面的数据完成");
-
-                        idxreader = null;
-
-                        int trycount = 0;
-                        while (true)
-                        {
-                            try
-                            {
-                                File.Delete(indexfile);
-                                break;
-                            }
-                            catch (System.IO.IOException ex)
-                            {
-                                Thread.Sleep(1);
-                                trycount++;
-                                if (trycount > 1000)  
-                                {
-                                    throw ex;
-                                }
-                            }
-                        }
-
-                        File.Move(newindexfile, indexfile);
-
-                        ProcessTraceUtil.Trace("删除旧文件，重命名新文件完成");
-                    }
-
-
-                    string metafile = GetMetaFile(tablename);
-                    mergeinfo.IndexMergePos = newIndexMergePos;
-                    LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
-
-                    LoadKey(tablename, meta);
-
-                    ProcessTraceUtil.Trace("更新元文件，更新索引完成");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("整理出错" + ex.ToString());
-                    if (newwriter != null && !newwriter.Isdispose)
-                    {
-                        newwriter.Dispose();
-                    }
-
-                    if (File.Exists(newindexfile))
-                    {
-                        File.Delete(newindexfile);
-                    }
-                }
-                finally
-                {
-                    if (idxreader != null)
-                    {
-                        idxreader.Dispose();
-                    }
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
-            finally
-            {
-                mergeinfo.IsMergin = false;
-
-                Console.WriteLine(ProcessTraceUtil.PrintTrace());
-                ProcessTraceUtil.StartTrace();
-            }
-
-        }
-
-        private void LoadKey(string tablename, EntityTableMeta meta)
-        {
-            string indexfile = GetKeyFile(tablename);
-            var indexmergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
-            if (indexmergeinfo == null)
-            {
-                indexmergeinfo = new IndexMergeInfo();
-                indexmergeinfo.IndexName = meta.KeyName;
-                meta.IndexMergeInfos.Add(indexmergeinfo);
-            }
-
-            //计算加载因子
-            indexmergeinfo.LoadFactor = (int)Math.Max(4, new FileInfo(indexfile).Length / MAX_KEYBUFFER);
-
-            int i = 0;
-            BigEntityTableIndexItem lastreadindex = null;
-            List<BigEntityTableIndexItem> list = new List<BigEntityTableIndexItem>();
-            using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
-            {
-                Console.WriteLine("loadkey");
-
-                foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                {
-                    if (newindex.KeyOffset == indexmergeinfo.IndexMergePos)
-                    {
-                        //list.Add(newindex);
-                        if (list.Count > 0)
-                        {
-                            if (list.Last().KeyOffset != lastreadindex.KeyOffset)
-                            {
-                                list.Add(lastreadindex);
-                            }
-                        }
-                        break;
-                    }
-                    if (!newindex.Del)
-                    {
-                        if (indexmergeinfo.LoadFactor == 1 || i % indexmergeinfo.LoadFactor == 0)
-                        {
-                            list.Add(newindex);
-                        }
-                        i++;
-                        lastreadindex = newindex;
-                    }
-                }
-
-                if (list.Last().KeyOffset != lastreadindex.KeyOffset)
-                {
-                    list.Add(lastreadindex);
-                }
-            }
-            indexmergeinfo.TotalCount = i;
-
-            BigEntityTableIndexItem[] oldindexitems = null;
-            keyindexarrdic.TryRemove(tablename, out oldindexitems);
-            keyindexarrdic.TryAdd(tablename, list.ToArray());
-
-            using (ObjTextReader idr = ObjTextReader.CreateReader(indexfile))
-            {
-                Console.WriteLine("loadkey2");
-
-                if (indexmergeinfo.IndexMergePos > 0)
-                {
-                    idr.SetPostion(indexmergeinfo.IndexMergePos);
-                }
-                Dictionary<string, BigEntityTableIndexItem> indexdic = new Dictionary<string, BigEntityTableIndexItem>();
-                //keyindexlistdic[tablename];
-
-                foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                {
-                    if (!newindex.Del)
-                    {
-                        indexdic.Add(newindex.Key, newindex);
-                    }
-                }
-
-                var tabkey = GetKeyLocker(tablename, string.Empty);
-                lock (tabkey)
-                {
-                    foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                    {
-                        if (!newindex.Del)
-                        {
-                            indexdic.Add(newindex.Key, newindex);
-                        }
-                    }
-                    keyindexlistdic[tablename] = indexdic;
-                }
-            }
-        }
-
-        private BigEntityTableIndexItemBag LoadIndex(string tablename, string indexname, EntityTableMeta meta)
-        {
-            string key = string.Format("{0}##{1}", tablename, indexname);
-            BigEntityTableIndexItemBag temp = null;
-            if (indexdic.TryGetValue(key, out temp))
-            {
-                temp.LastUsed = DateTime.Now;
-            }
-
-            string indexfile = GetIndexFile(tablename, indexname);
-            var locker = GetKeyLocker(tablename, "index_" + indexname);
-            lock (locker)
-            {
-                if (indexdic.TryGetValue(key, out temp))
-                {
-                    temp.LastUsed = DateTime.Now;
-                }
-                else
-                {
-                    temp = new BigEntityTableIndexItemBag();
-                }
-
-                using (ObjTextReader idxreader = ObjTextReader.CreateReader(indexfile))
-                {
-                    Console.WriteLine("loadindex");
-                    if (temp.LastOffset > 0)
-                    {
-                        idxreader.SetPostion(temp.LastOffset);
-                    }
-
-                    Dictionary<long, BigEntityTableIndexItem> al = null;
-                    foreach (var newindex in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
-                    {
-                        temp.LastOffset = idxreader.ReadedPostion();
-                        if (!temp.Dics.TryGetValue(newindex.Key, out al))
-                        {
-                            al = new Dictionary<long, BigEntityTableIndexItem>();
-                            temp.Dics.TryAdd(newindex.Key, al);
-                        }
-
-                        if (newindex.Del)
-                        {
-                            al.Remove(newindex.Offset);
-                        }
-                        else
-                        {
-                            al.Add(newindex.Offset, newindex);
-                        }
-                    }
-                }
-
-                if (temp.LastUsed == DateTime.MinValue)
-                {
-                    temp.LastUsed = DateTime.Now;
-                    indexdic.TryAdd(key, temp);
-                    LJC.FrameWork.Comm.Coroutine.CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new IndexDestroy(indexdic, key));
-                }
-                else
-                {
-                    temp.LastUsed = DateTime.Now;
-                }
-            }
-
-            return temp;
-        }
-
+        /// <summary>
+        /// 取元数据
+        /// </summary>
+        /// <param name="tablename"></param>
+        /// <returns></returns>
         private EntityTableMeta GetMetaData(string tablename)
         {
             EntityTableMeta meta = null;
@@ -1095,9 +263,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 return meta;
             }
 
-            var locker = GetKeyLocker(tablename, "GetMetaData");
-            lock (locker)
+            var metalocker = GetKeyLocker(tablename, "GetMetaData");
+            try
             {
+                metalocker.EnterWriteLock();
                 if (metadic.TryGetValue(tablename, out meta))
                 {
                     return meta;
@@ -1144,158 +313,228 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
 
-                if (!keyindexlistdic.ContainsKey(tablename))
+                if (!keyindexmemlist.ContainsKey(tablename))
                 {
-                    lock (keyindexlistdic)
+                    lock (keyindexmemlist)
                     {
-                        if (!keyindexlistdic.ContainsKey(tablename))
-                        {
-                            keyindexlistdic.TryAdd(tablename, new Dictionary<string, BigEntityTableIndexItem>());
-                        }
+                        keyindexmemlist.TryAdd(tablename, new SortArrayList<BigEntityTableIndexItem>());
+                    }
+                }
+
+                if (!keyindexmemtemplist.ContainsKey(tablename))
+                {
+                    lock (keyindexmemtemplist)
+                    {
+                        keyindexmemtemplist.TryAdd(tablename, new SortArrayList<BigEntityTableIndexItem>());
                     }
                 }
 
                 LoadKey(tablename, meta);
 
+                if (meta.Indexs != null && meta.Indexs.Length > 0)
+                {
+                    foreach (var index in meta.Indexs)
+                    {
+                        var indexkey = tablename + ":" + index;
+                        if (!keyindexmemlist.ContainsKey(indexkey))
+                        {
+                            lock (keyindexmemlist)
+                            {
+                                keyindexmemlist.TryAdd(indexkey, new SortArrayList<BigEntityTableIndexItem>());
+                            }
+                        }
+                        if (!keyindexmemtemplist.ContainsKey(indexkey))
+                        {
+                            lock (keyindexmemtemplist)
+                            {
+                                keyindexmemtemplist.TryAdd(indexkey, new SortArrayList<BigEntityTableIndexItem>());
+                            }
+                        }
+                        LoadIndex(tablename, index, meta);
+                    }
+                }
+
                 return meta;
             }
+            finally
+            {
+                metalocker.ExitWriteLock();
+            }
         }
 
-        private ObjTextWriter GetWriter(string filename, int locksecs = 1)
+        private ReaderWriterLockSlim GetKeyLocker(string table, string key)
         {
-            ObjTextWriter writer = null;
-            if (writerdic.TryGetValue(filename, out writer))
+            string totalkey = string.Format("{0}:{1}", table, key);
+            ReaderWriterLockSlim locker = null;
+            if (keylocker.TryGetValue(totalkey, out locker))
             {
-                lock (writer)
-                {
-                    if (!writer.Isdispose)
-                    {
-                        writer.Tag = DateTime.Now;
-                        return writer;
-                    }
-                }
+                return locker;
             }
 
-            lock (writerdic)
+            lock (keylocker)
             {
-                if (writerdic.TryGetValue(filename, out writer))
+                if (keylocker.TryGetValue(totalkey, out locker))
                 {
-                    lock (writer)
-                    {
-                        if (!writer.Isdispose)
-                        {
-                            writer.Tag = DateTime.Now;
-                            return writer;
-                        }
-                        else
-                        {
-                            writerdic.Remove(filename);
-                        }
-                    }
+                    return locker;
                 }
 
-                writer = ObjTextWriter.CreateWriter(filename, ObjTextReaderWriterEncodeType.entitybuf);
-                writer.Tag = DateTime.Now;
-                writerdic.Add(filename, writer);
+                locker = new ReaderWriterLockSlim();
+                keylocker.Add(totalkey, locker);
 
-                LJC.FrameWork.Comm.Coroutine.CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new WriterDestroy(writerdic, filename, locksecs));
+                //CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new LockerDestroy(keylocker, totalkey));
             }
-            return writer;
+
+            return locker;
         }
+
+        #region 合并主键索引
+
+        private IEnumerable<BigEntityTableIndexItem> MergeAndSort2(List<BigEntityTableIndexItem> sortedlist, List<BigEntityTableIndexItem> sortedlist2)
+        {
+            if (sortedlist.Count() == 0)
+            {
+                foreach (var item in sortedlist2)
+                {
+                    yield return item;
+                }
+            }
+            else if (sortedlist2.Count() == 0)
+            {
+                foreach (var item in sortedlist)
+                {
+                    yield return item;
+                }
+            }
+            else
+            {
+                var it1 = sortedlist.GetEnumerator();
+                it1.MoveNext();
+                var item1 = it1.Current;
+                var it2 = sortedlist2.GetEnumerator();
+                it2.MoveNext();
+                var item2 = it2.Current;
+                int compareval = 0;
+                while (item1 != null && item2 != null)
+                {
+                    compareval = item1.CompareTo(item2);
+                    if (compareval > 0)
+                    {
+                        yield return item2;
+                        item2 = it2.MoveNext() ? it2.Current : null;
+                    }
+                    else
+                    {
+                        yield return item1;
+                        item1 = it1.MoveNext() ? it1.Current : null;
+                    }
+                }
+
+                if (item1 != null)
+                {
+                    yield return item1;
+                    while (it1.MoveNext())
+                    {
+                        yield return it1.Current;
+                    }
+                }
+
+                if (item2 != null)
+                {
+                    yield return item2;
+                    while (it2.MoveNext())
+                    {
+                        yield return it2.Current;
+                    }
+                }
+            }
+        }
+
+
+        #endregion
+
+        #region 增删改查
 
         private bool Insert2<T>(string tablename, IEnumerable<T> items, EntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
-            var locker = GetKeyLocker(tablename, string.Empty);
+            var tablelocker = GetKeyLocker(tablename, string.Empty);
             string keyindexfile = GetKeyFile(tablename);
 
-            lock (locker)
+            try
             {
+                tablelocker.EnterWriteLock();
                 var otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf);
-                ObjTextWriter keywriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf);
+                ObjTextWriter keywriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf2);
+                var keyreader = ObjTextReader.CreateReader(keyindexfile);
                 Dictionary<string, ObjTextWriter> idxwriterdic = new Dictionary<string, ObjTextWriter>();
+                var tableitem = new EntityTableItem<T>();
+                tableitem.Flag = EntityTableItemFlag.Ok;
+
                 try
                 {
+                    var keylist = keyindexmemlist[tablename];
+                    var findkey = new BigEntityTableIndexItem();
                     foreach (var item in items)
                     {
-                        var keyvalue = item.Eval(meta.KeyProperty);
+                        var keyvalue = meta.KeyProperty.GetValueMethed(item);
                         if (keyvalue == null)
                         {
                             throw new Exception("key值不能为空");
                         }
 
-                        var keystr = keyvalue.ToString();
-
-                        var keylocker = GetKeyLocker(tablename, keystr);
-
-                        lock (keylocker)
+                        findkey.Key = keyvalue;
+                        if (KeyExsitsInner(tablename, findkey, keyreader))
                         {
-                            if (keyindexlistdic[tablename].ContainsKey(keystr))
-                            {
-                                throw new Exception(string.Format("key:{0}不可重复", keystr));
-                            }
+                            throw new Exception("不能重复写入:" + keyvalue);
                         }
 
 
-                        var tableitem = new EntityTableItem<T>(item);
-                        tableitem.Flag = EntityTableItemFlag.Ok;
+                        tableitem.Data = item;
+                        var offset = otw.AppendObject(tableitem);
 
-                        //var otw = GetWriter(tablefile);
-                        //lock(otw)
+                        var newkey = new BigEntityTableIndexItem
                         {
-                            var offset = otw.AppendObject(tableitem);
+                            Key = keyvalue,
+                            Offset = offset.Item1,
+                            len = (int)(offset.Item2 - offset.Item1),
+                            KeyType = meta.EntityTypeDic[meta.KeyName]
+                        };
 
-                            var keylist = keyindexlistdic[tablename];
-
-                            var newkey = new BigEntityTableIndexItem
+                        foreach (var idx in meta.Indexs)
+                        {
+                            string indexfile = GetIndexFile(tablename, idx);
+                            var indexvalue = meta.IndexProperties[idx].GetValueMethed(item);
+                            var newindex = new BigEntityTableIndexItem
                             {
-                                Key = keystr,
-                                Offset = offset.Item1,
-                                len = (int)(offset.Item2 - offset.Item1)
+                                Key = indexvalue,
+                                Offset = newkey.Offset,
+                                len = newkey.len,
+                                KeyType = meta.EntityTypeDic[idx]
                             };
 
-                            keylist.Add(newkey.Key, newkey);
-
-                            //string keyindexfile = GetKeyFile(tablename);
-                            //ObjTextWriter keywriter = GetWriter(keyindexfile);
-                            //lock (keywriter)
+                            ObjTextWriter idxwriter = null;
+                            if (!idxwriterdic.TryGetValue(indexfile, out idxwriter))
                             {
-                                newkey.KeyOffset = keywriter.GetWritePosition();
-                                keywriter.AppendObject(newkey);
+                                idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf2);
+                                idxwriterdic.Add(indexfile, idxwriter);
                             }
 
-                            foreach (var idx in meta.Indexs)
-                            {
-                                string indexfile = GetIndexFile(tablename, idx);
-                                var indexvalue = item.Eval(meta.IndexProperties[idx]);
-                                var newindex = new BigEntityTableIndexItem
-                                {
-                                    Key = indexvalue == null ? string.Empty : indexvalue.ToString(),
-                                    Offset = offset.Item1,
-                                    len = (int)(offset.Item2 - offset.Item1)
-                                };
+                            keyindexmemlist[tablename + ":" + idx].Add(newindex);
 
-                                ObjTextWriter idxwriter = null;
-                                if (!idxwriterdic.TryGetValue(indexfile, out idxwriter))
-                                {
-                                    idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf);
-                                    idxwriterdic.Add(indexfile, idxwriter);
-                                }
-
-                                //ObjTextWriter idxwriter = GetWriter(indexfile);
-                                //lock (idxwriter)
-                                {
-                                    newindex.KeyOffset = idxwriter.GetWritePosition();
-                                    idxwriter.AppendObject(newindex);
-                                }
-                            }
+                            newindex.KeyOffset = idxwriter.GetWritePosition();
+                            idxwriter.AppendObject(newindex);
                         }
+
+                        newkey.KeyOffset = keywriter.GetWritePosition();
+                        keywriter.AppendObject(newkey);
+                        keylist.Add(newkey);
                     }
 
                     meta.NewAddCount += items.Count();
                 }
                 finally
                 {
+                    using (keyreader) { };
                     using (otw) { };
                     using (keywriter) { };
 
@@ -1305,12 +544,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
             }
+            finally
+            {
+                tablelocker.ExitWriteLock();
+            }
 
             return true;
         }
 
         public bool Insert<T>(string tablename, T item) where T : new()
         {
+            if (HasDBError)
+            {
+                return false;
+            }
+
             //item.Eval()
             EntityTableMeta meta = GetMetaData(tablename);
 
@@ -1329,6 +577,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 return false;
             }
 
+            if (HasDBError)
+            {
+                return false;
+            }
+
             EntityTableMeta meta = GetMetaData(tablename);
 
             if (meta.TType != items.First().GetType())
@@ -1339,86 +592,103 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return Insert2(tablename, items, meta);
         }
 
-        public bool Delete(string tablename, string key)
+        public bool Delete<T>(string tablename, string key) where T : new()
         {
             EntityTableMeta meta = GetMetaData(tablename);
 
-            var delkey=FindKey(tablename, key);
+            var delkey = FindKey(tablename, key);
             if (delkey == null)
             {
-                return false;
+                throw new Exception(string.Format("主键查找失败:{0}.{1}", tablename, key));
             }
 
-            var locker = GetKeyLocker(tablename, string.Empty);
-            lock (locker)
+            var delitem = Find<T>(tablename, key);
+            if (delitem == null)
             {
-                string keyindexfile = GetKeyFile(tablename);
-                using (ObjTextWriter keywriter=ObjTextWriter.CreateWriter(keyindexfile,ObjTextReaderWriterEncodeType.entitybuf))
-                //ObjTextWriter keywriter = GetWriter(keyindexfile);
-                //lock (keywriter)
+                throw new Exception(string.Format("数据查找失败:{0}.{1}", tablename, key));
+            }
+
+            var tablelocker = GetKeyLocker(tablename, string.Empty);
+            string keyindexfile = GetKeyFile(tablename);
+            string tablefile = GetTableFile(tablename);
+            try
+            {
+                Tuple<long, long> offset = null;
+                tablelocker.EnterWriteLock();
+
+                var tableitem = new EntityTableItem<T>(delitem);
+                tableitem.Flag = EntityTableItemFlag.Del;
+                using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                 {
+                    var posend = otw.GetWritePosition();
+                    offset = otw.PreAppendObject(tableitem, (s1, s2) =>
+                    {
+                        if (s1.Length <= delkey.len)
+                        {
+                            var tp = otw.Override(delkey.Offset, s1, s1.Length - 2);
+                            otw.SetPosition(posend);
+                            return tp;
+                        }
+                        return null;
+                    });
+                }
+                if (offset.Item1 != delkey.Offset)
+                {
+                    delkey.Offset = offset.Item1;
+                    delkey.len = (int)(offset.Item2 - offset.Item1);
+                }
+
+                using (ObjTextWriter keywriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf2))
+                {
+                    var oldoffset = keywriter.GetWritePosition();
                     delkey.Del = true;
 
                     keywriter.SetPosition(delkey.KeyOffset);
                     keywriter.AppendObject(delkey);
 
-                    foreach (var idx in meta.Indexs)
+                    keywriter.SetPosition(oldoffset);
+                }
+
+                foreach (var idx in meta.Indexs)
+                {
+                    string indexfile = GetIndexFile(tablename, idx);
+
+                    var idxval = meta.IndexProperties[idx].GetValueMethed(delitem).ToString();
+                    //var idxfindkey = new BigEntityTableIndexItem { Key = idxval, Offset=delkey.Offset };
+                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, idxval, delkey.Offset).FirstOrDefault();
+
+                    if (idxitem == null)
                     {
-                        //string indexfile = GetIndexFile(tablename, idx);
-                        //ObjTextWriter idxwriter = GetWriter(indexfile);
-                        //lock (idxwriter)
-                        //{
-                        //    delitem.KeyOffset = idxwriter.GetWritePosition();
-                        //    idxwriter.AppendObject(delitem);
-                        //}
+                        throw new Exception("查找索引失败:" + idx);
+                    }
+
+                    bool success = false;
+                    using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf2))
+                    {
+                        var posend = idxwriter.GetWritePosition();
+                        idxitem.Del = true;
+                        idxitem.Offset = delkey.Offset;
+                        idxitem.len = delkey.len;
+                        idxwriter.SetPosition(idxitem.KeyOffset);
+                        idxwriter.AppendObject(idxitem);
+                        success = true;
+                        idxwriter.SetPosition(posend);
+                    }
+                    if (!success)
+                    {
+                        throw new Exception(string.Format("查找索引失败:{0}.{1}", tablename, key));
                     }
                 }
             }
-
-            return true;
-        }
-
-        public bool DeleteMem(string tablename, string key)
-        {
-            EntityTableMeta meta = GetMetaData(tablename);
-            var dic = keyindexlistdic[tablename];
-
-            var locker = GetKeyLocker(tablename, string.Empty);
-            lock (locker)
+            finally
             {
-                BigEntityTableIndexItem delitem=null;
-                if (!dic.TryGetValue(key, out delitem))
-                {
-                    return false;
-                }
-
-                string keyindexfile = GetKeyFile(tablename);
-                using (ObjTextWriter keywriter=ObjTextWriter.CreateWriter(keyindexfile,ObjTextReaderWriterEncodeType.entitybuf))
-                //ObjTextWriter keywriter = GetWriter(keyindexfile);
-                //lock (keywriter)
-                {
-                    delitem.Del = true;
-
-                    keywriter.SetPosition(delitem.KeyOffset);
-                    keywriter.AppendObject(delitem);
-
-                    foreach (var idx in meta.Indexs)
-                    {
-                        //string indexfile = GetIndexFile(tablename, idx);
-                        //ObjTextWriter idxwriter = GetWriter(indexfile);
-                        //lock (idxwriter)
-                        //{
-                        //    delitem.KeyOffset = idxwriter.GetWritePosition();
-                        //    idxwriter.AppendObject(delitem);
-                        //}
-                    }
-                }
+                tablelocker.ExitWriteLock();
             }
 
             return true;
         }
 
-        public bool UpsertMem<T>(string tablename, T item) where T : new()
+        public bool Upsert<T>(string tablename, T item) where T : new()
         {
             EntityTableMeta meta = GetMetaData(tablename);
 
@@ -1427,16 +697,16 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
             }
 
-            var keyobj = item.Eval(meta.KeyProperty);
+            var keyobj = meta.KeyProperty.GetValueMethed(item);
             if (keyobj == null)
             {
                 throw new Exception("key不能为空");
             }
 
-            string key = keyobj.ToString();
-            var indexdic = keyindexlistdic[tablename];
-            BigEntityTableIndexItem upitem = null;
-            if (indexdic.TryGetValue(key, out upitem))
+            var key = keyobj.ToString();
+            var upitem = FindKey(tablename, keyobj.ToString());
+
+            if (upitem != null)
             {
                 return Update2(tablename, key, item, meta);
             }
@@ -1449,96 +719,132 @@ namespace LJC.FrameWork.Data.EntityDataBase
         private bool Update2<T>(string tablename, string key, T item, EntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
-            Dictionary<string,BigEntityTableIndexItem> dic = keyindexlistdic[tablename];
             Tuple<long, long> offset = null;
 
-            var locker = GetKeyLocker(tablename, string.Empty);
-            lock (locker)
+            var tablelocker = GetKeyLocker(tablename, string.Empty);
+            try
             {
-                BigEntityTableIndexItem indexitem = null;
-
-                if (!dic.TryGetValue(key, out indexitem))
+                BigEntityTableIndexItem oldindexitem = FindKey(tablename, key);
+                if (oldindexitem == null)
                 {
-                    throw new Exception(string.Format("更新失败，key为{0}的记录数为0", key));
+                    throw new Exception("查找索引失败:" + key);
                 }
 
+                var olditem = Find<T>(tablename, key);
+                if (olditem == null)
+                {
+                    throw new Exception("查找数据失败");
+                }
+
+                tablelocker.EnterWriteLock();
                 string keyindexfile = GetKeyFile(tablename);
-                indexitem.Del = true;
-                //ObjTextWriter keywriter = GetWriter(keyindexfile);
-                using(ObjTextWriter keywriter=ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                //lock (keywriter)
-                {
-                    keywriter.SetPosition(indexitem.KeyOffset);
-                    keywriter.AppendObject(indexitem);
-                }
 
-                var keyvalue = item.Eval(meta.KeyProperty);
+                var keyvalue = meta.KeyProperty.GetValueMethed(item);
                 if (keyvalue == null)
                 {
                     throw new Exception("key值不能为空");
                 }
                 var tableitem = new EntityTableItem<T>(item);
                 tableitem.Flag = EntityTableItemFlag.Ok;
-                //ObjTextWriter otw = GetWriter(tablefile);
-                using(ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
+                using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                 {
+                    var posend = otw.GetWritePosition();
                     offset = otw.PreAppendObject(tableitem, (s1, s2) =>
                     {
-                        if (s1.Length <= indexitem.len)
+                        if (s1.Length <= oldindexitem.len)
                         {
-                            return otw.Override(indexitem.Offset, s1);
+                            var tp = otw.Override(oldindexitem.Offset, s1, s1.Length - 2);
+                            otw.SetPosition(posend);
+                            return tp;
                         }
                         return null;
                     });
                 }
 
-
-                var keylist = keyindexlistdic[tablename];
-
                 BigEntityTableIndexItem newkey = new BigEntityTableIndexItem
                 {
                     Key = keyvalue.ToString(),
                     Offset = offset.Item1,
-                    len = (int)(offset.Item2 - offset.Item1),
+                    len = (oldindexitem.Offset == offset.Item1) ? oldindexitem.len : (int)(offset.Item2 - offset.Item1),
+                    KeyOffset = oldindexitem.KeyOffset,
                     Del = false
                 };
 
-                if (newkey.Offset == indexitem.Offset)
-                {
-                    newkey.len = indexitem.len;
-                }
-                
-                dic.Add(newkey.Key,newkey);
-
-                using(ObjTextWriter keyidxwriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                //ObjTextWriter keyidxwriter = GetWriter(keyindexfile);
-                //lock(keyidxwriter)
-                {
-                    newkey.KeyOffset = keyidxwriter.GetWritePosition();
-                    keyidxwriter.AppendObject(newkey);
-                }
-
+                //更新索引
                 foreach (var idx in meta.Indexs)
                 {
-                    string indexfile = GetIndexFile(tablename, idx);
-                    var indexvalue = item.Eval(meta.IndexProperties[idx]);
-                    var newindex = new BigEntityTableIndexItem
+                    var oldidxval = meta.IndexProperties[idx].GetValueMethed(olditem).ToString();
+                    var newidxval = meta.IndexProperties[idx].GetValueMethed(item).ToString();
+
+                    if (oldidxval == newidxval && oldindexitem.Offset == offset.Item1)
                     {
-                        Key = indexvalue == null ? string.Empty : indexvalue.ToString(),
-                        Offset = offset.Item1,
-                        len = (int)(offset.Item2 - offset.Item1),
-                        Del = false
-                    };
-                    using(ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf))
-                    //ObjTextWriter idxwriter = GetWriter(indexfile);
-                    //lock(idxwriter)
+                        continue;
+                    }
+                    var indexfile = GetIndexFile(tablename, idx);
+                    //这里有问题。索引重排后会变的
+                    var idxfindkey = new BigEntityTableIndexItem { Key = oldidxval, Offset = oldindexitem.Offset };
+                    var idxkey = tablename + ":" + idx;
+                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, oldidxval, oldindexitem.Offset).FirstOrDefault();
+
+                    if (idxitem == null)
                     {
-                        newindex.KeyOffset = idxwriter.GetWritePosition();
-                        idxwriter.AppendObject(newindex);
+                        throw new Exception("查找索引失败:" + idx);
+                    }
+
+                    using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf2))
+                    {
+                        var posend = idxwriter.GetWritePosition();
+
+                        if (oldidxval == newidxval)
+                        {
+                            idxitem.Offset = newkey.Offset;
+                            idxitem.len = newkey.len;
+                            idxwriter.SetPosition(idxitem.KeyOffset);
+                            idxwriter.AppendObject(idxitem);
+                            idxwriter.SetPosition(posend);
+                        }
+                        else
+                        {
+                            idxitem.Del = true;
+                            idxwriter.SetPosition(idxitem.KeyOffset);
+                            idxwriter.AppendObject(idxitem);
+                            idxwriter.SetPosition(posend);
+
+                            var newidxitem = new BigEntityTableIndexItem
+                            {
+                                Del = false,
+                                Key = newidxval,
+                                KeyOffset = posend,
+                                len = newkey.len,
+                                Offset = newkey.Offset
+                            };
+                            idxwriter.AppendObject(newidxitem);
+                            keyindexmemlist[idxkey].Add(newidxitem);
+                        }
                     }
                 }
 
+                using (ObjTextWriter keywriter = ObjTextWriter.CreateWriter(keyindexfile, ObjTextReaderWriterEncodeType.entitybuf2))
+                {
+                    var posend = keywriter.GetWritePosition();
+                    newkey.KeyOffset = oldindexitem.KeyOffset;
+                    keywriter.SetPosition(newkey.KeyOffset);
+                    keywriter.AppendObject(newkey);
+                    keywriter.SetPosition(posend);
+                }
+
+                //更新oldkey
+                oldindexitem.Key = newkey.Key;
+                oldindexitem.KeyOffset = newkey.KeyOffset;
+                oldindexitem.len = newkey.len;
+                oldindexitem.Offset = newkey.Offset;
+                oldindexitem.Del = newkey.Del;
+
                 Console.WriteLine("写入成功:" + keyvalue + "->" + offset);
+            }
+            finally
+            {
+                tablelocker.ExitWriteLock();
             }
             return true;
         }
@@ -1552,7 +858,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new NotSupportedException("不是期待数据类型:" + meta.TypeString);
             }
 
-            var keyobj = item.Eval(meta.KeyProperty);
+            var keyobj = meta.KeyProperty.GetValueMethed(item);
             if (keyobj == null)
             {
                 throw new Exception("key不能为空");
@@ -1560,40 +866,38 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             string key = keyobj.ToString();
 
-            return Update2(tablename, key, item,meta);
+            return Update2(tablename, key, item, meta);
         }
+        #endregion
+
+        #region 根据的主键操作
 
         public bool Exists(string tablename, string key)
         {
             return FindKey(tablename, key) != null;
         }
 
-        public IEnumerable<T> ListMemAll<T>(string tablename) where T:new()
-        {
-            var meta = this.GetMetaData(tablename);
-
-            var listkeys = keyindexlistdic[tablename];
-            foreach (var key in listkeys)
-            {
-                yield return FindMem<T>(tablename,key.Key);
-            }
-        }
-
-        public IEnumerable<T> List<T>(string tablename,int pi,int ps) where T : new()
+        public IEnumerable<T> List<T>(string tablename, int pi, int ps) where T : new()
         {
             int count = 0;
             var start = (pi - 1) * ps;
             var end = pi * ps;
+            var buffer = new byte[1024 * 1024 * 10];
             using (var reader = ObjTextReader.CreateReader(GetTableFile(tablename)))
             {
-                foreach(var item in reader.ReadObjectsWating<EntityTableItem<T>>(1))
+                foreach (var item in reader.ReadObjectsWating<EntityTableItem<T>>(1, null, buffer))
                 {
                     if (item == null)
                     {
                         yield break;
                     }
 
-                    if (count++>=start)
+                    if (item.Flag == EntityTableItemFlag.Del)
+                    {
+                        continue;
+                    }
+
+                    if (count++ >= start)
                     {
                         yield return item.Data;
                     }
@@ -1609,137 +913,320 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public int Count(string tablename)
         {
             var meta = this.GetMetaData(tablename);
-            var memkeys = keyindexlistdic[tablename];
-            var mergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
-            return memkeys.Count + (mergeinfo == null ? 0 : mergeinfo.TotalCount);
+            var keylocker = GetKeyLocker(tablename, string.Empty);
+            keylocker.EnterReadLock();
+            try
+            {
+                var memkeys = this.keyindexmemlist[tablename];
+                var mergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+                return memkeys.Length() + keyindexmemtemplist[tablename].Length() + (mergeinfo == null ? 0 : mergeinfo.TotalCount);
+            }
+            finally
+            {
+                keylocker.ExitReadLock();
+            }
+        }
+
+        private bool KeyExsitsInner(string tablename, BigEntityTableIndexItem key, ObjTextReader keyReader)
+        {
+            var meta = GetMetaData(tablename);
+
+            BigEntityTableIndexItem findkeyitem = keyindexmemlist[tablename].Find(key);
+            if (findkeyitem != null)
+            {
+                return !findkeyitem.Del;
+            }
+            findkeyitem = keyindexmemtemplist[tablename].Find(key);
+            if (findkeyitem != null)
+            {
+                return !findkeyitem.Del;
+            }
+
+            var indexarr = keyindexdisklist[tablename];
+            int mid = -1;
+            int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(key, ref mid);
+
+            if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+            {
+                return false;
+            }
+            else if (pos > -1)
+            {
+                findkeyitem = indexarr[pos];
+                return !findkeyitem.Del;
+            }
+
+            if (findkeyitem == null)
+            {
+                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+                if (pos == -1 && keymergeinfo.LoadFactor == 1)
+                {
+                    return false;
+                }
+
+                var posstart = indexarr[mid].KeyOffset;
+                var posend = indexarr[mid + 1].KeyOffset;
+
+                var buffer = new byte[1024];
+                keyReader.SetPostion(posstart);
+
+                foreach (var item in keyReader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+                {
+                    if (keyReader.ReadedPostion() > posend)
+                    {
+                        return false;
+                    }
+                    if (item.Key.Equals(key))
+                    {
+                        return !item.Del;
+                    }
+                }
+            }
+
+            return false;
+
         }
 
         public BigEntityTableIndexItem FindKey(string tablename, string key)
         {
             var meta = GetMetaData(tablename);
 
-            BigEntityTableIndexItem findkeyitem = null;
-            if (keyindexlistdic[tablename].TryGetValue(key, out findkeyitem))
+            var findkey = new BigEntityTableIndexItem { Key = key };
+            var locker = GetKeyLocker(tablename, string.Empty);
+            try
             {
+                locker.EnterReadLock();
+                BigEntityTableIndexItem findkeyitem = keyindexmemlist[tablename].Find(findkey);
+                if (findkeyitem != null)
+                {
+                    if (findkeyitem.Del)
+                    {
+                        return null;
+                    }
+                    return findkeyitem;
+                }
+                findkeyitem = keyindexmemtemplist[tablename].Find(findkey);
+                if (findkeyitem != null)
+                {
+                    if (findkeyitem.Del)
+                    {
+                        return null;
+                    }
+                    return findkeyitem;
+                }
+
+                var indexarr = keyindexdisklist[tablename];
+                int mid = -1;
+                int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
+                {
+                    Key = key
+                }, ref mid);
+
+                if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+                {
+                    return null;
+                }
+                else if (pos > -1)
+                {
+                    findkeyitem = indexarr[pos];
+                    if (findkeyitem.Del)
+                    {
+                        return null;
+                    }
+                }
+
+                if (findkeyitem == null)
+                {
+                    var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+                    if (pos == -1 && keymergeinfo.LoadFactor == 1)
+                    {
+                        return null;
+                    }
+
+                    var posstart = indexarr[mid].KeyOffset;
+                    var posend = indexarr[mid + 1].KeyOffset;
+
+                    var buffer = new byte[1024];
+                    using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+                    {
+                        reader.SetPostion(posstart);
+
+                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+                        {
+                            //var item = reader.ReadObject<BigEntityTableIndexItem>();
+                            if (reader.ReadedPostion() > posend)
+                            {
+                                return null;
+                            }
+                            if (item.Key.Equals(key))
+                            {
+                                if (item.Del)
+                                {
+                                    return null;
+                                }
+                                return item;
+                            }
+                        }
+                    }
+                }
+
                 return findkeyitem;
             }
-
-            var indexarr = keyindexarrdic[tablename];
-            int mid = -1;
-            int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
+            finally
             {
-                Key = key
-            }, ref mid);
-
-            if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
-            {
-                return null;
+                locker.ExitReadLock();
             }
-            else if (pos > -1)
-            {
-                findkeyitem = indexarr[pos];
-                if (findkeyitem.Del)
-                {
-                    return null;
-                }
-            }
-
-            if (findkeyitem == null)
-            {
-                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
-                if (pos == -1 && keymergeinfo.LoadFactor == 1)
-                {
-                    return null;
-                }
-
-                var posstart = indexarr[mid].KeyOffset;
-                var posend = indexarr[mid + 1].KeyOffset;
-
-
-                using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
-                {
-                    reader.SetPostion(posstart);
-                    while (true)
-                    {
-                        var item = reader.ReadObject<BigEntityTableIndexItem>();
-                        if (item == null || reader.ReadedPostion() > posend)
-                        {
-                            break;
-                        }
-                        if (item.Key.Equals(key))
-                        {
-                            findkeyitem = item;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            return findkeyitem;
         }
 
-        public BigEntityTableIndexItem FindDiskKey(string tablename, string key)
-        {   
-            var indexarr = keyindexarrdic[tablename];
-            int mid = -1;
-            int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
-            {
-                Key = key
-            }, ref mid);
-
-            BigEntityTableIndexItem findkeyitem = null;
-            if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
-            {
-                return null;
-            }
-            else if (pos > -1)
-            {
-                findkeyitem = indexarr[pos];
-                if (findkeyitem.Del)
-                {
-                    return null;
-                }
-            }
-
-            if (findkeyitem == null)
-            {
-                var meta = GetMetaData(tablename);
-                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
-                if (pos == -1 && keymergeinfo.LoadFactor == 1)
-                {
-                    return null;
-                }
-
-                var posstart = indexarr[mid].KeyOffset;
-                var posend = indexarr[mid + 1].KeyOffset;
-
-
-                using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
-                {
-                    reader.SetPostion(posstart);
-                    while (true)
-                    {
-                        var item = reader.ReadObject<BigEntityTableIndexItem>();
-                        if (item == null || reader.ReadedPostion() > posend)
-                        {
-                            break;
-                        }
-                        if (item.Key.Equals(key))
-                        {
-                            findkeyitem = item;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            return findkeyitem;
-
-        }
-
-        public T FindDisk<T>(string tablename,string key) where T:new()
+        /// <summary>
+        /// 查找索引，不加锁
+        /// </summary>
+        /// <param name="tablename"></param>
+        /// <param name="meta"></param>
+        /// <param name="index"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private IEnumerable<BigEntityTableIndexItem> FindIndex(string tablename, EntityTableMeta meta, string index, object value, long offset = 0)
         {
-            var indexarr = keyindexarrdic[tablename];
+            var findkey = new BigEntityTableIndexItem { Key = value, Offset = offset };
+            var indexkey = tablename + ":" + index;
+            var indexarr = keyindexdisklist[indexkey];
+            int mid = -1;
+            int pospev = -1;
+            int posnext = -1;
+            int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(findkey, ref mid);
+
+            if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+            {
+                //应该没有数据
+            }
+            else if (pos > -1)
+            {
+                pospev = pos;
+                while (pospev >= 0)
+                {
+                    var compare = indexarr[pospev].CompareTo(findkey);
+                    if (compare < 0 || pospev == 0)
+                    {
+                        break;
+                    }
+
+                    pospev--;
+                }
+                posnext = pos;
+                while (posnext <= indexarr.Length - 1)
+                {
+                    var compare = indexarr[posnext].CompareTo(findkey);
+                    if (compare > 0 || posnext == indexarr.Length - 1)
+                    {
+                        break;
+                    }
+
+                    posnext++;
+                }
+            }
+            else
+            {
+                pospev = mid;
+                posnext = mid;
+                while (posnext <= indexarr.Length - 1)
+                {
+                    var compare = indexarr[posnext].CompareTo(findkey);
+                    if (compare > 0 || posnext == indexarr.Length - 1)
+                    {
+                        break;
+                    }
+
+                    posnext++;
+
+                }
+            }
+            ProcessTraceUtil.Trace("start scan disk index");
+            if (pospev != -1 && posnext != -1 && pospev <= posnext)
+            {
+                var posstart = indexarr[pospev].KeyOffset;
+                var posend = indexarr[posnext].KeyOffset;
+
+                var buffer = new byte[1024];
+                int skipcount = 0;
+                using (var reader = ObjTextReader.CreateReader(GetIndexFile(tablename, index)))
+                {
+                    ProcessTraceUtil.Trace("open indexfile");
+                    reader.SetPostion(posstart);
+                    ProcessTraceUtil.Trace("set pos:" + posstart);
+                    foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+                    {
+                        skipcount++;
+                        if (skipcount == 1)
+                        {
+                            ProcessTraceUtil.Trace("find first index");
+                        }
+                        if (item.Key.Equals(value))
+                        {
+                            if (!item.Del)
+                            {
+                                yield return item;
+                            }
+                        }
+                        if (reader.ReadedPostion() > posend)
+                        {
+                            break;
+                        }
+                    }
+                }
+                ProcessTraceUtil.Trace("scan disk index end");
+                ProcessTraceUtil.Trace("扫描索引条数:" + skipcount);
+            }
+
+            ProcessTraceUtil.Trace("find in temp mem");
+            //内存里查找
+            foreach (var item in keyindexmemtemplist[indexkey].FindAll(findkey))
+            {
+                yield return item;
+            }
+
+            ProcessTraceUtil.Trace("find in mem");
+            foreach (var item in keyindexmemlist[indexkey].FindAll(findkey))
+            {
+                yield return item;
+            }
+
+            ProcessTraceUtil.Trace("find in mem end");
+        }
+
+        public T Find<T>(string tablename, string key) where T : new()
+        {
+            string tablefile = GetTableFile(tablename);
+            EntityTableMeta meta = GetMetaData(tablename);
+            var memlist = keyindexmemlist[tablename];
+            var findkey = new BigEntityTableIndexItem() { Key = key };
+            BigEntityTableIndexItem indexitem = memlist.Find(findkey) ??
+                keyindexmemtemplist[tablename].Find(findkey);
+            if (indexitem != null)
+            {
+                if (indexitem.Del)
+                {
+                    return default(T);
+                }
+
+                //先找到offset
+                using (ObjTextReader otw = ObjTextReader.CreateReader(tablefile))
+                {
+                    otw.SetPostion(indexitem.Offset);
+
+                    var readobj = otw.ReadObject<EntityTableItem<T>>();
+                    if (readobj == null)
+                    {
+                        return default(T);
+                    }
+                    else
+                    {
+                        return readobj.Data;
+                    }
+                }
+            }
+
+            var indexarr = keyindexdisklist[tablename];
             if (indexarr.Length == 0)
             {
                 return default(T);
@@ -1756,7 +1243,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 if (index.Key.Equals(key))
                 {
                     //先找到offset
-                    using (ObjTextReader otw = ObjTextReader.CreateReader(GetTableFile(tablename)))
+                    using (ObjTextReader otw = ObjTextReader.CreateReader(tablefile))
                     {
                         otw.SetPostion(index.Offset);
 
@@ -1778,16 +1265,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
             else
             {
-                int mid=-1;
-                int pos=new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem{
-                    Key=key
-                },ref mid);
+                int mid = -1;
+                int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(findkey, ref mid);
 
                 BigEntityTableIndexItem findkeyitem = null;
                 if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
                 {
                     return default(T);
-                }else if (pos > -1)
+                }
+                else if (pos > -1)
                 {
                     findkeyitem = indexarr[pos];
                     if (findkeyitem.Del)
@@ -1798,7 +1284,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 if (findkeyitem == null)
                 {
-                    var meta = GetMetaData(tablename);
                     var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
                     if (pos == -1 && keymergeinfo.LoadFactor == 1)
                     {
@@ -1808,15 +1293,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var posstart = indexarr[mid].KeyOffset;
                     var posend = indexarr[mid + 1].KeyOffset;
 
-
+                    var buffer = new byte[1024];
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
-                        reader.SetPostion(posstart);        
-
-                        while (true)
+                        reader.SetPostion(posstart);
+                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
                         {
-                            var item = reader.ReadObject<BigEntityTableIndexItem>();
-                            if (item == null || reader.ReadedPostion() > posend)
+                            //var item = reader.ReadObject<BigEntityTableIndexItem>();
+                            if (reader.ReadedPostion() > posend)
                             {
                                 break;
                             }
@@ -1829,9 +1313,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
 
-                if (findkeyitem != null)
+                if (findkeyitem != null && !findkeyitem.Del)
                 {
-                    using (var reader = ObjTextReader.CreateReader(GetTableFile(tablename)))
+                    using (var reader = ObjTextReader.CreateReader(tablefile))
                     {
                         reader.SetPostion(findkeyitem.Offset);
 
@@ -1850,83 +1334,45 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public T Find<T>(string tablename, string key) where T : new()
-        {
-            var t = FindMem<T>(tablename, key);
-            if (object.Equals(t,default(T)))
-            {
-                t = FindDisk<T>(tablename, key);
-            }
-
-            return t;
-        }
-
         public IEnumerable<T> FindBatch<T>(string tablename, IEnumerable<string> keys) where T : new()
         {
             string tablefile = GetTableFile(tablename);
             EntityTableMeta meta = GetMetaData(tablename);
-            var dic = keyindexlistdic[tablename];
             BigEntityTableIndexItem indexitem = null;
-            var indexarr = keyindexarrdic[tablename];
+            var indexarr = keyindexdisklist[tablename];
 
+            var tablelocker = GetKeyLocker(tablename, string.Empty);
+
+            var findkey = new BigEntityTableIndexItem();
             using (ObjTextReader otr = ObjTextReader.CreateReader(tablefile))
             {
-                using (var keyreader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+                try
                 {
-                    foreach (var key in keys)
+                    tablelocker.EnterReadLock();
+                    using (var keyreader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
-                        if (dic.TryGetValue(key, out indexitem))
+                        foreach (var key in keys)
                         {
-                            if (indexitem != null && !indexitem.Del)
+                            findkey.Key = key;
+                            indexitem = keyindexmemlist[tablename].Find(findkey) ??
+                                keyindexmemtemplist[tablename].Find(findkey);
+                            if (indexitem != null)
                             {
-                                otr.SetPostion(indexitem.Offset);
-
-                                var readobj = otr.ReadObject<EntityTableItem<T>>();
-                                if (readobj != null)
+                                if (!indexitem.Del)
                                 {
-                                    yield return readobj.Data;
-                                    continue;
-                                }
-                                else
-                                {
-                                    yield return default(T);
-                                    continue;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (indexarr.Length == 0)
-                            {
-                                yield return default(T);
-                                continue;
-                            }
-
-                            if (indexarr.Length == 1)
-                            {
-                                var index = indexarr.FirstOrDefault();
-                                if (index == null || index.Del)
-                                {
-                                    yield return default(T);
-                                    continue;
-                                }
-
-                                if (index.Key.Equals(key))
-                                {
-                                    //先找到offset
-                                    otr.SetPostion(index.Offset);
+                                    otr.SetPostion(indexitem.Offset);
 
                                     var readobj = otr.ReadObject<EntityTableItem<T>>();
-                                    if (readobj == null)
-                                    {
-                                        yield return default(T);
-                                        continue;
-                                    }
-                                    else
+                                    if (readobj != null)
                                     {
                                         yield return readobj.Data;
                                         continue;
                                     }
+                                    else
+                                    {
+                                        yield return default(T);
+                                        continue;
+                                    }
                                 }
                                 else
                                 {
@@ -1936,151 +1382,350 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             }
                             else
                             {
-                                int mid = -1;
-                                int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
-                                {
-                                    Key = key
-                                }, ref mid);
-
-                                BigEntityTableIndexItem findkeyitem = null;
-                                if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+                                if (indexarr.Length == 0)
                                 {
                                     yield return default(T);
                                     continue;
                                 }
-                                else if (pos > -1)
+
+                                if (indexarr.Length == 1)
                                 {
-                                    findkeyitem = indexarr[pos];
-                                    if (findkeyitem.Del)
+                                    var index = indexarr.FirstOrDefault();
+                                    if (index == null || index.Del)
+                                    {
+                                        yield return default(T);
+                                        continue;
+                                    }
+
+                                    if (index.Key.Equals(key))
+                                    {
+                                        //先找到offset
+                                        otr.SetPostion(index.Offset);
+
+                                        var readobj = otr.ReadObject<EntityTableItem<T>>();
+                                        if (readobj == null)
+                                        {
+                                            yield return default(T);
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            yield return readobj.Data;
+                                            continue;
+                                        }
+                                    }
+                                    else
                                     {
                                         yield return default(T);
                                         continue;
                                     }
                                 }
-
-                                if (findkeyitem == null)
+                                else
                                 {
-                                    var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
-                                    if (pos == -1 && keymergeinfo.LoadFactor == 1)
+                                    int mid = -1;
+                                    int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
+                                    {
+                                        Key = key
+                                    }, ref mid);
+
+                                    BigEntityTableIndexItem findkeyitem = null;
+                                    if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
                                     {
                                         yield return default(T);
                                         continue;
                                     }
-
-                                    var posstart = indexarr[mid].KeyOffset;
-                                    var posend = indexarr[mid + 1].KeyOffset;
-
-                                    keyreader.SetPostion(posstart);
-
-                                    while (true)
+                                    else if (pos > -1)
                                     {
-                                        var item = keyreader.ReadObject<BigEntityTableIndexItem>();
-                                        if (item == null || keyreader.ReadedPostion() > posend)
+                                        findkeyitem = indexarr[pos];
+                                        if (findkeyitem.Del)
                                         {
-                                            break;
-                                        }
-                                        if (item.Key.Equals(key))
-                                        {
-                                            findkeyitem = item;
-                                            break;
+                                            yield return default(T);
+                                            continue;
                                         }
                                     }
-                                }
 
-                                if (findkeyitem != null)
-                                {
-                                    otr.SetPostion(findkeyitem.Offset);
-
-                                    var obj = otr.ReadObject<EntityTableItem<T>>();
-
-                                    if (obj == null)
+                                    if (findkeyitem == null)
                                     {
-                                        yield return default(T);
+                                        var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+                                        if (pos == -1 && keymergeinfo.LoadFactor == 1)
+                                        {
+                                            yield return default(T);
+                                            continue;
+                                        }
+
+                                        var posstart = indexarr[mid].KeyOffset;
+                                        var posend = indexarr[mid + 1].KeyOffset;
+
+                                        keyreader.SetPostion(posstart);
+                                        var buffer = new byte[1024];
+                                        foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+                                        {
+                                            //var item = keyreader.ReadObject<BigEntityTableIndexItem>();
+                                            if (keyreader.ReadedPostion() > posend)
+                                            {
+                                                break;
+                                            }
+                                            if (item.Key.Equals(key))
+                                            {
+                                                findkeyitem = item;
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    if (findkeyitem != null)
+                                    {
+                                        otr.SetPostion(findkeyitem.Offset);
+
+                                        var obj = otr.ReadObject<EntityTableItem<T>>();
+
+                                        if (obj == null)
+                                        {
+                                            yield return default(T);
+                                            continue;
+                                        }
+
+                                        yield return obj.Data;
                                         continue;
                                     }
 
-                                    yield return obj.Data;
+                                    yield return default(T);
                                     continue;
                                 }
-
-                                yield return default(T);
-                                continue;
                             }
                         }
                     }
                 }
+                finally
+                {
+                    tablelocker.ExitReadLock();
+                }
             }
         }
 
-        public T FindMem<T>(string tablename, string key) where T : new()
+        private BigEntityTableIndexItem GetNear(string tablename, string key, bool start)
         {
-            string tablefile = GetTableFile(tablename);
-            EntityTableMeta meta = GetMetaData(tablename);
-            var dic = keyindexlistdic[tablename];
-            BigEntityTableIndexItem indexitem=null;
-            if (dic.TryGetValue(key, out indexitem))
+            var meta = GetMetaData(tablename);
+            var findkey = new BigEntityTableIndexItem { Key = key };
+            BigEntityTableIndexItem findkeyitem = keyindexmemlist[tablename].Find(findkey);
+            if (findkeyitem != null)
             {
-                if (indexitem != null && !indexitem.Del)
-                {
-                    //先找到offset
-                    using (ObjTextReader otw = ObjTextReader.CreateReader(tablefile))
-                    {
-                        otw.SetPostion(indexitem.Offset);
+                return findkeyitem;
+            }
 
-                        var readobj = otw.ReadObject<EntityTableItem<T>>();
-                        if (readobj == null)
+            var indexarr = keyindexdisklist[tablename];
+            int mid = -1;
+            int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(findkey, ref mid);
+
+            if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+            {
+                return null;
+            }
+            else if (pos > -1)
+            {
+                findkeyitem = indexarr[pos];
+                return findkeyitem;
+            }
+
+
+            var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+
+            using (var keyreader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+            {
+                keyreader.SetPostion(indexarr[mid].KeyOffset);
+                var endoffset = indexarr[mid + 1].KeyOffset;
+
+                foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                {
+                    if (item.KeyOffset > endoffset)
+                    {
+                        break;
+                    }
+
+                    if (start && item.CompareTo(findkey) >= 0)
+                    {
+                        return item;
+                    }
+                    if (!start && item.CompareTo(findkey) >= 0)
+                    {
+                        return item;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public IEnumerable<T> Scan<T>(string tablename, string keystart, string keyend) where T : new()
+        {
+            var tablelocker = GetKeyLocker(tablename, string.Empty);
+            List<long> keylist = new List<long>();
+            tablelocker.EnterReadLock();
+            try
+            {
+                var start = GetNear(tablename, keystart, true);
+
+                if (start != null)
+                {
+                    var end = GetNear(tablename, keyend, false);
+                    var compere = start.CompareTo(end);
+                    if (end != null && compere <= 0)
+                    {
+                        if (compere == 0)
                         {
-                            return default(T);
+                            if (!start.Del)
+                            {
+                                keylist.Add(start.Offset);
+                            }
                         }
                         else
                         {
-                            return readobj.Data;
+                            using (var keyreader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+                            {
+                                keyreader.SetPostion(start.KeyOffset);
+                                foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0))
+                                {
+                                    if (k.KeyOffset > end.KeyOffset)
+                                    {
+                                        break;
+                                    }
+                                    if (!k.Del)
+                                    {
+                                        keylist.Add(k.Offset);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-
-            return default(T);
-        }
-
-        public IEnumerable<T> Find<T>(string tablename, string index,string value) where T : new()
-        {
-            string tablefile = GetTableFile(tablename);
-            EntityTableMeta meta = GetMetaData(tablename);
-            Dictionary<long, BigEntityTableIndexItem> arr = null;
-            BigEntityTableIndexItem indexitem = null;
-
-            var indexobj=LoadIndex(tablename, index, meta);
-            if (value == null)
+            finally
             {
-                value = string.Empty;
+                tablelocker.ExitReadLock();
             }
-            if (indexobj.Dics.TryGetValue(value, out arr))
+
+            if (keylist.Count > 0)
             {
-                //先找到offset
-                using (ObjTextReader otw = ObjTextReader.CreateReader(tablefile))
+                keylist.Sort();
+                using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
                 {
-                    foreach (var o in arr)
+                    foreach (var k in keylist)
                     {
-                        indexitem = (BigEntityTableIndexItem)o.Value;
-                        if (!indexitem.Del)
-                        {
-                            otw.SetPostion(indexitem.Offset);
-
-                            var readobj = otw.ReadObject<EntityTableItem<T>>();
-                            if (readobj == null)
-                            {
-                                yield return default(T);
-                            }
-                            else
-                            {
-                                yield return readobj.Data;
-                            }
-                        }
+                        otr.SetPostion(k);
+                        yield return otr.ReadObject<EntityTableItem<T>>().Data;
                     }
                 }
             }
         }
 
+
+        public IEnumerable<T> Find<T>(string tablename, Func<T, bool> findcondition) where T : new()
+        {
+            var buffer = new byte[1024 * 1024 * 10];
+            using (var reader = ObjTextReader.CreateReader(GetTableFile(tablename)))
+            {
+                foreach (var item in reader.ReadObjectsWating<EntityTableItem<T>>(1, null, buffer))
+                {
+                    if (item == null)
+                    {
+                        yield break;
+                    }
+
+                    if (item.Flag == EntityTableItemFlag.Del)
+                    {
+
+                        continue;
+                    }
+
+                    if (findcondition(item.Data))
+                    {
+                        yield return item.Data;
+                    }
+                }
+            }
+        }
+        #endregion
+
+        #region 索引操作
+        public IEnumerable<T> Find<T>(string tablename, string index, string value) where T : new()
+        {
+            var tablefile = GetTableFile(tablename);
+            var meta = GetMetaData(tablename);
+            var locker = GetKeyLocker(tablename, string.Empty);
+            List<BigEntityTableIndexItem> indexlist = null;
+            locker.EnterReadLock();
+            try
+            {
+                indexlist = FindIndex(tablename, meta, index, value).ToList();
+            }
+            finally
+            {
+                locker.ExitReadLock();
+            }
+            if (indexlist.Count > 0)
+            {
+                using (ObjTextReader reader = ObjTextReader.CreateReader(tablefile))
+                {
+                    ProcessTraceUtil.Trace("open tablefile");
+                    foreach (var item in indexlist)
+                    {
+                        reader.SetPostion(item.Offset);
+                        var data = reader.ReadObject<EntityTableItem<T>>();
+                        if (data.Flag == EntityTableItemFlag.Ok)
+                        {
+                            yield return data.Data;
+                        }
+                    }
+                    ProcessTraceUtil.Trace("find end");
+                }
+            }
+        }
+
+        public int Count(string tablename, string index, string value)
+        {
+            var meta = GetMetaData(tablename);
+            var locker = GetKeyLocker(tablename, string.Empty);
+            locker.EnterReadLock();
+            try
+            {
+                List<BigEntityTableIndexItem> indexlist = FindIndex(tablename, meta, index, value).ToList();
+                return indexlist.Count;
+            }
+            finally
+            {
+                locker.ExitReadLock();
+            }
+
+        }
+
+        public void ReBuildIndex(string tablename)
+        {
+            var tablelocker = GetKeyLocker(tablename, string.Empty);
+            var tablefile = GetTableFile(tablename);
+            tablelocker.EnterWriteLock();
+            try
+            {
+                var files = System.IO.Directory.GetFiles(dirbase);
+                foreach (var f in files)
+                {
+                    var filename = System.IO.Path.GetFileName(f);
+                    if (filename.EndsWith(".id") && filename.StartsWith(tablename))
+                    {
+                        System.IO.File.Delete(f);
+                    }
+                }
+                //开始创建
+                string metafile = GetMetaFile(tablename);
+                if (!File.Exists(metafile))
+                {
+                    throw new Exception("找不到元文件:" + tablename);
+                }
+            }
+            finally
+            {
+                tablelocker.ExitWriteLock();
+            }
+        }
+        #endregion
     }
 }

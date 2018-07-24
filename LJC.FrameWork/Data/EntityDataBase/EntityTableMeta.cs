@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LJC.FrameWork.EntityBuf;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -105,6 +106,16 @@ namespace LJC.FrameWork.Data.EntityDataBase
             get
             {
                 return _indexProperties;
+            }
+        }
+
+        private Dictionary<string, EntityType> _entityTypeDic = new Dictionary<string, EntityType>();
+        [XmlIgnore]
+        public Dictionary<string, EntityType> EntityTypeDic
+        {
+            get
+            {
+                return _entityTypeDic;
             }
         }
 

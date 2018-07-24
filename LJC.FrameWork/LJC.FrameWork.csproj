@@ -273,6 +273,8 @@
     <Compile Include="Data\QuickDataBase\ReportAttr.cs" />
     <Compile Include="Data\QuickDataBase\TimePoint.cs" />
     <Compile Include="Data\QuickDataBase\TimeSpan.cs" />
+    <Compile Include="EntityBuf2\EntityBufCore2.cs" />
+    <Compile Include="EntityBuf2\MemoryStreamWriter2.cs" />
     <Compile Include="EntityBuf\EntityBufCore.cs" />
     <Compile Include="EntityBuf\EntityBufType.cs" />
     <Compile Include="EntityBuf\EntityBufTypeFlag.cs" />

@@ -31,6 +31,15 @@ namespace LJC.FrameWork.EntityBuf
         }
 
         /// <summary>
+        /// 如Dictionary<string,string>
+        /// </summary>
+        public Type[] GenerTypes
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
         /// 类名，只是类
         /// </summary>
         public Type ClassType
