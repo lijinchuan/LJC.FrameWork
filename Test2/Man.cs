@@ -7,7 +7,7 @@ using System.Text;
 namespace Test2
 {
     [ProtoContract]
-    public class Man:IComparable<Man>
+    public class Man
     {
         [ProtoMember(1)]
         public string IDCard
@@ -30,16 +30,18 @@ namespace Test2
             set;
         }
 
+        private string _addr="addr";
         [ProtoMember(4)]
         public string Addr
         {
-            get;
-            set;
-        }
-
-        public int CompareTo(Man other)
-        {
-            return this.Name.CompareTo(other.Name);
+            get
+            {
+                return _addr;
+            }
+            set
+            {
+                _addr = value;
+            }
         }
     }
 }

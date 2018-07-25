@@ -1,11 +1,10 @@
 ﻿using Ljc.Com.NewsService.Entity;
 using LJC.Com.StockService.Contract;
-using LJC.FrameWork.Collections;
 using LJC.FrameWork.Comm;
-using LJC.FrameWork.Comm.Coroutine;
 using LJC.FrameWork.Comm.TextReaderWriter;
 using LJC.FrameWork.Data.EntityDataBase;
 using LJC.FrameWork.Data.Mongo;
+using LJC.FrameWork.EntityBuf;
 using LJC.FrameWork.SOA;
 using LJC.FrameWork.SocketApplication;
 using LJC.FrameWork.SocketApplication.SocketEasyUDP.Client;
@@ -13,12 +12,40 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace Test2
 {
     class Program
     {
+        public class Person
+        {
+            public string Name
+            {
+                get;
+                set;
+            }
+
+            public int Age
+            {
+                get;
+                set;
+            }
+
+            public DateTime Birth
+            {
+                get;
+                set;
+            }
+
+            public byte[] Info
+            {
+                get;
+                set;
+            }
+        }
+
         static void TryRead()
         {
             //string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Debug\testrwobjex.bin";
@@ -70,7 +97,7 @@ namespace Test2
             string filename = @"E:\Work\learn\Git\LJC.FrameWork\Test\bin\Debug\testrwobjex.bin";
             using (LJC.FrameWork.Comm.ObjTextReader reader = LJC.FrameWork.Comm.ObjTextReader.CreateReader(filename))
             {
-                foreach(var item in reader.ReadObjectWating<Man>())
+                foreach(var item in reader.ReadObjectsWating<Man>())
                 {
                     Console.WriteLine(item.Name);
                 }
@@ -166,430 +193,187 @@ namespace Test2
             Console.WriteLine(obj.Message);
         }
 
-        static void TestSorteArray()
+        static void TestUdpClient()
         {
-            List<BigEntityTableIndexItem> indexarray = new List<BigEntityTableIndexItem>();
-            for (int i = 0; i < 10; i++)
+            SessionClient udpclient = new SessionClient("127.0.0.1", 19000);
+            udpclient.StartClient();
+            DateTime now = DateTime.Now;
+            for (int i = 0; i < 100000; i++)
             {
-                indexarray.Add(new BigEntityTableIndexItem
+                if (udpclient.SetMTU(10240))
                 {
-                    Key=((i*2)+1).ToString(),
-                    Del=false,
-                    KeyOffset=0,
-                    len=100,
-                    Offset=0
-                });
-            }
-            SorteArray<LJC.FrameWork.Data.EntityDataBase.BigEntityTableIndexItem> sa = new SorteArray<BigEntityTableIndexItem>(indexarray.OrderBy(p=>p.Key).ToArray());
-            int mid=-100;
-            int fnd = 0;
-
-            var array = sa.GetArray().ToArray();
-
-            for (int i = 0; i < 30; i++)
-            {
-                if (i == 22)
-                {
-                    i = 99;
-                }
-                fnd = sa.Find(new BigEntityTableIndexItem
-                {
-                    Del=false,
-                    Key=i.ToString()
-                }, ref mid);
-
-                if (mid == array.Length - 1)
-                {
-                    Console.WriteLine(string.Format("查找:{0},fnd:{1},mid:{2},real:{3},midread:{4},midreadnext:{5}", i, fnd, mid, fnd > -1 ? array[fnd].Key : "", array[mid].Key, "最右边"));
-                }
-                else if (mid == -1)
-                {
-                    Console.WriteLine(string.Format("查找:{0},fnd:{1},mid:{2},real:{3},midread:{4},midreadnext:{5}", i, fnd, mid, fnd > -1 ? array[fnd].Key : "", "最左边", array[mid + 1].Key));
-                }
-                else
-                {
-                    Console.WriteLine(string.Format("查找:{0},fnd:{1},mid:{2},real:{3},midread:{4},midreadnext:{5}", i, fnd, mid, fnd > -1 ? array[fnd].Key : "", array[mid].Key, array[mid + 1].Key));
+                    //Console.WriteLine("设置mtu成功");
                 }
             }
-        }
 
-        static void TestLocaldb()
-        {
-            //Man 
-            EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man), new[] { "IDCard", "Sex" });
-            //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
-            DateTime time = DateTime.Now;
-            for(int i=0;i<100000;i++){
-                EntityTableEngine.LocalEngine.Insert("Man", new Man
-                {
-                    Addr="addr"+Guid.NewGuid().ToString(),
-                    IDCard="id"+i,
-                    Name="name"+i,
-                    Sex=new Random(Guid.NewGuid().GetHashCode()).Next(2)
-                });
-            }
-
-            Console.WriteLine("写入完成:"+DateTime.Now.Subtract(time).TotalMilliseconds);
-            Console.Read();
-        }
-
-        static void TestBigLocaldb()
-        {
-            int insertcount = 10000000;
-            //Man 
-            BigEntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
-            //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
-            DateTime time = DateTime.Now;
-            List<Man> list = new List<Man>();
-            for (int i = 0; i < insertcount; i++)
-            {
-                
-                var man=new Man
-                {
-                    Addr = "addr" + Guid.NewGuid().ToString(),
-                    IDCard = "id" + i,
-                    Name = "name" + i,
-                    Sex = new Random(Guid.NewGuid().GetHashCode()).Next(2)
-                };
-                list.Add(man);
-                if (list.Count > 10000)
-                {
-                    BigEntityTableEngine.LocalEngine.InsertBatch("Man", list);
-                    list.Clear();
-                }
-            }
-            if (list.Count > 0)
-            {
-                BigEntityTableEngine.LocalEngine.InsertBatch("Man", list);
-                list.Clear();
-            }
-            Console.WriteLine("写入完成:" + DateTime.Now.Subtract(time).TotalMilliseconds);
-           // Console.Read();
-        }
-
-        static void TestLocaldb2()
-        {
-            //Man 
-            EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man), new[] { "IDCard", "Sex" });
-            //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
-            DateTime time = DateTime.Now;
-            for (int i = 100000; i < 200000; i++)
-            {
-                EntityTableEngine.LocalEngine.Insert("Man", new Man
-                {
-                    Addr = "addr" + Guid.NewGuid().ToString(),
-                    IDCard = "id" + i,
-                    Name = "name" + i,
-                    Sex = new Random(Guid.NewGuid().GetHashCode()).Next(2)
-                });
-            }
-
-            Console.WriteLine("写入完成:" + DateTime.Now.Subtract(time).TotalMilliseconds);
-            Console.Read();
-        }
-
-        static void TestOrder()
-        {
-            BigEntityTableEngine.LocalEngine.MergeIndex("Man", "Name");
-            using (ObjTextReader reader = ObjTextReader.CreateReader(@"D:\GitHub\LJC.FrameWork\Test2\bin\Release\localdb\Man.id"))
-            {
-                foreach(var item in  reader.ReadObjectsWating<EntityTableIndexItem>(1))
-                {
-                    Console.WriteLine(item.Key + "->" + item.Offset);
-                }
-            }
+            Console.WriteLine("用时:"+(DateTime.Now.Subtract(now).TotalMilliseconds));
 
             Console.Read();
         }
 
-        static void TestLocaldbFind()
+        static string PrintCmd()
         {
-            for (int i = 0; i < 10; i++)
+            Console.WriteLine("1-测试BigEntityTable");
+            Console.WriteLine("2-测试二分法排序");
+            Console.WriteLine("0-退出");
+            return Console.ReadLine();
+        }
+
+        static void TestUdpClient2()
+        {
+            SessionClient[] udpclients=new SessionClient[3];
+            for (int i = 0; i < udpclients.Length; i++)
             {
-                var time = DateTime.Now;
-                int cnt = 0;
-                //foreach (var m in EntityTableEngine.LocalEngine.Find<Man>("Man", "Sex", "1"))
-                //{
-                //    //Console.WriteLine(m.Name + " " + m.Sex);
-                //    cnt++;
-                //}
-                foreach (var m in EntityTableEngine.LocalEngine.Find<Man>("Man", "name8651"))
-                {
-                    Console.WriteLine(m.Name + " " + m.Addr);
-                    cnt++;
-                }
-                Console.WriteLine("读取完成:" + cnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
+                udpclients[i] = new SessionClient("127.0.0.1", 19000);
+                udpclients[i].StartClient();
             }
+
+            var now = DateTime.Now;
+
+            List<int> list = new List<int>();
+            for (int i = 0; i < 100000; i++)
+            {
+                list.Add(i);
+            }
+
+            //LJC.FrameWork.Comm.TaskHelper.RunTask2<int>(list, 3, (i) =>
+            //{
+            //    udpclients[i%udpclients.Length].SetMTU(10240);
+            //});
+
+            Console.WriteLine("多线程用时:" + (DateTime.Now.Subtract(now).TotalMilliseconds));
+
             Console.Read();
         }
 
-        static void TestBigLocaldbFind()
+        static void TestNio()
         {
-            //Console.WriteLine("cnt:"+BigEntityTableEngine.LocalEngine.Count("Man"));
-            //Console.Read();
-            int insertcount = 10000000;
-            int ccount = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, insertcount))
-            {
-                //Console.WriteLine(item.Name);
-                ccount++;
-            }
-            Console.WriteLine("ccount:" + ccount);
+            var resp = ESBClient.DoSOARequest<CallBackRequest>(100,
+                               1, new SubmitSparkRequest()
+                               {
+                                   Context = new SparkLauncherContext
+                                   {
+                                       AppResource = "AppResource",
+                                       MainClass = "MainClass",
+                                       Master = "Master",
+                                       SparkHome = "SparkHome",
 
-            for (int c = 0; c < 1; c++)
+                                   },
+                                   TaskId = "test1"
+                               });
+        }
+
+        static void TestEntityTable()
+        {
+            EntityTableEngine engine = new EntityTableEngine(null);
+            engine.CreateTable("testperson", "Name", typeof(Person));
+            engine.Insert("testperson", new Person
             {
-                var time = DateTime.Now;
-                int cnt = 0;
-                int readcnt = 0;
-                for (int i = 0; i < insertcount; i++)
+                Name = "ljc1",
+                Age = 20,
+                Birth = DateTime.Now.AddYears(-20)
+            });
+
+            engine.Insert("testperson", new Person
+            {
+                Name = "ljc2",
+                Age = 21,
+                Birth = DateTime.Now.AddYears(-21)
+            });
+
+            engine.Insert("testperson", new Person
+            {
+                Name = "ljc3",
+                Age = 21,
+                Birth = DateTime.Now.AddYears(-21)
+            });
+        }
+
+        static void TestEntityTableRead()
+        {
+            EntityTableEngine engine = new EntityTableEngine(null);
+            DateTime st = DateTime.Now;
+            //for (int i = 0; i < 10000; i++)
+            {
+                foreach (var item in engine.Find<Person>("testperson", "ljc2"))
                 {
-
-                    var m = BigEntityTableEngine.LocalEngine.Find<Man>("Man", "name" + i);
-                    if (m == null)
-                    {
-                        cnt++;
-                        Console.WriteLine("找不到用户:" + ("name" + i));
-                        Console.Read();
-                    }
-                    readcnt++;
-                    if (readcnt % 10000 == 0)
-                    {
-                        Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
-                    }
-
+                    Console.WriteLine(item.Name + "," + item.Age);
                 }
-                Console.WriteLine("读取完成:" + cnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
-
             }
-            Console.Read();
+
+            Console.WriteLine("用时:" + (DateTime.Now.Subtract(st).TotalMilliseconds));
         }
 
-        static void TestBigLocaldbFindBatch()
+        static void TestEntityTableDel()
         {
-            //Console.WriteLine("cnt:"+BigEntityTableEngine.LocalEngine.Count("Man"));
-            //Console.Read();
-
-            int insertcount = 10000000;
-            int ccount = 0;
-            var start = DateTime.Now;
-            foreach (var item in BigEntityTableEngine.LocalEngine.List<Man>("Man", 1, insertcount))
-            {
-                //Console.WriteLine(item.Name);
-                ccount++;
-            }
-            Console.WriteLine("ccount:" + ccount+",用时:"+(DateTime.Now.Subtract(start).TotalSeconds)+"秒");
-
-            for (int c = 0; c < 1; c++)
-            {
-                var time = DateTime.Now;
-                int cnt = 0;
-                int readcnt = 0;
-
-                var findkeylist = new List<string>();
-                for (int i = 0; i < insertcount; i++)
-                {
-                    var key = "name" + i;
-
-                    findkeylist.Add(key);
-
-                    if (findkeylist.Count >= 10000)
-                    {
-                        DateTime timenow = DateTime.Now;
-                        var findvallist = BigEntityTableEngine.LocalEngine.FindBatch<Man>("Man", findkeylist).ToList();
-
-                        int nullcount = findvallist.Where(p => p == null).Count();
-                        cnt += nullcount;
-                        if (nullcount > 0)
-                        {
-                            for (int ii = 0; ii < findvallist.Count; ii++)
-                            {
-                                if (findvallist[ii] == null)
-                                {
-                                    Console.WriteLine("key->" + findkeylist[ii]);
-                                }
-                            }
-                            Console.Read();
-                        }
-                        readcnt += findkeylist.Count;
-                        Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(timenow).TotalMilliseconds + "，未找到记录数:" + cnt);
-                        findkeylist.Clear();
-                    }
-
-                }
-
-                if (findkeylist.Count > 0)
-                {
-                    DateTime timenow = DateTime.Now;
-                    var findvallist = BigEntityTableEngine.LocalEngine.FindBatch<Man>("Man", findkeylist).ToList();
-                    int nullcount = findvallist.Where(p => p == null).Count();
-                    cnt += nullcount;
-                    if (nullcount > 0)
-                    {
-                        for (int i = 0; i < findvallist.Count; i++)
-                        {
-                            if (findvallist[i] == null)
-                            {
-                                Console.WriteLine("key->" + findkeylist[i]);
-                            }
-                        }
-                        Console.Read();
-                    }
-                    readcnt += findkeylist.Count;
-                    Console.WriteLine(cnt + "用时:" + DateTime.Now.Subtract(timenow).TotalMilliseconds + "，未找到记录数:" + cnt);
-                    findkeylist.Clear();
-                }
-                Console.WriteLine("读取完成:" + readcnt + "条,用时:" + DateTime.Now.Subtract(time).TotalMilliseconds);
-
-            }
-            Console.Read();
+            EntityTableEngine engine = new EntityTableEngine(null);
+            engine.Delete("testperson", "ljc1");
         }
 
-        static void TestBigLocalUpdate()
+        static void TestEntityTableUpdate()
         {
-            var man1920=BigEntityTableEngine.LocalEngine.FindMem<Man>("Man","name1920");
-            Console.Write("修改前:"+man1920.Addr);
-            man1920.Addr = "龙坪镇新村李陈1026";
-            BigEntityTableEngine.LocalEngine.Update<Man>("Man", man1920);
-            var man1920_u = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name1920");
-            Console.Write("修改后:" + man1920_u.Addr);
-
-            man1920_u.Addr = Guid.NewGuid().ToString() + "asfasdfasdfase_addr";
-            BigEntityTableEngine.LocalEngine.Update<Man>("Man", man1920_u);
-
-            var man1920_uu = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name1920");
-            Console.Write("修改后:" + man1920_uu.Addr);
+            EntityTableEngine engine = new EntityTableEngine(null);
+            Console.WriteLine("修改前:" + engine.Find<Person>("testperson", "ljc2").First().Age);
+            engine.Update<Person>("testperson", new Person
+            {
+                Name = "ljc2",
+                Age = 30
+            });
+            Console.WriteLine("修改后:" + engine.Find<Person>("testperson", "ljc2").First().Age);
         }
 
-        static void TestBigLocaldbDel()
-        {
-            var boo = BigEntityTableEngine.LocalEngine.DeleteMem("Man", "name3991");
-            Console.WriteLine("删除:" + boo);
-
-            var items = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name3991");
-            if (items!=null)
-            {
-                Console.WriteLine("查找name3991:" + items.Name);
-            }
-            else
-            {
-                Console.WriteLine("查找name3991:不存在");
-            }
-
-            items = BigEntityTableEngine.LocalEngine.FindMem<Man>("Man", "name3992");
-            if (items!=null)
-            {
-                Console.WriteLine("查找name3992:" + items.Name);
-            }
-            else
-            {
-                Console.WriteLine("查找name3992:不存在");
-            }
-        }
-
-        class coroutineTest : LJC.FrameWork.Comm.Coroutine.ICoroutineUnit
-        {
-            DateTime time = DateTime.Now;
-            public bool IsSuccess()
-            {
-                return false;
-            }
-
-            public bool IsDone()
-            {
-                return DateTime.Now.Subtract(time).TotalSeconds > 10;
-            }
-
-            public bool IsTimeOut()
-            {
-                return false;
-            }
-
-            public void Exceute()
-            {
-                
-            }
-
-            public object GetResult()
-            {
-                return null;
-            }
-
-            public void CallBack(CoroutineCallBackEventArgs args)
-            {
-                Console.WriteLine("计时完成");
-            }
-        }
 
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            while (true)
+            var cmd = PrintCmd();
+            IFun funx = null;
+            while (cmd != "0")
             {
-                Console.WriteLine("选择操作 1-写库 2-读库 3-整理索引");
-                var cmd = Console.ReadLine();
-
-                if (cmd == "1")
+                switch (cmd)
                 {
-                    //TestSorteArray();
-                    //Console.Read();
-                    //return;
-                    TestBigLocaldb();
+                    case "1":
+                        {
+                            funx = new Fun1();
+                            break;
+                        }
+                    case "2":
+                        {
+                            funx = new Fun2();
+                            break;
+                        }
                 }
 
-                if (cmd == "2")
+                if (funx != null)
                 {
-                    //TestBigLocaldbDel();
-                    //TestBigLocalUpdate();
-                    //BigEntityTableEngine.LocalEngine.MergeIndex("Man","Name");
-                    TestBigLocaldbFindBatch();
+                    try
+                    {
+                        funx.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
                 }
 
-                if (cmd == "3")
-                {
-                    BigEntityTableEngine.LocalEngine.MergeIndex("Man", "Name");
-                }
+                cmd = PrintCmd();
             }
-            return;
-
-            TestLocaldb();
-            //TestLocaldb2();
-            //TestLocaldbFind();
-            TestOrder();
-            Console.Read();
-
-            CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new coroutineTest());
-
-            Thread.Sleep(15000);
-            CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new coroutineTest());
-
-            Thread.Sleep(30000);
-            CoroutineEngine.DefaultCoroutineEngine.Dispatcher(new coroutineTest());
 
             
-
-            Console.Read();
             return;
-
-            ESBUdpClient client = new ESBUdpClient("192.168.0.100", 2998);
-            client.StartClient();
-            client.LoginFail += () =>
-                {
-                    Console.WriteLine("登录失败");
-                    client.Dispose();
-                };
-            client.Login(null, null);
-
-            Console.Read();
-
-            Message msg = new Message();
-            var bytes= LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
-
-            var newmsg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(bytes);
-
-
-            TestEsbservices();
-            Console.Read();
         }
+
+        static void udpclient_Error(Exception obj)
+        {
+            Console.WriteLine(obj.ToString());
+        }
+
+        static void TestRedisSpeed()
+        {
+            //Host_Redis
+            
+        }
+
 
         static void client_Error(Exception obj)
         {
@@ -662,7 +446,7 @@ namespace Test2
 
             var bytes = Convert.FromBase64String(bytestring);
 
-            var list = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<List<LJC.Com.StockService.Contract.StockSimpleInfo>>(bytes, true);
+            var list = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<List<LJC.Com.StockService.Contract.StockSimpleInfo>>(bytes);
         }
 
         static void client_LoginSuccess()
@@ -678,7 +462,6 @@ namespace Test2
                             MessageHeader = new LJC.FrameWork.SocketApplication.MessageHeader
                             {
                                 TransactionID = LJC.FrameWork.SocketApplication.SocketApplicationComm.GetSeqNum(),
-                                MessageTime = DateTime.Now,
                                 MessageType = 10240
                             }
                         };
@@ -725,6 +508,87 @@ namespace Test2
             //throw new NotImplementedException();
             string msg = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<string>(obj.MessageBuffer);
             Console.WriteLine("收到广播消息:" + msg);
+        }
+
+        protected static byte[] MargeBag(byte[] bag)
+        {
+            string str = "CwgAAAAAAABFAAAASAAAANgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+            bag = Convert.FromBase64String(str);
+            int packageno = 0, packagelen = 0;
+            Dictionary<string, byte[][]> TempBagDic = new Dictionary<string, byte[][]>();
+            try
+            {
+                packageno = BitConverter.ToInt32(bag, 8);
+                packagelen = BitConverter.ToInt32(bag, 12);
+
+                if (packagelen > 1)
+                {
+                    long bagid = BitConverter.ToInt64(bag, 16);
+                    string key = "gg";
+                    byte[][] bags = null;
+                    if (!TempBagDic.TryGetValue(key, out bags))
+                    {
+                        lock (TempBagDic)
+                        {
+                            if (!TempBagDic.TryGetValue(key, out bags))
+                            {
+                                bags = new byte[packagelen][];
+                                TempBagDic.Add(key, bags);
+
+                            }
+                        }
+                    }
+
+                    lock (bags)
+                    {
+                        var index = packageno - 1;
+                        if (bags[index] == null)
+                        {
+                            bags[index] = bag;
+                        }
+                    }
+
+                    for (var i = 0; i < bags.Length; i++)
+                    {
+                        if (bags[i] == null)
+                        {
+                            return null;
+                        }
+                    }
+
+                    lock (TempBagDic)
+                    {
+                        //TempBagDic.Remove(key);
+                        TempBagDic[key] = new byte[0][];
+                    }
+
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
+                    {
+                        for (int i = 0; i < bags.Length; i++)
+                        {
+                            var offset = 24;
+                            ms.Write(bags[i], offset, bags[i].Length - offset);
+                        }
+
+                        return ms.ToArray();
+                    }
+                }
+                else
+                {
+                    return bag.Skip(24).ToArray();
+                }
+            }
+            catch (Exception ex)
+            {
+                ex.Data.Add("packageno", packageno);
+                ex.Data.Add("packagelen", packagelen);
+                ex.Data.Add("bag", Convert.ToBase64String(bag));
+
+                //LogManager.LogHelper.Instance.Error("MargeBag error", ex);
+
+                throw ex;
+            }
+
         }
     }
 }

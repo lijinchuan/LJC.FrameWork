@@ -246,6 +246,7 @@
     </Compile>
     <Compile Include="ConfigurationSectionHandler\ThreadPoolConfig.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableEngine.cs" />
+    <Compile Include="Data\EntityDataBase\BigEntityTableEngineTest.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableEngine~Index.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableEngine~Key.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableIndexItem.cs" />
