@@ -79,6 +79,24 @@ namespace LJC.FrameWork.Comm
         //    return prop.GetValue(o, null);
         //}
 
+        public static Func<object, object> GetGetValueFunc(Type type, PropertyInfoEx propertyInfo)
+        {
+            ParameterExpression instance = Expression.Parameter(
+            typeof(object), "instance");
+            Expression instanceCast = Expression.Convert(
+            instance, propertyInfo.PropertyInfo.ReflectedType);
+            Expression propertyAccess = Expression.Property(
+            instanceCast, propertyInfo.PropertyInfo);
+            UnaryExpression castPropertyValue = Expression.Convert(
+            propertyAccess, typeof(object));
+
+            Expression<Func<object, object>> lamexpress =
+            Expression.Lambda<Func<object, object>>(
+                castPropertyValue, instance);
+
+            return lamexpress.Compile();
+        }
+
         public static object Eval(this object o, PropertyInfoEx propertyInfo)
         {
             if (o == null)
@@ -176,6 +194,24 @@ namespace LJC.FrameWork.Comm
             if (property == null)
                 return;
             property.SetValue(o, val, null);
+        }
+
+        public static Action<object, object> GetSetValueFunc(Type type, PropertyInfoEx property)
+        {
+            ParameterExpression instance = Expression.Parameter(typeof(object), "instance");
+            ParameterExpression valParameter = Expression.Parameter(typeof(object), "val");
+
+            //转换为真实类型
+            var instanceCast = Expression.Convert(instance, type);
+            var valParameterCast = Expression.Convert(valParameter, property.PropertyInfo.PropertyType);
+
+
+            var body = Expression.Call(instanceCast, property.PropertyInfo.GetSetMethod(), valParameterCast);
+            var lamexpress = Expression.Lambda<Action<object, object>>(body, instance, valParameter).Compile();
+
+            //property.SetValueMethed = lamexpress;
+
+            return lamexpress;
         }
 
         public static void SetValue(this object o, PropertyInfoEx property, object val)

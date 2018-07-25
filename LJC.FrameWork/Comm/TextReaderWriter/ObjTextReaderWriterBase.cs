@@ -26,6 +26,7 @@ namespace LJC.FrameWork.Comm
             }
         }
 
+
         protected bool CheckNexIsEndSpan(Stream s)
         {
             if(s.Length-s.Position<4)
@@ -71,10 +72,10 @@ namespace LJC.FrameWork.Comm
             lock (this)
             {
                 var oldpos = s.Position;
-                if (s.Length >= 4)
+                if (s.Position >= 4)
                 {
                     var byts3 = new byte[3];
-                    s.Position = s.Length - 3;
+                    s.Position = s.Position - 3;
                     s.Read(byts3, 0, 3);
 
                     s.Position = oldpos;

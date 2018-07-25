@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
+using LJC.FrameWork.Comm;
 
 namespace LJC.FrameWork
 {
@@ -24,6 +25,9 @@ namespace LJC.FrameWork
         public PropertyInfoEx(PropertyInfo prop)
         {
             _propertyInfo = prop;
+
+            this.GetValueMethed = ReflectionHelper.GetGetValueFunc(prop.DeclaringType, this);
+            this.SetValueMethed = ReflectionHelper.GetSetValueFunc(prop.DeclaringType, this);
         }
 
         public bool IsSetSetValueMethed
