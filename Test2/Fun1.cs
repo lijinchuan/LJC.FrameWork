@@ -13,7 +13,7 @@ namespace Test2
     {
         static void TestBigLocaldb()
         {
-            int insertcount = 3000000;
+            int insertcount = 1200000;
             //Man 
             BigEntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
@@ -49,7 +49,7 @@ namespace Test2
         {
             //Console.WriteLine("cnt:"+BigEntityTableEngine.LocalEngine.Count("Man"));
             //Console.Read();
-            int insertcount = 3000000;
+            int insertcount = 1200000;
             Console.WriteLine("要先统计所有的数据吗？Y/N");
             var input = Console.ReadLine();
             if (input.Equals("Y"))

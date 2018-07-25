@@ -143,6 +143,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                             var pp = ttype.GetProperty(keyname);
                             meta.KeyProperty = new PropertyInfoEx(pp);
+                            meta.EntityTypeDic.Add(keyname, EntityBuf2.EntityBufCore2.GetTypeBufType(pp.PropertyType).Item1.EntityType);
+                            metadic.Add(tablename, meta);
 
                             if (indexs != null && indexs.Length > 0)
                             {
@@ -284,6 +286,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     meta.Indexs = new string[] { };
                 }
                 meta.KeyProperty = new PropertyInfoEx(meta.TType.GetProperty(meta.KeyName));
+                var pp = meta.TType.GetProperty(meta.KeyName);
+                meta.EntityTypeDic.Add(meta.KeyName, EntityBuf2.EntityBufCore2.GetTypeBufType(pp.PropertyType).Item1.EntityType);
+                metadic.Add(tablename, meta);
 
                 if (meta.Indexs != null)
                 {
