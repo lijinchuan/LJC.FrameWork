@@ -41,6 +41,50 @@ namespace LJC.FrameWork.Comm
             catch { }
         }
 
+        private static long GetMem(string munit)
+        {
+            long mem = GC.GetTotalMemory(false);
+            if (!string.IsNullOrWhiteSpace(munit))
+            {
+                munit = munit.ToLower();
+                switch (munit)
+                {
+                    case "k":
+                    case "kb":
+                        {
+                            mem /= 1024;
+                            break;
+                        }
+                    case "m":
+                    case "mb":
+                        {
+                            mem /= (1024 * 1024);
+                            break;
+                        }
+                    case "g":
+                    case "gb":
+                        {
+                            mem /= (1024 * 1024 * 1024);
+                            break;
+                        }
+                }
+            }
+            return mem;
+        }
+
+        public static void TraceMem(string message, string munit = "k")
+        {
+            try
+            {
+                var threadid = Thread.CurrentThread.ManagedThreadId;
+                TraceDic[threadid].Enqueue(new Tuple<string, long>(string.Format("[mem:{1}{2}字节]{0}", message, GetMem(munit), munit), Environment.TickCount & Int32.MaxValue));
+            }
+            catch
+            {
+
+            }
+        }
+
         public static long GetTraceTickes()
         {
             try

@@ -24,17 +24,21 @@ namespace LJC.FrameWork.Comm
             else
             {
                 this._encodeType = (ObjTextReaderWriterEncodeType)firstchar;
+                _sw.BaseStream.Position = _sw.BaseStream.Length;
 
-                if (CheckHasEndSpan(_sw.BaseStream))
+                while (true)
                 {
-                    _sw.BaseStream.Position = _sw.BaseStream.Length - 3;
-                }
-                else
-                {
-                    _sw.BaseStream.Position = _sw.BaseStream.Length;
+                    if (CheckHasEndSpan(_sw.BaseStream))
+                    {
+                        _sw.BaseStream.Position -= 3;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
-            Flush();
+            //Flush();
             _canReadFromBack = CanReadFormBack;
             if(_canReadFromBack)
             {
@@ -55,6 +59,22 @@ namespace LJC.FrameWork.Comm
             return new ObjTextWriter(textfile, encodetype);
         }
 
+        /// <summary>
+        /// 用结束符填充空格
+        /// </summary>
+        public void FillSpace(long count)
+        {
+            var oldcount = count;
+            lock (this)
+            {
+                while (count-- > 0)
+                {
+                    this._sw.BaseStream.Write(endSpanChar, 0, 3);
+                }
+                //this._sw.BaseStream.Position += 3 * oldcount;
+            }
+        }
+
         public void Flush()
         {
             if (!_isdispose)
@@ -73,7 +93,7 @@ namespace LJC.FrameWork.Comm
         /// <param name="obj"></param>
         /// <param name="append">返回null，则自动加到文件后面</param>
         /// <returns></returns>
-        public Tuple<long, long> PreAppendObject<T>(T obj, Func<byte[], Stream, Tuple<long,long>> append) where T : class
+        public Tuple<long, long> PreAppendObject<T>(T obj, Func<byte[], Stream, Tuple<long, long>> append) where T : class
         {
             Tuple<long, long> offset;
 
@@ -81,46 +101,53 @@ namespace LJC.FrameWork.Comm
             {
                 using (System.IO.StreamWriter tempms = new StreamWriter(ms0))
                 {
-                    if (ObjTextReaderWriterEncodeType.protobuf == this._encodeType
-                        || ObjTextReaderWriterEncodeType.protobufex == this._encodeType)
+                    switch (_encodeType)
                     {
-                        using (MemoryStream ms = new MemoryStream())
-                        {
-                            ProtoBuf.Serializer.Serialize<T>(ms, obj);
-                            offset = Append(tempms.BaseStream, ms.ToArray(), true);
-                        }
-                    }
-                    else if (ObjTextReaderWriterEncodeType.jsonbuf == this._encodeType
-                       || ObjTextReaderWriterEncodeType.jsonbufex == this._encodeType)
-                    {
-                        //using (MemoryStream ms = new MemoryStream())
-                        //{
-                        //    ProtoBuf.Serializer.Serialize<T>(ms, obj);
-                        //    Append(ms.ToArray(), true);
-                        //}
-
-                        var json = JsonUtil<T>.Serialize(obj);
-                        offset = Append(tempms.BaseStream, Encoding.UTF8.GetBytes(json), true);
-                    }
-                    else if (ObjTextReaderWriterEncodeType.entitybuf == this._encodeType
-                        || ObjTextReaderWriterEncodeType.entitybufex == this._encodeType)
-                    {
-                        var buf = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj,false);
-                        offset = Append(tempms.BaseStream, buf, true);
-                    }
-                    else
-                    {
-                        string str = JsonUtil<T>.Serialize(obj);
-                        if (ObjTextReaderWriterEncodeType.jsongzip == this._encodeType)
-                        {
-                            var jsonByte = Encoding.UTF8.GetBytes(str);
-                            var compressbytes = GZip.Compress(jsonByte);
-                            offset = Append(tempms.BaseStream, compressbytes, false);
-                        }
-                        else
-                        {
-                            offset = Append(tempms, str);
-                        }
+                        case ObjTextReaderWriterEncodeType.protobuf:
+                        case ObjTextReaderWriterEncodeType.protobufex:
+                            {
+                                using (MemoryStream ms = new MemoryStream())
+                                {
+                                    ProtoBuf.Serializer.Serialize<T>(ms, obj);
+                                    offset = Append(tempms.BaseStream, ms.ToArray(), true);
+                                }
+                                break;
+                            }
+                        case ObjTextReaderWriterEncodeType.jsonbuf:
+                        case ObjTextReaderWriterEncodeType.jsonbufex:
+                            {
+                                var json = JsonUtil<T>.Serialize(obj);
+                                offset = Append(tempms.BaseStream, Encoding.UTF8.GetBytes(json), true);
+                                break;
+                            }
+                        case ObjTextReaderWriterEncodeType.entitybuf:
+                        case ObjTextReaderWriterEncodeType.entitybufex:
+                            {
+                                var buf = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj);
+                                offset = Append(tempms.BaseStream, buf, true);
+                                break;
+                            }
+                        case ObjTextReaderWriterEncodeType.entitybuf2:
+                            {
+                                var buf = LJC.FrameWork.EntityBuf2.EntityBufCore2.Serialize(obj);
+                                offset = Append(tempms.BaseStream, buf, true);
+                                break;
+                            }
+                        default:
+                            {
+                                string str = JsonUtil<T>.Serialize(obj);
+                                if (ObjTextReaderWriterEncodeType.jsongzip == this._encodeType)
+                                {
+                                    var jsonByte = Encoding.UTF8.GetBytes(str);
+                                    var compressbytes = GZip.Compress(jsonByte);
+                                    offset = Append(tempms.BaseStream, compressbytes, false);
+                                }
+                                else
+                                {
+                                    offset = Append(tempms, str);
+                                }
+                                break;
+                            }
                     }
 
                     var bytes = ms0.ToArray();
@@ -146,49 +173,56 @@ namespace LJC.FrameWork.Comm
             return offset;
         }
 
-        public Tuple<long,long> AppendObject<T>(T obj) where T : class
+        public Tuple<long, long> AppendObject<T>(T obj) where T : class
         {
-            Tuple<long,long> offset;
-            if (ObjTextReaderWriterEncodeType.protobuf == this._encodeType
-                || ObjTextReaderWriterEncodeType.protobufex == this._encodeType)
+            Tuple<long, long> offset;
+            switch (this._encodeType)
             {
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    ProtoBuf.Serializer.Serialize<T>(ms, obj);
-                    offset = Append(ms.ToArray(), true);
-                }
-            }
-            else if (ObjTextReaderWriterEncodeType.jsonbuf == this._encodeType
-               || ObjTextReaderWriterEncodeType.jsonbufex == this._encodeType)
-            {
-                //using (MemoryStream ms = new MemoryStream())
-                //{
-                //    ProtoBuf.Serializer.Serialize<T>(ms, obj);
-                //    Append(ms.ToArray(), true);
-                //}
-
-                var json = JsonUtil<T>.Serialize(obj);
-                offset = Append(Encoding.UTF8.GetBytes(json), true);
-            }
-            else if (ObjTextReaderWriterEncodeType.entitybuf == this._encodeType
-                || ObjTextReaderWriterEncodeType.entitybufex == this._encodeType)
-            {
-                var buf = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj,false);
-                offset = Append(buf, true);
-            }
-            else
-            {
-                string str = JsonUtil<T>.Serialize(obj);
-                if (ObjTextReaderWriterEncodeType.jsongzip == this._encodeType)
-                {
-                    var jsonByte = Encoding.UTF8.GetBytes(str);
-                    var compressbytes = GZip.Compress(jsonByte);
-                    offset = Append(compressbytes, false);
-                }
-                else
-                {
-                    offset = Append(str);
-                }
+                case ObjTextReaderWriterEncodeType.protobuf:
+                case ObjTextReaderWriterEncodeType.protobufex:
+                    {
+                        using (MemoryStream ms = new MemoryStream())
+                        {
+                            ProtoBuf.Serializer.Serialize<T>(ms, obj);
+                            offset = Append(ms.ToArray(), true);
+                        }
+                        break;
+                    }
+                case ObjTextReaderWriterEncodeType.jsonbuf:
+                case ObjTextReaderWriterEncodeType.jsonbufex:
+                    {
+                        var json = JsonUtil<T>.Serialize(obj);
+                        offset = Append(Encoding.UTF8.GetBytes(json), true);
+                        break;
+                    }
+                case ObjTextReaderWriterEncodeType.entitybuf:
+                case ObjTextReaderWriterEncodeType.entitybufex:
+                    {
+                        var buf = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(obj);
+                        offset = Append(buf, true);
+                        break;
+                    }
+                case ObjTextReaderWriterEncodeType.entitybuf2:
+                    {
+                        var buf = LJC.FrameWork.EntityBuf2.EntityBufCore2.Serialize(obj);
+                        offset = Append(buf, true);
+                        break;
+                    }
+                default:
+                    {
+                        string str = JsonUtil<T>.Serialize(obj);
+                        if (ObjTextReaderWriterEncodeType.jsongzip == this._encodeType)
+                        {
+                            var jsonByte = Encoding.UTF8.GetBytes(str);
+                            var compressbytes = GZip.Compress(jsonByte);
+                            offset = Append(compressbytes, false);
+                        }
+                        else
+                        {
+                            offset = Append(str);
+                        }
+                        break;
+                    }
             }
 
             return offset;
@@ -263,6 +297,17 @@ namespace LJC.FrameWork.Comm
             {
                 _sw.BaseStream.Position = start;
                 _sw.BaseStream.Write(bytes, 0, bytes.Length);
+
+                return new Tuple<long, long>(start, _sw.BaseStream.Position);
+            }
+        }
+
+        public Tuple<long, long> Override(long start, byte[] bytes, int len)
+        {
+            lock (this)
+            {
+                _sw.BaseStream.Position = start;
+                _sw.BaseStream.Write(bytes, 0, len);
 
                 return new Tuple<long, long>(start, _sw.BaseStream.Position);
             }

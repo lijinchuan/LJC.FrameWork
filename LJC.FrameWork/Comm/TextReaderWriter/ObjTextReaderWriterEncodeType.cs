@@ -17,5 +17,6 @@ namespace LJC.FrameWork.Comm
         jsonbufex,
         entitybuf,
         entitybufex,
+        entitybuf2
     }
 }

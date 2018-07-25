@@ -92,6 +92,10 @@ namespace LJC.FrameWork.Comm
                         {
                             return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte,false);
                         }
+                    case ObjTextReaderWriterEncodeType.entitybuf2:
+                        {
+                            return LJC.FrameWork.EntityBuf2.EntityBufCore2.DeSerialize<T>(contentbyte);
+                        }
                     default:
                         {
                             throw new NotSupportedException();
@@ -122,156 +126,133 @@ namespace LJC.FrameWork.Comm
 
         private T ReadObject<T>(Stream s) where T : class
         {
-            if (CheckNexIsEndSpan(s))
+            while (CheckNexIsEndSpan(s))
             {
                 s.Position += 3;
             }
 
-            if (_encodeType == ObjTextReaderWriterEncodeType.protobuf
-                || _encodeType == ObjTextReaderWriterEncodeType.protobufex)
+            var fixpos = s.Position;
+
+            byte[] bylen = new byte[4];
+            int readreallen = s.Read(bylen, 0, 4);
+            if (readreallen != 4)
             {
-                byte[] bylen = new byte[4];
-                s.Read(bylen, 0, 4);
-                var len = BitConverter.ToInt32(bylen, 0);
-                //239 187 191
-                if (len <= 0 || len == 12565487)
-                    return default(T);
-
-                //检查长度
-                if (s.Length - s.Position < len)
-                {
-                    s.Position -= 4;
-                    return default(T);
-                }
-
-                var contentbyte = new Byte[len];
-                s.Read(contentbyte, 0, len);
-
-                if (_canReadFromBack)
-                {
-                    s.Position += 4;
-                }
-
-                //扫过分隔符
-                s.Position += 2;
-
-                using (MemoryStream ms = new MemoryStream(contentbyte))
-                {
-                    return ProtoBuf.Serializer.Deserialize<T>(ms);
-                }
-            }
-            else if (_encodeType == ObjTextReaderWriterEncodeType.jsonbuf
-               || _encodeType == ObjTextReaderWriterEncodeType.jsonbufex)
-            {
-                byte[] bylen = new byte[4];
-                s.Read(bylen, 0, 4);
-                var len = BitConverter.ToInt32(bylen, 0);
-                //239 187 191
-                if (len <= 0 || len == 12565487)
-                    return default(T);
-
-                if (len > 10240000)
-                {
-                    throw new Newtonsoft.Json.JsonReaderException("太长了:" + len);
-                }
-
-                //检查长度
-                if (s.Length - s.Position < len)
-                {
-                    s.Position -= 4;
-                    return default(T);
-                }
-
-                var contentbyte = new Byte[len];
-                s.Read(contentbyte, 0, len);
-
-                if (_canReadFromBack)
-                {
-                    s.Position += 4;
-                }
-
-                //扫过分隔符
-                s.Position += 2;
-
-                using (MemoryStream ms = new MemoryStream(contentbyte))
-                {
-                    //return ProtoBuf.Serializer.Deserialize<T>(ms);
-                    return JsonUtil<T>.Deserialize(Encoding.UTF8.GetString(ms.ToArray()));
-                }
-            }
-            else if (_encodeType == ObjTextReaderWriterEncodeType.entitybuf || _encodeType == ObjTextReaderWriterEncodeType.entitybufex)
-            {
-                byte[] bylen = new byte[4];
-                s.Read(bylen, 0, 4);
-                var len = BitConverter.ToInt32(bylen, 0);
-                if (len == 0 || len == 12565487)
-                    return default(T);
-
-                //检查长度
-                if (s.Length - s.Position < len)
-                {
-                    s.Position -= 4;
-                    return default(T);
-                }
-
-                var contentbyte = new Byte[len];
-                s.Read(contentbyte, 0, len);
-
-                if (_canReadFromBack)
-                {
-                    s.Position += 4;
-                }
-
-                //扫过分隔符
-                s.Position += 2;
-
-                return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte,false);
-            }
-            else if (_encodeType == ObjTextReaderWriterEncodeType.jsongzip)
-            {
-                byte[] bylen = new byte[4];
-                s.Read(bylen, 0, 4);
-                var len = BitConverter.ToInt32(bylen, 0);
-                if (len == 0 || len == 12565487)
-                    return default(T);
-
-                //检查长度
-                if (s.Length - s.Position < len)
-                {
-                    s.Position -= 4;
-                    return default(T);
-                }
-
-                var contentbyte = new Byte[len];
-                s.Read(contentbyte, 0, len);
-
-                var decomparssbytes = GZip.Decompress(contentbyte);
-                var jsonstr = Encoding.UTF8.GetString(decomparssbytes);
-                return JsonUtil<T>.Deserialize(jsonstr);
-            }
-            else
-            {
-                //string s = _sr.ReadLine().Trim((char)65279, (char)1); //过滤掉第一行
-                string str =ReadLine(s);
-
-                if (str == null)
-                    return default(T);
-
-                str = str.Trim((char)65279, (char)1);
-
-                while ((string.IsNullOrEmpty(str) || !str.Last().Equals(splitChar))
-                    && !_sr.EndOfStream)
-                {
-                    str +=ReadLine(s).Trim((char)65279, (char)1);
-                }
-
-                if (!string.IsNullOrEmpty(str) && str.Last().Equals(splitChar))
-                {
-                    str = str.Remove(str.Length - 1, 1);
-                    return JsonUtil<T>.Deserialize(str);
-                }
-
+                //throw new Exception("读取长度失败");
                 return default(T);
+            }
+            var len = BitConverter.ToInt32(bylen, 0);
+            if (len == 0 || len == 12565487)
+                return default(T);
+
+            if (len > 10240000)
+            {
+                throw new OverflowException(string.Format("太长了:[{0} {1} {2} {3}]", bylen[0], bylen[1], bylen[2], bylen[3]) + len + ",mem len:" + s.Length);
+            }
+
+            //检查长度
+            if (s.Length - s.Position < len)
+            {
+                //s.Position -= 4;
+                s.Position = fixpos;
+                return default(T);
+            }
+
+            var contentbyte = new Byte[len];
+            s.Read(contentbyte, 0, len);
+
+            switch (_encodeType)
+            {
+                case ObjTextReaderWriterEncodeType.protobuf:
+                case ObjTextReaderWriterEncodeType.protobufex:
+                    {
+                        //if (_canReadFromBack)
+                        //{
+                        //    s.Position += 4;
+                        //}
+
+                        ////扫过分隔符
+                        //s.Position += 2;
+                        if (!SkipNextSplitChar(s))
+                        {
+                            //throw new Exception("定位分割符失败");
+                            s.Position = fixpos;
+                            return default(T);
+                        }
+
+                        using (MemoryStream ms = new MemoryStream(contentbyte))
+                        {
+                            return ProtoBuf.Serializer.Deserialize<T>(ms);
+                        }
+                    }
+                case ObjTextReaderWriterEncodeType.jsonbuf:
+                case ObjTextReaderWriterEncodeType.jsonbufex:
+                    {
+
+                        //if (_canReadFromBack)
+                        //{
+                        //    s.Position += 4;
+                        //}
+
+                        ////扫过分隔符
+                        //s.Position += 2;
+
+                        if (!SkipNextSplitChar(s))
+                        {
+                            //throw new Exception("定位分割符失败");
+                            s.Position = fixpos;
+                            return default(T);
+                        }
+
+                        using (MemoryStream ms = new MemoryStream(contentbyte))
+                        {
+                            //return ProtoBuf.Serializer.Deserialize<T>(ms);
+                            return JsonUtil<T>.Deserialize(Encoding.UTF8.GetString(ms.ToArray()));
+                        }
+                    }
+                case ObjTextReaderWriterEncodeType.entitybuf:
+                case ObjTextReaderWriterEncodeType.entitybufex:
+                    {
+                        //if (_canReadFromBack)
+                        //{
+                        //    s.Position += 4;
+                        //}
+
+                        ////扫过分隔符
+                        //s.Position += 2;
+
+                        if (!SkipNextSplitChar(s))
+                        {
+                            //throw new Exception("定位分割符失败");
+                            s.Position = fixpos;
+                            return default(T);
+                        }
+
+                        return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte);
+                    }
+                case ObjTextReaderWriterEncodeType.entitybuf2:
+                    {
+                        //if (_canReadFromBack)
+                        //{
+                        //    s.Position += 4;
+                        //}
+
+                        ////扫过分隔符
+                        //s.Position += 2;
+
+                        if (!SkipNextSplitChar(s))
+                        {
+                            //throw new Exception("定位分割符失败");
+                            s.Position = fixpos;
+                            return default(T);
+                        }
+
+                        return LJC.FrameWork.EntityBuf2.EntityBufCore2.DeSerialize<T>(contentbyte);
+
+                    }
+                default:
+                    {
+                        throw new NotSupportedException("不支持的类型:" + _encodeType);
+                    }
             }
         }
 
@@ -303,7 +284,7 @@ namespace LJC.FrameWork.Comm
             }
         }
 
-        public IEnumerable<T> ReadObjectsWating<T>(int timeout=0) where T : class
+        public IEnumerable<T> ReadObjectsWating<T>(int timeout = 0, Action<long> hook = null, byte[] bytes = null) where T : class
         {
             //var oldpost = _sr.BaseStream.Position;
             var oldlen = 0L;
@@ -313,8 +294,11 @@ namespace LJC.FrameWork.Comm
             int wms = 0;
             int sleelms = 1;
 
-            int bufferlen = 1024 * 1024 * 10;
-            byte[] bytes = new byte[bufferlen];
+            int bufferlen = bytes == null ? 1024 * 1024 * 10 : bytes.Length;
+            if (bytes == null)
+            {
+                bytes = new byte[bufferlen];
+            }
 
             while (true)
             {
@@ -325,12 +309,18 @@ namespace LJC.FrameWork.Comm
                     _sr.BaseStream.Position -= readlen;
                     oldlen = _sr.BaseStream.Position;
 
+                    long readpos = oldlen;
                     using (MemoryStream ms = new MemoryStream(bytes, 0, readlen))
                     {
                         while ((item = ReadObject<T>(ms)) != null)
                         {
                             last = item;
                             _sr.BaseStream.Position = oldlen + ms.Position;
+                            if (hook != null)
+                            {
+                                hook(readpos);
+                            }
+                            readpos = oldlen + ms.Position;
                             yield return item;
                         }
 
@@ -346,12 +336,9 @@ namespace LJC.FrameWork.Comm
                         }
                     }
                 }
-                else
+                else if (timeout > 0)
                 {
-                    if (timeout > 0)
-                    {
-                        break;
-                    }
+                    break;
                 }
 
                 bool exit = false;

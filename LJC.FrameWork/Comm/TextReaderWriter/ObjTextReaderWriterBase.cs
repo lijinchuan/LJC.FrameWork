@@ -14,7 +14,7 @@ namespace LJC.FrameWork.Comm
         protected ObjTextReaderWriterEncodeType _encodeType = ObjTextReaderWriterEncodeType.json;
         //是否可以从后往前读
         protected bool _canReadFromBack = false;
-        private static byte[] endSpanChar = new byte[] { (byte)239, (byte)187, (byte)191 };
+        protected static byte[] endSpanChar = new byte[] { (byte)239, (byte)187, (byte)191 };
 
         protected bool CanReadFormBack
         {
@@ -39,6 +39,31 @@ namespace LJC.FrameWork.Comm
 
             s.Position = oldpos;
             return byts3[0] == endSpanChar[0] && byts3[1] == endSpanChar[1] && byts3[2] == endSpanChar[2];
+        }
+
+        protected bool SkipNextSplitChar(Stream s)
+        {
+            while (s.Length - s.Position >= 2)
+            {
+                if (s.ReadByte() == splitBytes[0])
+                {
+                    var byte2 = s.ReadByte();
+                    if (byte2 == splitBytes[1])
+                    {
+                        return true;
+                    }
+                    else if (byte2 == splitBytes[0])
+                    {
+                        byte2 = s.ReadByte();
+                        if (byte2 == splitBytes[1])
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         protected bool CheckHasEndSpan(Stream s)

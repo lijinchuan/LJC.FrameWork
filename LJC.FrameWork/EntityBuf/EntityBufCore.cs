@@ -521,6 +521,11 @@ namespace LJC.FrameWork.EntityBuf
                 return (byte[])o;
             }
 
+            if (o is IEntityBufObject)
+            {
+                return ((IEntityBufObject)o).Serialize();
+            }
+
             MemoryStream ms = new MemoryStream();
             MemoryStreamWriter writer = new MemoryStreamWriter(ms);
             Serialize(o, writer);
@@ -961,6 +966,10 @@ namespace LJC.FrameWork.EntityBuf
 
         public static object DeSerialize(Type DestType, byte[] bytes, bool compress = true)
         {
+            if (DestType is IEntityBufObject)
+            {
+                return ((IEntityBufObject)System.Activator.CreateInstance(DestType)).DeSerialize(bytes);
+            }
             var decompressBytes = bytes;
             if (compress && bytes != null && bytes.Length > minGZIPCompressLenth)
             {

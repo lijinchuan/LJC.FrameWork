@@ -1,7 +1,10 @@
-﻿using LJC.FrameWork.EntityBuf;
+﻿using LJC.FrameWork.Comm;
+using LJC.FrameWork.EntityBuf;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;

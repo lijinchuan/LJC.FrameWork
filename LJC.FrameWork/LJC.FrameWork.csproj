@@ -246,6 +246,8 @@
     </Compile>
     <Compile Include="ConfigurationSectionHandler\ThreadPoolConfig.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableEngine.cs" />
+    <Compile Include="Data\EntityDataBase\BigEntityTableEngine~Index.cs" />
+    <Compile Include="Data\EntityDataBase\BigEntityTableEngine~Key.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableIndexItem.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableIndexItemBag.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableEngine.cs" />
@@ -274,11 +276,13 @@
     <Compile Include="Data\QuickDataBase\TimePoint.cs" />
     <Compile Include="Data\QuickDataBase\TimeSpan.cs" />
     <Compile Include="EntityBuf2\EntityBufCore2.cs" />
+    <Compile Include="EntityBuf2\MemoryStreamReader2.cs" />
     <Compile Include="EntityBuf2\MemoryStreamWriter2.cs" />
     <Compile Include="EntityBuf\EntityBufCore.cs" />
     <Compile Include="EntityBuf\EntityBufType.cs" />
     <Compile Include="EntityBuf\EntityBufTypeFlag.cs" />
     <Compile Include="EntityBuf\EntityType.cs" />
+    <Compile Include="EntityBuf\IEntityBufObject.cs" />
     <Compile Include="EntityBuf\MemoryStreamReader.cs" />
     <Compile Include="EntityBuf\MemoryStreamWriter.cs" />
     <Compile Include="LogManager\CategoryLogReader.cs" />

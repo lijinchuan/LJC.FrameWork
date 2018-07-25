@@ -8,6 +8,8 @@ namespace LJC.FrameWork.Comm
 {
     public class IOUtil
     {
+        protected static byte[] endSpanChar = new byte[] { (byte)239, (byte)187, (byte)191 };
+
         public static void MakeDirs(string path)
         {
             if (Directory.Exists(path))
@@ -37,23 +39,68 @@ namespace LJC.FrameWork.Comm
             }
         }
 
-        public static long CopyFile(string source, string dest,FileMode destmode, long begin, long end)
+        static bool CheckHasEndSpan(Stream s)
+        {
+
+            var oldpos = s.Position;
+            if (s.Position >= 4)
+            {
+                var byts3 = new byte[3];
+                s.Position = s.Position - 3;
+                s.Read(byts3, 0, 3);
+
+                s.Position = oldpos;
+                return byts3[0] == endSpanChar[0] && byts3[1] == endSpanChar[1] && byts3[2] == endSpanChar[2];
+            }
+            return false;
+
+        }
+
+        public static long CopyFile(string source, string dest, FileMode destmode, long begin, long end, bool samepos = true)
         {
             long pos = -1;
-            if (begin < 0 || end < begin)
+            if (begin < 0 || (end > 0 && end < begin))
             {
                 return pos;
             }
             byte[] buffer = new byte[1024 * 1024];
-            int offset=0;
-            using (System.IO.FileStream fs = new FileStream(dest,destmode))
+            long offset = 0;
+            using (System.IO.FileStream fs = new FileStream(dest, destmode))
             {
+                if (samepos)
+                {
+                    fs.Position = begin;
+                }
+                else// if (destmode == FileMode.Append)
+                {
+                    fs.Position = fs.Length;
+                    while (true)
+                    {
+                        if (CheckHasEndSpan(fs))
+                        {
+                            fs.Position -= 3;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
                 using (System.IO.FileStream fs2 = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
                     if (end >= fs2.Length)
                     {
-                        end = fs2.Length-1;
+                        end = fs2.Length - 1;
                         pos = end;
+                    }
+                    else if (end < 0)
+                    {
+                        end = fs2.Length + end;
+                        pos = end;
+                        if (pos <= begin)
+                        {
+                            pos = begin;
+                        }
                     }
                     fs2.Position = begin;
                     while (true)
