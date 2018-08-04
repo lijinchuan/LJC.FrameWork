@@ -596,17 +596,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                         var keystr = keyvalue.ToString();
 
-                        if (!meta.KeyDuplicate)
-                        {
-                            var keylocker = GetKeyLocker(tablename, keystr);
+                        var keylocker = GetKeyLocker(tablename, keystr);
 
-                            Dictionary<long, EntityTableIndexItem> arr = null;
-                            lock (keylocker)
+                        Dictionary<long, EntityTableIndexItem> arr = null;
+                        lock (keylocker)
+                        {
+                            if (keyindexdic[tablename].TryGetValue(keystr, out arr))
                             {
-                                if (keyindexdic[tablename].TryGetValue(keystr, out arr))
-                                {
-                                    throw new Exception(string.Format("key:{0}不可重复", keystr));
-                                }
+                                throw new Exception(string.Format("key:{0}不可重复", keystr));
                             }
                         }
 

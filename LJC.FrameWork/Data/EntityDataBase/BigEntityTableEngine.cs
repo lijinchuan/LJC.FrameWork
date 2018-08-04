@@ -16,7 +16,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
     public partial class BigEntityTableEngine
     {
         #region 基本数据
-        Dictionary<string, EntityTableMeta> metadic = new Dictionary<string, EntityTableMeta>();
+        Dictionary<string, BigEntityTableMeta> metadic = new Dictionary<string, BigEntityTableMeta>();
         //磁盘索引
         ConcurrentDictionary<string, BigEntityTableIndexItem[]> keyindexdisklist = new ConcurrentDictionary<string, BigEntityTableIndexItem[]>();
 
@@ -85,7 +85,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         string metafile = GetMetaFile(tablename);
                         if (!File.Exists(metafile))
                         {
-                            EntityTableMeta meta = new EntityTableMeta();
+                            BigEntityTableMeta meta = new BigEntityTableMeta();
                             meta.KeyName = keyname;
                             meta.Indexs = indexs ?? new string[] { };
                             meta.CTime = DateTime.Now;
@@ -124,7 +124,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 }
                             }
 
-                            LJC.FrameWork.Comm.SerializerHelper.SerializerToXML<EntityTableMeta>(meta, metafile, catchErr: true);
+                            LJC.FrameWork.Comm.SerializerHelper.SerializerToXML<BigEntityTableMeta>(meta, metafile, catchErr: true);
                             metadic.Add(tablename, meta);
 
                             keyindexdisklist.TryAdd(tablename, new BigEntityTableIndexItem[0]);
@@ -133,7 +133,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                         else
                         {
-                            var meta = LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<EntityTableMeta>(metafile, true);
+                            var meta = LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<BigEntityTableMeta>(metafile, true);
                             if (!meta.KeyName.Equals(keyname) || !meta.TypeString.Equals(ttype))
                             {
                                 delfile = false;
@@ -218,7 +218,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     foreach (var tablename in metadic.Keys)
                     {
-                        EntityTableMeta meta = metadic[tablename];
+                        BigEntityTableMeta meta = metadic[tablename];
                         if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT ||
                         (this.keyindexmemlist.ContainsKey(tablename) && keyindexmemlist[tablename].Length() >= MERGE_TRIGGER_NEW_COUNT))
                         {
@@ -257,9 +257,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
         /// </summary>
         /// <param name="tablename"></param>
         /// <returns></returns>
-        private EntityTableMeta GetMetaData(string tablename)
+        private BigEntityTableMeta GetMetaData(string tablename)
         {
-            EntityTableMeta meta = null;
+            BigEntityTableMeta meta = null;
             if (metadic.TryGetValue(tablename, out meta))
             {
                 return meta;
@@ -459,7 +459,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         #region 增删改查
 
-        private bool Insert2<T>(string tablename, IEnumerable<T> items, EntityTableMeta meta) where T : new()
+        private bool Insert2<T>(string tablename, IEnumerable<T> items, BigEntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
             var tablelocker = GetKeyLocker(tablename, string.Empty);
@@ -565,7 +565,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             //item.Eval()
-            EntityTableMeta meta = GetMetaData(tablename);
+            BigEntityTableMeta meta = GetMetaData(tablename);
 
             if (meta.TType != item.GetType())
             {
@@ -587,7 +587,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 return false;
             }
 
-            EntityTableMeta meta = GetMetaData(tablename);
+            BigEntityTableMeta meta = GetMetaData(tablename);
 
             if (meta.TType != items.First().GetType())
             {
@@ -599,7 +599,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public bool Delete<T>(string tablename, string key) where T : new()
         {
-            EntityTableMeta meta = GetMetaData(tablename);
+            BigEntityTableMeta meta = GetMetaData(tablename);
 
             var delkey = FindKey(tablename, key);
             if (delkey == null)
@@ -695,7 +695,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public bool Upsert<T>(string tablename, T item) where T : new()
         {
-            EntityTableMeta meta = GetMetaData(tablename);
+            BigEntityTableMeta meta = GetMetaData(tablename);
 
             if (meta.TType != item.GetType())
             {
@@ -721,7 +721,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private bool Update2<T>(string tablename, string key, T item, EntityTableMeta meta) where T : new()
+        private bool Update2<T>(string tablename, string key, T item, BigEntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
             Tuple<long, long> offset = null;
@@ -856,7 +856,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public bool Update<T>(string tablename, T item) where T : new()
         {
-            EntityTableMeta meta = GetMetaData(tablename);
+            BigEntityTableMeta meta = GetMetaData(tablename);
 
             if (meta.TType != item.GetType())
             {
@@ -1091,7 +1091,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         /// <param name="index"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        private IEnumerable<BigEntityTableIndexItem> FindIndex(string tablename, EntityTableMeta meta, string index, object value, long offset = 0)
+        private IEnumerable<BigEntityTableIndexItem> FindIndex(string tablename, BigEntityTableMeta meta, string index, object value, long offset = 0)
         {
             var findkey = new BigEntityTableIndexItem { Key = value, Offset = offset };
             var indexkey = tablename + ":" + index;
@@ -1202,7 +1202,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public T Find<T>(string tablename, string key) where T : new()
         {
             string tablefile = GetTableFile(tablename);
-            EntityTableMeta meta = GetMetaData(tablename);
+            BigEntityTableMeta meta = GetMetaData(tablename);
             var memlist = keyindexmemlist[tablename];
             var findkey = new BigEntityTableIndexItem() { Key = key };
             BigEntityTableIndexItem indexitem = memlist.Find(findkey) ??
@@ -1342,7 +1342,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public IEnumerable<T> FindBatch<T>(string tablename, IEnumerable<string> keys) where T : new()
         {
             string tablefile = GetTableFile(tablename);
-            EntityTableMeta meta = GetMetaData(tablename);
+            BigEntityTableMeta meta = GetMetaData(tablename);
             BigEntityTableIndexItem indexitem = null;
             var indexarr = keyindexdisklist[tablename];
 

@@ -2,15 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Serialization;
 
 namespace LJC.FrameWork.Data.EntityDataBase
 {
     [Serializable]
-    public class EntityTableMeta
+    public class BigEntityTableMeta
     {
         public string KeyName
         {
@@ -18,20 +16,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
             set;
         }
 
-        /// <summary>
-        /// 其它索引
-        /// </summary>
-        public string[] Indexs
+        public IndexInfo[] IndexInfos
         {
             get;
             set;
         }
-
-        //public IndexInfo[] IndexInfos
-        //{
-        //    get;
-        //    set;
-        //}
 
         public DateTime CTime
         {

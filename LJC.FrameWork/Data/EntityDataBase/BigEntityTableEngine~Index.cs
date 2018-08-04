@@ -11,7 +11,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 {
     partial class BigEntityTableEngine
     {
-        private void LoadIndex(string tablename, string index, EntityTableMeta meta)
+        private void LoadIndex(string tablename, string index, BigEntityTableMeta meta)
         {
             string indexfile = GetIndexFile(tablename, index);
             var indexmergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index));
@@ -124,7 +124,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             MergeIndex2(tablename, indexname, meta);
         }
 
-        public void MergeIndex2(string tablename, string indexname, EntityTableMeta meta)
+        public void MergeIndex2(string tablename, string indexname, BigEntityTableMeta meta)
         {
             ProcessTraceUtil.StartTrace();
 

@@ -251,13 +251,16 @@
     <Compile Include="Data\EntityDataBase\BigEntityTableEngine~Key.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableIndexItem.cs" />
     <Compile Include="Data\EntityDataBase\BigEntityTableIndexItemBag.cs" />
+    <Compile Include="Data\EntityDataBase\BigEntityTableMeta.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableEngine.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableIndexItem.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableIndexItemBag.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableItem.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableItemFlag.cs" />
     <Compile Include="Data\EntityDataBase\EntityTableMeta.cs" />
+    <Compile Include="Data\EntityDataBase\IndexItem.cs" />
     <Compile Include="Data\EntityDataBase\IndexMergeInfo.cs" />
+    <Compile Include="Data\EntityDataBase\IndexInfo.cs" />
     <Compile Include="Data\QuickDataBase\CachDataContextMoudel.cs" />
     <Compile Include="Data\QuickDataBase\DatabaseHelper.cs" />
     <Compile Include="Data\QuickDataBase\DataBaseMapperAttr.cs" />
