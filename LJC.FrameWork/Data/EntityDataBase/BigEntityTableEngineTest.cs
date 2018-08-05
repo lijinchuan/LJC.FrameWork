@@ -11,9 +11,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public void AssertFindKeyMem(string tablename)
         {
             var meta = GetMetaData(tablename);
-            foreach (var idx in meta.Indexs)
+            foreach (var idx in meta.IndexInfos)
             {
-                var idxkey = tablename + ":" + idx;
+                var idxkey = tablename + ":" + idx.IndexName;
                 var memlist = keyindexmemlist[idxkey];
                 var alllist = memlist.GetList().ToList();
                 foreach (var key in alllist)
@@ -41,12 +41,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     listt.Add(item);
                 }
 
-                foreach (var idx in meta.Indexs)
+                foreach (var idx in meta.IndexInfos)
                 {
                     Dictionary<object, int> keyscount = new Dictionary<object, int>();
                     foreach (var item in listt)
                     {
-                        var idxval = meta.IndexProperties[idx].GetValueMethed(item);
+                        var idxval = string.Join("_", idx.GetIndexValues(item,meta).Select(p => p.ToString()));
                         if (keyscount.ContainsKey(idxval))
                         {
                             keyscount[idxval] = keyscount[idxval] + 1;
@@ -81,11 +81,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     ProcessTraceUtil.StartTrace();
 
-                    var count = FindIndex(tablename, meta, meta.Indexs[i], kv.Key).Count();
+                    var count = FindIndex(tablename, meta, meta.IndexInfos[i],new object[] { kv.Key }).Count();
                     if (count != kv.Value)
                     {
                         //Console.WriteLine("查找不相等:" + kv.Key + ",查找到的" + count + "!=统计的" + kv.Value);
-                        LogManager.LogHelper.Instance.Error("[" + meta.Indexs[i] + "]查找不相等:" + kv.Key + ",查找到的" + count + "!=统计的" + kv.Value);
+                        LogManager.LogHelper.Instance.Error("[" + meta.IndexInfos[i].IndexName + "]查找不相等:" + kv.Key + ",查找到的" + count + "!=统计的" + kv.Value);
                     }
 
                     //Console.WriteLine(ProcessTraceUtil.PrintTrace());

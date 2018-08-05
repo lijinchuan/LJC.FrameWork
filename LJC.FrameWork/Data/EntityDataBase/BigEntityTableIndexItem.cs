@@ -318,6 +318,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 if (compare != 0)
                 {
+                    if (this.Index.Indexs[j].Direction == -1)
+                    {
+                        compare = -compare;
+                    }
                     break;
                 }
             }

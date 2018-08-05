@@ -23,7 +23,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         /// <summary>
         /// 方向,1-正向 -1-逆向
         /// </summary>
-        public byte Direction
+        public sbyte Direction
         {
             get;
             set;

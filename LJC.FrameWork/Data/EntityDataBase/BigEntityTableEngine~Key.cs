@@ -185,7 +185,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         KeyOffset = p.KeyOffset,
                         len = p.len,
                         Offset = p.Offset,
-                        KeyType = p.KeyType
+                        Index=p.Index,
                     }).ToList();
                     int readcount = listtemp.Count;
 
@@ -302,7 +302,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             long copyoffset = 0;
                             using (var nw = ObjTextWriter.CreateWriter(newindexfile, ObjTextReaderWriterEncodeType.entitybuf2))
                             {
-                                var item = new BigEntityTableIndexItem { Del = listorderedlast.Del, Key = listorderedlast.Key, len = listorderedlast.len, Offset = listorderedlast.Offset, KeyType = listorderedlast.KeyType };
+                                var item = new BigEntityTableIndexItem { Del = listorderedlast.Del, Key = listorderedlast.Key, len = listorderedlast.len, Offset = listorderedlast.Offset, Index=listorderedlast.Index };
                                 item.KeyOffset = nw.GetWritePosition();
 
                                 copyoffset = nw.GetWritePosition() - listorderedlast.KeyOffset;
@@ -409,7 +409,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                             KeyOffset = p.KeyOffset + offset,
                                             len = p.len,
                                             Offset = p.Offset,
-                                            KeyType = p.KeyType
+                                            Index=p.Index
                                         });
                                     }
                                 }
@@ -459,7 +459,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                                 KeyOffset = p.KeyOffset + offset,
                                                 len = p.len,
                                                 Offset = p.Offset,
-                                                KeyType = p.KeyType
+                                                Index=p.Index
                                             });
                                         }
                                     }
@@ -489,7 +489,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                             KeyOffset = p.KeyOffset + offset,
                                             len = p.len,
                                             Offset = p.Offset,
-                                            KeyType = p.KeyType
+                                            Index=p.Index
                                         });
                                     }
                                 }
