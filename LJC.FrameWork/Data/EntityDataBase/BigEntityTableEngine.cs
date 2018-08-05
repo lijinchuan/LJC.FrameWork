@@ -70,7 +70,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return indexfile;
         }
 
-        public void CreateTable(string tablename, string keyname, Type ttype, string[] indexs = null)
+        public void CreateTable(string tablename, string keyname, Type ttype, IndexInfo[] indexs = null)
         {
             string tablefile = GetTableFile(tablename);
             bool delfile = true;
@@ -87,7 +87,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             BigEntityTableMeta meta = new BigEntityTableMeta();
                             meta.KeyName = keyname;
-                            meta.Indexs = indexs ?? new string[] { };
+                            meta.IndexInfos = indexs ?? new IndexInfo[] { };
                             meta.CTime = DateTime.Now;
                             meta.TType = ttype;
                             var pp = ttype.GetProperty(keyname);
@@ -96,30 +96,46 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 throw new Exception("找不到主键:" + keyname);
                             }
                             meta.KeyProperty = new PropertyInfoEx(pp);
-                            meta.EntityTypeDic.Add(keyname, EntityBuf2.EntityBufCore2.GetTypeBufType(pp.PropertyType).Item1.EntityType);
+                            var keyentitytype = EntityBuf2.EntityBufCore2.GetTypeBufType(pp.PropertyType).Item1.EntityType;
+                            meta.EntityTypeDic.Add(keyname, keyentitytype);                         
+                            meta.KeyIndexInfo=new IndexInfo
+                            {
+                                IndexName = keyname,
+                                Indexs = new IndexItem[]{
+                                    new IndexItem
+                                {
+                                    Field=keyname,
+                                    Direction=1,
+                                    FieldType=keyentitytype
+                                }
+                            }
+                            };
 
                             if (indexs != null && indexs.Length > 0)
                             {
-                                if (indexs.Contains(keyname))
+                                var dupkeys = indexs.GroupBy(p => p.IndexName).FirstOrDefault(p => p.Count() > 1).Key;
+                                if (!string.IsNullOrWhiteSpace(dupkeys))
                                 {
-                                    throw new Exception("索引不能包含主键");
+                                    throw new Exception("索引名称不能重复:"+dupkeys);
                                 }
-                                indexs = indexs.Distinct().ToArray();
                                 foreach (var idx in indexs)
                                 {
-                                    var idxpp = ttype.GetProperty(idx);
-                                    if (idxpp == null)
+                                    foreach (var id in idx.Indexs)
                                     {
-                                        throw new Exception("找不到索引:" + idx);
-                                    }
+                                        var idxpp = ttype.GetProperty(id.Field);
+                                        if (idxpp == null)
+                                        {
+                                            throw new Exception("对象不存在字段:" + id.Field);
+                                        }
 
-                                    if (!meta.IndexProperties.ContainsKey(idx))
-                                    {
-                                        meta.IndexProperties.Add(idx, new PropertyInfoEx(idxpp));
-                                    }
-                                    if (!meta.EntityTypeDic.ContainsKey(idx))
-                                    {
-                                        meta.EntityTypeDic.Add(idx, EntityBuf2.EntityBufCore2.GetTypeBufType(idxpp.PropertyType).Item1.EntityType);
+                                        if (!meta.IndexProperties.ContainsKey(id.Field))
+                                        {
+                                            meta.IndexProperties.Add(id.Field, new PropertyInfoEx(idxpp));
+                                        }
+                                        if (!meta.EntityTypeDic.ContainsKey(id.Field))
+                                        {
+                                            meta.EntityTypeDic.Add(id.Field, EntityBuf2.EntityBufCore2.GetTypeBufType(idxpp.PropertyType).Item1.EntityType);
+                                        }
                                     }
                                 }
                             }
@@ -151,15 +167,18 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 indexs = indexs.Distinct().ToArray();
                                 foreach (var idx in indexs)
                                 {
-                                    var idxpp = ttype.GetProperty(idx);
+                                    foreach (var id in idx.Indexs)
+                                    {
+                                        var idxpp = ttype.GetProperty(id.Field);
 
-                                    if (!meta.IndexProperties.ContainsKey(idx))
-                                    {
-                                        meta.IndexProperties.Add(idx, new PropertyInfoEx(idxpp));
-                                    }
-                                    if (!meta.EntityTypeDic.ContainsKey(idx))
-                                    {
-                                        meta.EntityTypeDic.Add(idx, EntityBuf2.EntityBufCore2.GetTypeBufType(idxpp.PropertyType).Item1.EntityType);
+                                        if (!meta.IndexProperties.ContainsKey(id.Field))
+                                        {
+                                            meta.IndexProperties.Add(id.Field, new PropertyInfoEx(idxpp));
+                                        }
+                                        if (!meta.EntityTypeDic.ContainsKey(id.Field))
+                                        {
+                                            meta.EntityTypeDic.Add(id.Field, EntityBuf2.EntityBufCore2.GetTypeBufType(idxpp.PropertyType).Item1.EntityType);
+                                        }
                                     }
                                 }
                             }
@@ -181,7 +200,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 keyindexmemlist.TryAdd(idxkey, new SortArrayList<BigEntityTableIndexItem>());
                                 keyindexmemtemplist.TryAdd(idxkey, new SortArrayList<BigEntityTableIndexItem>());
 
-                                var indexfile = GetIndexFile(tablename, idx);
+                                var indexfile = GetIndexFile(tablename, idx.IndexName);
                                 using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf2))
                                 //ObjTextWriter idxwriter = GetWriter(indexfile);
                                 {
@@ -226,14 +245,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             MergeKey(tablename, meta.KeyName);
                         }
 
-                        if (meta.Indexs != null && meta.Indexs.Length > 0)
+                        if (meta.IndexInfos != null && meta.IndexInfos.Length > 0)
                         {
-                            foreach (var index in meta.Indexs)
+                            foreach (var index in meta.IndexInfos)
                             {
-                                var indexkey = tablename + ":" + index;
+                                var indexkey = tablename + ":" + index.IndexName;
                                 if (this.keyindexmemlist.ContainsKey(indexkey) && keyindexmemlist[indexkey].Length() >= MERGE_TRIGGER_NEW_COUNT)
                                 {
-                                    MergeIndex(tablename, index);
+                                    MergeIndex(tablename, index.IndexName);
                                 }
 
                             }
@@ -280,29 +299,32 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     throw new Exception("找不到元文件:" + tablename);
                 }
 
-                meta = LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<EntityTableMeta>(metafile, true);
-                if (meta.Indexs == null)
+                meta = LJC.FrameWork.Comm.SerializerHelper.DeSerializerFile<BigEntityTableMeta>(metafile, true);
+                if (meta.IndexInfos == null)
                 {
-                    meta.Indexs = new string[] { };
+                    meta.IndexInfos = new IndexInfo[] { };
                 }
                 meta.KeyProperty = new PropertyInfoEx(meta.TType.GetProperty(meta.KeyName));
                 var pp = meta.TType.GetProperty(meta.KeyName);
                 meta.EntityTypeDic.Add(meta.KeyName, EntityBuf2.EntityBufCore2.GetTypeBufType(pp.PropertyType).Item1.EntityType);
                 metadic.Add(tablename, meta);
 
-                if (meta.Indexs != null)
+                if (meta.IndexInfos != null)
                 {
-                    foreach (var idx in meta.Indexs)
+                    foreach (var idx in meta.IndexInfos)
                     {
-                        var idxpp = meta.TType.GetProperty(idx);
-                        if (idxpp == null)
+                        foreach (var id in idx.Indexs)
                         {
-                            throw new Exception("找不到索引:" + idx);
-                        }
+                            var idxpp = meta.TType.GetProperty(id.Field);
+                            if (idxpp == null)
+                            {
+                                throw new Exception("对象不存在字段:" + id.Field);
+                            }
 
-                        if (!meta.IndexProperties.ContainsKey(idx))
-                        {
-                            meta.IndexProperties.Add(idx, new PropertyInfoEx(idxpp));
+                            if (!meta.IndexProperties.ContainsKey(id.Field))
+                            {
+                                meta.IndexProperties.Add(id.Field, new PropertyInfoEx(idxpp));
+                            }
                         }
                     }
                 }
@@ -336,11 +358,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 LoadKey(tablename, meta);
 
-                if (meta.Indexs != null && meta.Indexs.Length > 0)
+                if (meta.IndexInfos != null && meta.IndexInfos.Length > 0)
                 {
-                    foreach (var index in meta.Indexs)
+                    foreach (var index in meta.IndexInfos)
                     {
-                        var indexkey = tablename + ":" + index;
+                        var indexkey = tablename + ":" + index.IndexName;
                         if (!keyindexmemlist.ContainsKey(indexkey))
                         {
                             lock (keyindexmemlist)
@@ -355,7 +377,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 keyindexmemtemplist.TryAdd(indexkey, new SortArrayList<BigEntityTableIndexItem>());
                             }
                         }
-                        LoadIndex(tablename, index, meta);
+                        LoadIndex(tablename, index.IndexName, meta);
                     }
                 }
 
@@ -487,7 +509,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             throw new Exception("key值不能为空");
                         }
 
-                        findkey.Key = keyvalue;
+                        findkey.Key =new object[] { keyvalue };
                         if (KeyExsitsInner(tablename, findkey, keyreader))
                         {
                             throw new Exception("不能重复写入:" + keyvalue);
@@ -499,22 +521,28 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                         var newkey = new BigEntityTableIndexItem
                         {
-                            Key = keyvalue,
+                            Key = new object[] { keyvalue },
                             Offset = offset.Item1,
                             len = (int)(offset.Item2 - offset.Item1),
-                            KeyType = meta.EntityTypeDic[meta.KeyName]
+                            Index = meta.KeyIndexInfo
                         };
 
-                        foreach (var idx in meta.Indexs)
+                        for(int j=0;j<meta.IndexInfos.Length;j++)
                         {
-                            string indexfile = GetIndexFile(tablename, idx);
-                            var indexvalue = meta.IndexProperties[idx].GetValueMethed(item);
+                            var idx = meta.IndexInfos[j];
+                            string indexfile = GetIndexFile(tablename, idx.IndexName);
+                            object[] indexvalues = new object[idx.Indexs.Length];
+                            for (int i = 0; i < indexvalues.Length; i++)
+                            {
+                                var indexvalue = meta.IndexProperties[idx.Indexs[i].Field].GetValueMethed(item);
+                                indexvalues[i] = indexvalue;
+                            }
                             var newindex = new BigEntityTableIndexItem
                             {
-                                Key = indexvalue,
+                                Key = indexvalues,
                                 Offset = newkey.Offset,
                                 len = newkey.len,
-                                KeyType = meta.EntityTypeDic[idx]
+                                Index=idx
                             };
 
                             ObjTextWriter idxwriter = null;
@@ -654,13 +682,17 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     keywriter.SetPosition(oldoffset);
                 }
 
-                foreach (var idx in meta.Indexs)
+                foreach (var idx in meta.IndexInfos)
                 {
-                    string indexfile = GetIndexFile(tablename, idx);
-
-                    var idxval = meta.IndexProperties[idx].GetValueMethed(delitem).ToString();
+                    string indexfile = GetIndexFile(tablename, idx.IndexName);
+                    var idxvals = new object[idx.Indexs.Length];
+                    for (int i = 0; i < idx.Indexs.Length; i++)
+                    {
+                        var idxval = meta.IndexProperties[idx.Indexs[i].Field].GetValueMethed(delitem);
+                        idxvals[i] = idxval;
+                    }
                     //var idxfindkey = new BigEntityTableIndexItem { Key = idxval, Offset=delkey.Offset };
-                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, idxval, delkey.Offset).FirstOrDefault();
+                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, idxvals, delkey.Offset).FirstOrDefault();
 
                     if (idxitem == null)
                     {
@@ -768,24 +800,40 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 BigEntityTableIndexItem newkey = new BigEntityTableIndexItem
                 {
-                    Key = keyvalue.ToString(),
+                    Key =new object[] { keyvalue },
                     Offset = offset.Item1,
                     len = (oldindexitem.Offset == offset.Item1) ? oldindexitem.len : (int)(offset.Item2 - offset.Item1),
                     KeyOffset = oldindexitem.KeyOffset,
-                    Del = false
+                    Del = false,
+                    Index=meta.KeyIndexInfo
                 };
 
                 //更新索引
-                foreach (var idx in meta.Indexs)
+                foreach (var idx in meta.IndexInfos)
                 {
-                    var oldidxval = meta.IndexProperties[idx].GetValueMethed(olditem).ToString();
-                    var newidxval = meta.IndexProperties[idx].GetValueMethed(item).ToString();
-
-                    if (oldidxval == newidxval && oldindexitem.Offset == offset.Item1)
+                    var oldidxval = idx.GetIndexValues(olditem,meta);
+                    var newidxval = idx.GetIndexValues(item, meta);
+                    bool equal = true;
+                    if (oldidxval.Length == newidxval.Length)
+                    {
+                        for(int i = 0; i < oldidxval.Length; i++)
+                        {
+                            if (oldidxval[i] != newidxval[i])
+                            {
+                                equal = false;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        equal = false;
+                    }
+                    if (equal && oldindexitem.Offset == offset.Item1)
                     {
                         continue;
                     }
-                    var indexfile = GetIndexFile(tablename, idx);
+                    var indexfile = GetIndexFile(tablename, idx.IndexName);
                     //这里有问题。索引重排后会变的
                     var idxfindkey = new BigEntityTableIndexItem { Key = oldidxval, Offset = oldindexitem.Offset };
                     var idxkey = tablename + ":" + idx;
@@ -996,7 +1044,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             var meta = GetMetaData(tablename);
 
-            var findkey = new BigEntityTableIndexItem { Key = key };
+            var findkey = new BigEntityTableIndexItem { Key = new object[] { key }, Index = meta.KeyIndexInfo };
             var locker = GetKeyLocker(tablename, string.Empty);
             try
             {
@@ -1024,7 +1072,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 int mid = -1;
                 int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
                 {
-                    Key = key
+                    Key = new object[] { key},
+                    Index=meta.KeyIndexInfo
                 }, ref mid);
 
                 if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
@@ -1091,10 +1140,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
         /// <param name="index"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        private IEnumerable<BigEntityTableIndexItem> FindIndex(string tablename, BigEntityTableMeta meta, string index, object value, long offset = 0)
+        private IEnumerable<BigEntityTableIndexItem> FindIndex(string tablename, BigEntityTableMeta meta, IndexInfo index, object[] value, long offset = 0)
         {
-            var findkey = new BigEntityTableIndexItem { Key = value, Offset = offset };
-            var indexkey = tablename + ":" + index;
+            var findkey = new BigEntityTableIndexItem { Key = value, Offset = offset, Index = index };
+            var indexkey = tablename + ":" + index.IndexName;
             var indexarr = keyindexdisklist[indexkey];
             int mid = -1;
             int pospev = -1;
@@ -1154,7 +1203,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 var buffer = new byte[1024];
                 int skipcount = 0;
-                using (var reader = ObjTextReader.CreateReader(GetIndexFile(tablename, index)))
+                using (var reader = ObjTextReader.CreateReader(GetIndexFile(tablename, index.IndexName)))
                 {
                     ProcessTraceUtil.Trace("open indexfile");
                     reader.SetPostion(posstart);
@@ -1199,12 +1248,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
             ProcessTraceUtil.Trace("find in mem end");
         }
 
-        public T Find<T>(string tablename, string key) where T : new()
+        public T Find<T>(string tablename, object key) where T : new()
         {
             string tablefile = GetTableFile(tablename);
             BigEntityTableMeta meta = GetMetaData(tablename);
             var memlist = keyindexmemlist[tablename];
-            var findkey = new BigEntityTableIndexItem() { Key = key };
+            var findkey = new BigEntityTableIndexItem() { Key = new object[] { key }, Index = meta.KeyIndexInfo };
             BigEntityTableIndexItem indexitem = memlist.Find(findkey) ??
                 keyindexmemtemplist[tablename].Find(findkey);
             if (indexitem != null)
@@ -1349,6 +1398,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             var tablelocker = GetKeyLocker(tablename, string.Empty);
 
             var findkey = new BigEntityTableIndexItem();
+            findkey.Index = meta.KeyIndexInfo;
             using (ObjTextReader otr = ObjTextReader.CreateReader(tablefile))
             {
                 try
@@ -1358,7 +1408,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         foreach (var key in keys)
                         {
-                            findkey.Key = key;
+                            findkey.Key = new object[] { key};
                             indexitem = keyindexmemlist[tablename].Find(findkey) ??
                                 keyindexmemtemplist[tablename].Find(findkey);
                             if (indexitem != null)
@@ -1430,7 +1480,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     int mid = -1;
                                     int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
                                     {
-                                        Key = key
+                                        Key = new object[] { key},
+                                        Index=meta.KeyIndexInfo
                                     }, ref mid);
 
                                     BigEntityTableIndexItem findkeyitem = null;
@@ -1508,10 +1559,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private BigEntityTableIndexItem GetNear(string tablename, string key, bool start)
+        private BigEntityTableIndexItem GetNear(string tablename, object key, bool start)
         {
             var meta = GetMetaData(tablename);
-            var findkey = new BigEntityTableIndexItem { Key = key };
+            var findkey = new BigEntityTableIndexItem { Key = new object[] { key} };
             BigEntityTableIndexItem findkeyitem = keyindexmemlist[tablename].Find(findkey);
             if (findkeyitem != null)
             {
@@ -1652,16 +1703,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
         #endregion
 
         #region 索引操作
-        public IEnumerable<T> Find<T>(string tablename, string index, string value) where T : new()
+        public IEnumerable<T> Find<T>(string tablename, string indexname, object[] value) where T : new()
         {
             var tablefile = GetTableFile(tablename);
             var meta = GetMetaData(tablename);
+            var index = meta.IndexInfos.First(p => p.IndexName == indexname);
+            if (index == null)
+            {
+                throw new Exception("索引不存在:"+indexname);
+            }
             var locker = GetKeyLocker(tablename, string.Empty);
             List<BigEntityTableIndexItem> indexlist = null;
             locker.EnterReadLock();
             try
             {
-                indexlist = FindIndex(tablename, meta, index, value).ToList();
+                indexlist = FindIndex(tablename, meta,index , value).ToList();
             }
             finally
             {
@@ -1686,9 +1742,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public int Count(string tablename, string index, string value)
+        public int Count(string tablename, string indexname, object[] value)
         {
             var meta = GetMetaData(tablename);
+            var index = meta.IndexInfos.First(p => p.IndexName == indexname);
+            if (index == null)
+            {
+                throw new Exception("索引不存在:" + indexname);
+            }
             var locker = GetKeyLocker(tablename, string.Empty);
             locker.EnterReadLock();
             try

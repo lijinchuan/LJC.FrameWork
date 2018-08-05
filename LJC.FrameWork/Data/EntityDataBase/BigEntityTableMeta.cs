@@ -16,6 +16,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
             set;
         }
 
+        public IndexInfo KeyIndexInfo
+        {
+            get;
+            set;
+        }
+
         public IndexInfo[] IndexInfos
         {
             get;
