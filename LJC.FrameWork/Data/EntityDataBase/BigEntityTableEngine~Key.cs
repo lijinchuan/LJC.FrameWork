@@ -36,6 +36,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
+                    newindex.Index = meta.KeyIndexInfo;
                     if (newindex.KeyOffset >= indexmergeinfo.IndexMergePos)
                     {
                         //list.Add(newindex);
@@ -85,6 +86,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
+                    newindex.Index = meta.KeyIndexInfo;
                     if (!newindex.Del)
                     {
                         //indexdic.Add(newindex.Key, newindex);

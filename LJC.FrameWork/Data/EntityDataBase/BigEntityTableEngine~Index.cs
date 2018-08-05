@@ -11,17 +11,22 @@ namespace LJC.FrameWork.Data.EntityDataBase
 {
     partial class BigEntityTableEngine
     {
-        private void LoadIndex(string tablename, string index, BigEntityTableMeta meta)
+        private void LoadIndex(string tablename, string indexname, BigEntityTableMeta meta)
         {
-            string indexfile = GetIndexFile(tablename, index);
-            var indexmergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index));
+            string indexfile = GetIndexFile(tablename, indexname);
+            var index = meta.IndexInfos.First(p => p.IndexName == indexname);
+            if (index == null)
+            {
+                throw new Exception("索引不存在:"+indexname);
+            }
+            var indexmergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(indexname));
             if (indexmergeinfo == null)
             {
                 indexmergeinfo = new IndexMergeInfo();
-                indexmergeinfo.IndexName = index;
+                indexmergeinfo.IndexName = indexname;
                 meta.IndexMergeInfos.Add(indexmergeinfo);
             }
-            var indexkey = tablename + ":" + index;
+            var indexkey = tablename + ":" + indexname;
             //计算加载因子
             indexmergeinfo.LoadFactor = (int)Math.Max(4, new FileInfo(indexfile).Length / MAX_KEYBUFFER);
 
@@ -32,10 +37,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
             byte[] buffer = new byte[1024 * 1024 * 10];
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
-                Console.WriteLine("loadindex:" + index);
+                Console.WriteLine("loadindex:" + indexname);
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
+                    newindex.Index = index;
                     if (newindex.KeyOffset >= indexmergeinfo.IndexMergePos)
                     {
                         //list.Add(newindex);
@@ -72,7 +78,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             using (ObjTextReader idr = ObjTextReader.CreateReader(indexfile))
             {
-                Console.WriteLine("loadindex2:" + index);
+                Console.WriteLine("loadindex2:" + indexname);
 
                 if (indexmergeinfo.IndexMergePos > 0)
                 {
@@ -85,6 +91,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
+                    newindex.Index = index;
                     if (!newindex.Del)
                     {
                         //indexdic.Add(newindex.Key, newindex);
