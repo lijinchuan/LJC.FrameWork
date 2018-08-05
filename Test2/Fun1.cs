@@ -248,7 +248,7 @@ namespace Test2
             //}
 
             int count = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.Find<Man>("Man", "Sex", "0"))
+            foreach (var item in BigEntityTableEngine.LocalEngine.Find<Man>("Man", "Sex", new[] { "0" }))
             {
                 //Console.WriteLine(item.Name+" "+item.Sex);
                 count++;
@@ -257,7 +257,7 @@ namespace Test2
             Console.WriteLine("sex=0," + count + "条");
 
             count = 0;
-            foreach (var item in BigEntityTableEngine.LocalEngine.Find<Man>("Man", "Sex", "1"))
+            foreach (var item in BigEntityTableEngine.LocalEngine.Find<Man>("Man", "Sex",new[] { "1" }))
             {
                 //Console.WriteLine(item.Name + " " + item.Sex);
                 count++;
@@ -296,7 +296,33 @@ namespace Test2
 
         private void TestKeyWord()
         {
-            BigEntityTableEngine.LocalEngine.CreateTable("NewsKeysEntity", "NewsKeysID", typeof(NewsKeysEntity), new[] { "NewsID", "Keys" });
+            BigEntityTableEngine.LocalEngine.CreateTable("NewsKeysEntity", "NewsKeysID", typeof(NewsKeysEntity),new IndexInfo[]{
+                new IndexInfo
+                {
+                    IndexName="NewsID",
+                    Indexs=new IndexItem[]
+                    {
+                        new IndexItem
+                        {
+                            Direction=1,
+                            Field="NewsID",
+                            FieldType=LJC.FrameWork.EntityBuf.EntityType.INT64
+                        }
+                    }
+                },new IndexInfo
+                {
+                    IndexName="Keys",
+                    Indexs=new IndexItem[]
+                    {
+                        new IndexItem
+                        {
+                            Direction=1,
+                            Field="Keys",
+                            FieldType=LJC.FrameWork.EntityBuf.EntityType.STRING
+                        }
+                    }
+                }
+                });
             long nid = 0;
             List<NewsKeysEntity> list = null;
             Console.WriteLine("开始读数据");
@@ -320,7 +346,7 @@ namespace Test2
             var now = DateTime.Now;
             ProcessTraceUtil.StartTrace();
             ProcessTraceUtil.Trace("start find");
-            var count = BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "Keys", key).Count();
+            var count = BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "Keys",new[] { key }).Count();
 
             var detail = ProcessTraceUtil.PrintTrace();
             Console.WriteLine(detail);
@@ -368,7 +394,7 @@ namespace Test2
                     return;
                 }
 
-                foreach (var it in BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "NewsID", item.NewsID.ToString()))
+                foreach (var it in BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "NewsID",new object[] { item.NewsID }))
                 {
                     if (it.NewsKeysID == item.NewsKeysID)
                     {
@@ -376,7 +402,7 @@ namespace Test2
                     }
                 }
 
-                foreach (var it in BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "Keys", item.Keys.ToString()))
+                foreach (var it in BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "Keys",new object[] { item.Keys }))
                 {
                     if (it.NewsKeysID == item.NewsKeysID)
                     {
@@ -436,7 +462,7 @@ namespace Test2
                 else
                 {
                     Console.WriteLine("查找后的数据:" + JsonUtil<object>.Serialize(newitem, false));
-                    foreach (NewsKeysEntity it in BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "Keys", oldkey))
+                    foreach (NewsKeysEntity it in BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "Keys",new object[] { oldkey }))
                     {
                         if (it.NewsKeysID == item.NewsKeysID)
                         {
@@ -446,7 +472,7 @@ namespace Test2
                     if (item.Keys != oldkey)
                     {
                         bool find2 = false;
-                        foreach (NewsKeysEntity it in BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "Keys", item.Keys))
+                        foreach (NewsKeysEntity it in BigEntityTableEngine.LocalEngine.Find<NewsKeysEntity>("NewsKeysEntity", "Keys",new object[] { item.Keys }))
                         {
                             if (it.NewsKeysID == item.NewsKeysID)
                             {
@@ -476,14 +502,40 @@ namespace Test2
             var total = BigEntityTableEngine.LocalEngine.Count("NewsKeysEntity");
             ProcessTraceUtil.Trace("total:"+total);
             ProcessTraceUtil.Trace("start find");
-            var count = BigEntityTableEngine.LocalEngine.Count("NewsKeysEntity", "Keys", key);
+            var count = BigEntityTableEngine.LocalEngine.Count("NewsKeysEntity", "Keys",new object[] { key });
 
             Console.WriteLine("完成，用时:" + (DateTime.Now.Subtract(now).TotalMilliseconds + "ms,条数:" + count + "," + ProcessTraceUtil.PrintTrace()));
         }
 
         public void Fun95()
         {
-            BigEntityTableEngine.LocalEngine.CreateTable("NewsKeysEntity", "NewsKeysID", typeof(NewsKeysEntity), new[] { "NewsID", "Keys" });
+            BigEntityTableEngine.LocalEngine.CreateTable("NewsKeysEntity", "NewsKeysID", typeof(NewsKeysEntity), new IndexInfo[]{
+                new IndexInfo
+                {
+                    IndexName="NewsID",
+                    Indexs=new IndexItem[]
+                    {
+                        new IndexItem
+                        {
+                            Direction=1,
+                            Field="NewsID",
+                            FieldType=LJC.FrameWork.EntityBuf.EntityType.INT64
+                        }
+                    }
+                },new IndexInfo
+                {
+                    IndexName="Keys",
+                    Indexs=new IndexItem[]
+                    {
+                        new IndexItem
+                        {
+                            Direction=1,
+                            Field="Keys",
+                            FieldType=LJC.FrameWork.EntityBuf.EntityType.STRING
+                        }
+                    }
+                }
+                });
             DateTime now = DateTime.Now;
             int count = 0;
             List<NewsKeysEntity> list = new List<NewsKeysEntity>();
