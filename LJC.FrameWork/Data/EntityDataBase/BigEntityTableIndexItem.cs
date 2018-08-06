@@ -113,6 +113,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             objs[i] = br.ReadSingle();
                             break;
                         }
+                    case EntityType.INT32:
+                        {
+                            objs[i] = br.ReadInt32();
+                            break;
+                        }
                     case EntityType.INT64:
                         {
                             objs[i] = br.ReadInt64();
@@ -208,6 +213,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     case EntityType.FLOAT:
                         {
                             var keybytes = BitConverter.GetBytes((float)o);
+                            ms.Write(keybytes, 0, keybytes.Length);
+                            break;
+                        }
+                    case EntityType.INT32:
+                        {
+                            var keybytes = BitConverter.GetBytes((int)o);
                             ms.Write(keybytes, 0, keybytes.Length);
                             break;
                         }

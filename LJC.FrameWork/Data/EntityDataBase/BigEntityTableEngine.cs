@@ -113,10 +113,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                             if (indexs != null && indexs.Length > 0)
                             {
-                                var dupkeys = indexs.GroupBy(p => p.IndexName).FirstOrDefault(p => p.Count() > 1).Key;
-                                if (!string.IsNullOrWhiteSpace(dupkeys))
+                                var dupkeys = indexs.GroupBy(p => p.IndexName).FirstOrDefault(p => p.Count() > 1);
+                                if (dupkeys!=null)
                                 {
-                                    throw new Exception("索引名称不能重复:"+dupkeys);
+                                    throw new Exception("索引名称不能重复:" + dupkeys.Key);
                                 }
                                 foreach (var idx in indexs)
                                 {

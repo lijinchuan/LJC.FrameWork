@@ -69,6 +69,7 @@
     <Compile Include="CallBackRequest.cs" />
     <Compile Include="Fun1.cs" />
     <Compile Include="Fun2.cs" />
+    <Compile Include="GubaBandResultEntity.cs" />
     <Compile Include="IFun.cs" />
     <Compile Include="Man.cs" />
     <Compile Include="NewsEntityEx.cs" />

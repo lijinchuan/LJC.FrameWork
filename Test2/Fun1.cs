@@ -580,11 +580,54 @@ namespace Test2
             Console.WriteLine("结束用时:" + (DateTime.Now.Subtract(now)).TotalMilliseconds + "ms");
         }
 
+        public void Fun98()
+        {
+            BigEntityTableEngine.LocalEngine.CreateTable("GubaBandResultEntity", "ID", typeof(GubaBandResultEntity), new IndexInfo[]{
+                new IndexInfo
+                {
+                    IndexName="GubaCode_Uid_Recount",
+                    Indexs=new IndexItem[]
+                    {
+                        new IndexItem
+                        {
+                            Direction=1,
+                            Field="GubaCode",
+                            FieldType=LJC.FrameWork.EntityBuf.EntityType.STRING
+                        },
+                         new IndexItem
+                        {
+                            Direction=1,
+                            Field="Uid",
+                            FieldType=LJC.FrameWork.EntityBuf.EntityType.STRING
+                        },
+                         new IndexItem
+                        {
+                            Direction=-1,
+                            Field="Recount",
+                            FieldType=LJC.FrameWork.EntityBuf.EntityType.INT32
+                        }
+                    }
+                }
+            });
+            long nid = 0;
+            List<GubaBandResultEntity> list = null;
+            Console.WriteLine("开始读数据");
+            while ((list = DataContextMoudelFactory<GubaBandResultEntity>.GetDataContext("ConndbDB$GubaData").WhereBiger(p => p.ID, nid).Top(10000).OrderBy(p => p.ID).ExecuteList()).Count > 0)
+            {
+                nid = list.Last().ID;
+                Console.WriteLine("nid:" + nid);
+                DateTime now = DateTime.Now;
+                BigEntityTableEngine.LocalEngine.InsertBatch("GubaBandResultEntity", list);
+                Console.WriteLine("写入完成:" + (DateTime.Now.Subtract(now).TotalMilliseconds + "ms"));
+            }
+            Console.WriteLine("读数据完成");
+        }
+
 
         public void Start()
         {
             Console.WriteLine(@"选择操作 1-写库 11-继续写库 2-读库 3-整理索引 4-测试删除 5-查找 51-遍历查找key 6-修改 7-scan 8-测试索引 
-9-写入关键字 91-查询关键字 92-测试删除关键字 93-测试修改关键字 94-count统计 95-遍历关键字 96-测试关键字 97-测试关键字查找数量");
+9-写入关键字 91-查询关键字 92-测试删除关键字 93-测试修改关键字 94-count统计 95-遍历关键字 96-测试关键字 97-测试关键字查找数量 98-写入GubaBandResult测试数据");
             var cmd = Console.ReadLine();
 
             if (cmd == "1")
@@ -669,6 +712,11 @@ namespace Test2
             if (cmd == "97")
             {
                 Fun97();
+            }
+
+            if (cmd == "98")
+            {
+                Fun98();
             }
         }
     }

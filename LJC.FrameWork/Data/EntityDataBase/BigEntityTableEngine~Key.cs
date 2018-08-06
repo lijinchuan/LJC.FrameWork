@@ -102,6 +102,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p))
                     {
                         newindex.KeyOffset = currentpos;
+                        newindex.SetIndex(meta.KeyIndexInfo);
                         if (!newindex.Del)
                         {
                             //indexdic.Add(newindex.Key, newindex);
@@ -269,6 +270,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
                         {
                             item.KeyOffset = keyoffset;
+                            item.SetIndex(meta.KeyIndexInfo);
 
                             if (item.KeyOffset >= mergeinfo.IndexMergePos)
                             {
@@ -519,6 +521,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
                     {
                         hasitem = true;
+                        item.SetIndex(meta.KeyIndexInfo);
                         item.KeyOffset = keyoffset;
                         if (item.KeyOffset > newwriter.GetWritePosition())
                         {
@@ -594,6 +597,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 {
                                     foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                                     {
+                                        item.SetIndex(meta.KeyIndexInfo);
                                         item.KeyOffset = newwriter.GetWritePosition();
                                         newwriter.AppendObject(item);
                                     }

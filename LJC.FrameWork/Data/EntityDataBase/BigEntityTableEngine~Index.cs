@@ -107,6 +107,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p))
                     {
                         newindex.KeyOffset = currentpos;
+                        newindex.SetIndex(index);
                         if (!newindex.Del)
                         {
                             //indexdic.Add(newindex.Key, newindex);
@@ -154,6 +155,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 meta.NewAddCount = 0;
                 mergeinfo.IsMergin = true;
             }
+            IndexInfo index=meta.IndexInfos.First(p=>p.IndexName==indexname);
             DateTime timestart = DateTime.Now;
             string newindexfile = string.Empty;
             try
@@ -272,6 +274,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         long keyoffset = 0;
                         foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
                         {
+                            item.SetIndex(index);
                             if (item.KeyOffset != keyoffset)
                             {
                                 //ProcessTraceUtil.Trace("数据位置不同，记录的:" + item.KeyOffset + "，实际:" + keyoffset + "，校正");
@@ -528,6 +531,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         hasitem = true;
                         item.KeyOffset = keyoffset;
+                        item.SetIndex(index);
                         if (item.KeyOffset > newwriter.GetWritePosition())
                         {
                             var spacelen = item.KeyOffset - newwriter.GetWritePosition();
@@ -602,6 +606,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 {
                                     foreach (var item in idxreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
                                     {
+                                        item.SetIndex(index);
                                         item.KeyOffset = newwriter.GetWritePosition();
                                         newwriter.AppendObject(item);
                                     }
