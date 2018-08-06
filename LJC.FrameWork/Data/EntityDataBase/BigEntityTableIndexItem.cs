@@ -21,6 +21,23 @@ namespace LJC.FrameWork.Data.EntityDataBase
             set;
         }
 
+        internal void SetIndex(IndexInfo index)
+        {
+            if (Index == null)
+            {
+                Index = index;
+                using (ms)
+                {
+                    using (br)
+                    {
+                        DeSerializeSimple(br, this);
+                    }
+                }
+                br = null;
+                ms = null;
+            }
+        }
+
         public long Offset
         {
             get;
@@ -113,21 +130,22 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return ret;
         }
 
+        private System.IO.MemoryStream ms = null;
+        private System.IO.BinaryReader br = null;
         public IEntityBufObject DeSerialize(byte[] bytes)
         {
             var ret = new BigEntityTableIndexItem();
 
-            using (System.IO.MemoryStream ms = new System.IO.MemoryStream(bytes))
-            {
-                using (System.IO.BinaryReader br = new System.IO.BinaryReader(ms))
-                {
-                    ret.KeyOffset = br.ReadInt64();
-                    ret.len = br.ReadInt32();
-                    ret.Offset = br.ReadInt64();
-                    ret.Del = br.ReadBoolean();
-                    DeSerializeSimple(br, ret);
-                }
-            }
+            ms = new System.IO.MemoryStream(bytes);
+            br = new System.IO.BinaryReader(ms);
+            ret.ms = ms;
+            ret.br = br;
+            ret.KeyOffset = br.ReadInt64();
+            ret.len = br.ReadInt32();
+            ret.Offset = br.ReadInt64();
+            ret.Del = br.ReadBoolean();
+            
+            //DeSerializeSimple(br, ret);
 
             return ret;
         }
@@ -224,7 +242,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public int CompareTo(BigEntityTableIndexItem other)
         {
-            int compare = -1;
+            int compare = 0;
             if (this.Index.IndexName != other.Index.IndexName)
             {
                 throw new Exception("无法比较，索引名称不相同");
@@ -245,20 +263,26 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 {
                                     if (i > lenb - 1)
                                     {
-                                        return 1;
+                                        compare = 1;
+                                        break;
                                     }
                                     diff = a - b[i];
                                     if (diff > 0)
                                     {
-                                        return 1;
+                                        compare = 1;
+                                        break;
                                     }
                                     else if (diff < 0)
                                     {
-                                        return -1;
+                                        compare = -1;
+                                        break;
                                     }
                                     i++;
                                 }
-                                compare = i == lenb ? 0 : -1;
+                                if (compare == 0)
+                                {
+                                    compare = i == lenb ? 0 : -1;
+                                }
                             }
                             else if (this.Key[j] == null)
                             {

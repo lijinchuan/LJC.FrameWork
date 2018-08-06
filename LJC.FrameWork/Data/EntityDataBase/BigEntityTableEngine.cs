@@ -510,6 +510,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
 
                         findkey.Key =new object[] { keyvalue };
+                        findkey.Index = meta.KeyIndexInfo;
                         if (KeyExsitsInner(tablename, findkey, keyreader))
                         {
                             throw new Exception("不能重复写入:" + keyvalue);
@@ -1025,6 +1026,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 foreach (var item in keyReader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
                 {
+                    item.SetIndex(meta.KeyIndexInfo);
                     if (keyReader.ReadedPostion() > posend)
                     {
                         return false;
@@ -1516,12 +1518,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                         var buffer = new byte[1024];
                                         foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
                                         {
+                                            item.SetIndex(meta.KeyIndexInfo);
                                             //var item = keyreader.ReadObject<BigEntityTableIndexItem>();
                                             if (keyreader.ReadedPostion() > posend)
                                             {
                                                 break;
                                             }
-                                            if (item.Key.Equals(key))
+                                            if (item.CompareTo(findkey) == 0)
                                             {
                                                 findkeyitem = item;
                                                 break;
