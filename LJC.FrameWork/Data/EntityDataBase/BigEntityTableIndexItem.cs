@@ -341,6 +341,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             compare = ((float)Key[j]).CompareTo((float)other.Key[j]);
                             break;
                         }
+                    case EntityType.INT32:
+                        {
+                            compare = ((int)Key[j]).CompareTo((int)other.Key[j]);
+                            break;
+                        }
                     case EntityType.INT64:
                         {
                             compare = ((long)Key[j]).CompareTo((long)other.Key[j]);

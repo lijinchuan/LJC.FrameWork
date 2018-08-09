@@ -195,7 +195,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             foreach (var idx in indexs)
                             {
-                                var idxkey = tablename + ":" + idx;
+                                var idxkey = tablename + ":" + idx.IndexName;
                                 keyindexdisklist.TryAdd(idxkey, new BigEntityTableIndexItem[0]);
                                 keyindexmemlist.TryAdd(idxkey, new SortArrayList<BigEntityTableIndexItem>());
                                 keyindexmemtemplist.TryAdd(idxkey, new SortArrayList<BigEntityTableIndexItem>());
@@ -553,7 +553,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 idxwriterdic.Add(indexfile, idxwriter);
                             }
 
-                            keyindexmemlist[tablename + ":" + idx].Add(newindex);
+                            keyindexmemlist[tablename + ":" + idx.IndexName].Add(newindex);
 
                             newindex.KeyOffset = idxwriter.GetWritePosition();
                             idxwriter.AppendObject(newindex);
@@ -837,7 +837,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var indexfile = GetIndexFile(tablename, idx.IndexName);
                     //这里有问题。索引重排后会变的
                     var idxfindkey = new BigEntityTableIndexItem { Key = oldidxval, Offset = oldindexitem.Offset };
-                    var idxkey = tablename + ":" + idx;
+                    var idxkey = tablename + ":" + idx.IndexName;
                     BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, oldidxval, oldindexitem.Offset).FirstOrDefault();
 
                     if (idxitem == null)
@@ -1217,9 +1217,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             ProcessTraceUtil.Trace("find first index");
                         }
-                        if (item.Key.Equals(value))
+                        item.SetIndex(index);
+                        if (!item.Del)
                         {
-                            if (!item.Del)
+                            if (item.CompareTo(findkey) == 0)
                             {
                                 yield return item;
                             }

@@ -623,6 +623,35 @@ namespace Test2
             Console.WriteLine("读数据完成");
         }
 
+        public void Fun99()
+        {
+            long nid = 0;
+            List<GubaBandResultEntity> list = null;
+            Console.WriteLine("开始读数据");
+            while ((list = DataContextMoudelFactory<GubaBandResultEntity>.GetDataContext("ConndbDB$GubaData").WhereBiger(p => p.ID, nid).Top(10000).OrderBy(p => p.ID).ExecuteList()).Count > 0)
+            {
+                nid = list.Last().ID;
+                int findcount = 0;
+                foreach (var item in list)
+                {
+                    var re = BigEntityTableEngine.LocalEngine.Find<GubaBandResultEntity>("GubaBandResultEntity", "GubaCode_Uid_Recount", new object[] { item.GubaCode, item.Uid, item.Recount });
+                    if (re.Count() == 0)
+                    {
+                        Console.WriteLine("找不到数据:" + item.GubaCode + "," + item.Uid + "," + item.Recount);
+                        Console.Read();
+                    }
+                    else
+                    {
+                        findcount++;
+                    }
+
+                }
+                Console.WriteLine("找到数:"+findcount);
+
+            }
+            Console.WriteLine("读数据完成");
+        }
+
 
         public void Start()
         {
@@ -717,6 +746,11 @@ namespace Test2
             if (cmd == "98")
             {
                 Fun98();
+            }
+
+            if (cmd == "99")
+            {
+                Fun99();
             }
         }
     }
