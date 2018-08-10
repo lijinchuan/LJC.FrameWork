@@ -1668,7 +1668,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 keyreader.SetPostion(start.KeyOffset);
                                 foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0))
                                 {
-                                    if (k.KeyOffset > end.KeyOffset)
+                                    if (k.KeyOffset >= end.KeyOffset)
                                     {
                                         break;
                                     }
@@ -1687,9 +1687,27 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
             }
 
+            var meta=GetMetaData(tablename);
+            var index=(string.IsNullOrWhiteSpace(keyorindex)||keyorindex==tablename)?meta.KeyIndexInfo:meta.IndexInfos.First(p=>p.IndexName==keyorindex);
             var keyindex=(string.IsNullOrWhiteSpace(keyorindex)||keyorindex==tablename)?tablename:(tablename+":"+keyorindex);
-            //内存查找
-            //keyindexmemlist[keyindex].fin
+
+            try
+            {
+                tablelocker.EnterReadLock();
+                foreach (var item in keyindexmemlist[keyindex].Scan(new BigEntityTableIndexItem { Index = index, Key = keystart }, new BigEntityTableIndexItem { Index = index, Key = keyend }))
+                {
+                    keylist.Add(item.Offset);
+                }
+
+                foreach (var item in keyindexmemtemplist[keyindex].Scan(new BigEntityTableIndexItem { Index = index, Key = keystart }, new BigEntityTableIndexItem { Index = index, Key = keyend }))
+                {
+                    keylist.Add(item.Offset);
+                }
+            }
+            finally
+            {
+                tablelocker.ExitReadLock();
+            }
 
             if (keylist.Count > 0)
             {

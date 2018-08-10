@@ -330,6 +330,90 @@ namespace LJC.FrameWork.Collections
             }
         }
 
+        public IEnumerable<T> Scan(T start,T end)
+        {
+            if (Count > 0)
+            {
+                int mid = 0;
+                int pos = Find(start, ref mid);
+                var posper = pos;
+                if (pos != -1)
+                {
+                    var compare = 0;
+                    while (posper >= 0)
+                    {
+                        compare = ListSort[posper].Tag.CompareTo(start);
+                        if (compare < 0 || posper == 0)
+                        {
+                            break;
+                        }
+                        posper--;
+                    }
+                    if (compare != 0)
+                    {
+                        posper++;
+                    }
+                }
+                else
+                {
+                    //var sl = ListSort[mid + 1];
+                    posper = mid + 1;
+                }
+
+                int mid2 = 0;
+                int pos2 = Find(end, ref mid2);
+                var posper2 = pos2;
+                if (pos2 != -1)
+                {
+                    var compare = 0;
+                    while (posper2 <= this.Count - 1)
+                    {
+                        compare = ListSort[posper2].Tag.CompareTo(end);
+                        if (compare < 0 || posper2 == 0)
+                        {
+                            break;
+                        }
+                        posper2++;
+                    }
+                    if (compare != 0)
+                    {
+                        posper2--;
+                    }
+                }
+                else
+                {
+                    //var sl = ListSort[mid + 1];
+                    posper2 = mid2 + 1;
+                }
+
+
+                for (int i=posper; i <= posper2; i++)
+                {
+                    var sl = ListSort[i];
+
+                    foreach (var r in sl.GetList())
+                    {
+                        if (i == posper || i == posper2)
+                        {
+                            if (r.CompareTo(start) >= 0 && r.CompareTo(end) <= 0)
+                            {
+                                yield return r;
+                            }
+                        }
+                        else
+                        {
+                            yield return r;
+                        }
+                    }
+
+                    if (sl.Tag.CompareTo(end) > 0 || posper == this.Count - 1)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
         public IEnumerable<T> GetList()
         {
             for (int i = 0; i < Count; i++)
