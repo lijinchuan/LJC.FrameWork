@@ -632,8 +632,11 @@ namespace Test2
             {
                 nid = list.Last().ID;
                 int findcount = 0;
+                DateTime now = DateTime.Now;
+                ProcessTraceUtil.StartTrace();
                 foreach (var item in list)
                 {
+                    
                     var re = BigEntityTableEngine.LocalEngine.Find<GubaBandResultEntity>("GubaBandResultEntity", "GubaCode_Uid_Recount", new object[] { item.GubaCode, item.Uid, item.Recount });
                     if (re.Count() == 0)
                     {
@@ -644,12 +647,26 @@ namespace Test2
                     {
                         findcount++;
                     }
-
                 }
-                Console.WriteLine("找到数:"+findcount);
+                LJC.FrameWork.LogManager.LogHelper.Instance.Debug("查找：" + ProcessTraceUtil.PrintTrace());
+                Console.WriteLine("找到数:" + findcount + ",用时" + (DateTime.Now.Subtract(now).TotalMilliseconds) + "ms");
 
             }
             Console.WriteLine("读数据完成");
+        }
+
+        public void Fun100()
+        {
+            var list = BigEntityTableEngine.LocalEngine.Scan<GubaBandResultEntity>("GubaBandResultEntity", "GubaCode_Uid_Recount", new object[] { "000001", "", 0 }, new object[] { "000002", "", 0 }).ToList();
+
+            StringBuilder sb = new StringBuilder();
+            foreach (var item in list)
+            {
+                sb.Append(JsonUtil<object>.Serialize(item));
+                sb.AppendLine();
+            }
+            LJC.FrameWork.LogManager.LogHelper.Instance.Info(sb.ToString());
+            Console.WriteLine("000001总条数:" + list.Count);
         }
 
 
@@ -751,6 +768,11 @@ namespace Test2
             if (cmd == "99")
             {
                 Fun99();
+            }
+
+            if (cmd == "100")
+            {
+                Fun100();
             }
         }
     }

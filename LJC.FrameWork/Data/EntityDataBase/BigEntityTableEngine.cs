@@ -1563,22 +1563,43 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private BigEntityTableIndexItem GetNear(string tablename, object key, bool start)
+        private BigEntityTableIndexItem GetNear(string tablename,string keyorindex, object[] value, bool start)
         {
             var meta = GetMetaData(tablename);
-            var findkey = new BigEntityTableIndexItem { Key = new object[] { key} };
-            BigEntityTableIndexItem findkeyitem = keyindexmemlist[tablename].Find(findkey);
+            IndexInfo index = null;
+            string keyfile = GetKeyFile(tablename);
+            string keyname = tablename;
+            if (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename)
+            {
+                index = meta.KeyIndexInfo;
+            }
+            else
+            {
+                index = meta.IndexInfos.FirstOrDefault(p => p.IndexName == keyorindex);
+                if (index == null)
+                {
+                    throw new Exception("索引不存在:" + keyorindex);
+                }
+                keyname = tablename + ":" + index.IndexName;
+                keyfile = GetIndexFile(tablename, index.IndexName);
+            }
+            var findkey = new BigEntityTableIndexItem { Key = value, Index = index };
+            BigEntityTableIndexItem findkeyitem = keyindexmemlist[keyname].Find(findkey);
             if (findkeyitem != null)
             {
                 return findkeyitem;
             }
 
-            var indexarr = keyindexdisklist[tablename];
+            BigEntityTableIndexItem[] indexarr = keyindexdisklist[keyname];
             int mid = -1;
             int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(findkey, ref mid);
 
             if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
             {
+                if (mid == -1 && indexarr.Length > 0)
+                {
+                    return indexarr[0];
+                }
                 return null;
             }
             else if (pos > -1)
@@ -1588,9 +1609,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
 
-            var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+            var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
 
-            using (var keyreader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+            using (var keyreader = ObjTextReader.CreateReader(keyfile))
             {
                 keyreader.SetPostion(indexarr[mid].KeyOffset);
                 var endoffset = indexarr[mid + 1].KeyOffset;
@@ -1601,6 +1622,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         break;
                     }
+
+                    item.SetIndex(index);
 
                     if (start && item.CompareTo(findkey) >= 0)
                     {
@@ -1616,31 +1639,31 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return null;
         }
 
-        public IEnumerable<T> Scan<T>(string tablename, string keystart, string keyend) where T : new()
+        public IEnumerable<T> Scan<T>(string tablename,string keyorindex, object[] keystart, object[] keyend) where T : new()
         {
             var tablelocker = GetKeyLocker(tablename, string.Empty);
             List<long> keylist = new List<long>();
-            tablelocker.EnterReadLock();
-            try
+            var start = GetNear(tablename, keyorindex, keystart, true);
+            if (start != null)
             {
-                var start = GetNear(tablename, keystart, true);
-
-                if (start != null)
+                var end = GetNear(tablename, keyorindex, keyend, false);
+                var compere = start.CompareTo(end);
+                if (end != null && compere <= 0)
                 {
-                    var end = GetNear(tablename, keyend, false);
-                    var compere = start.CompareTo(end);
-                    if (end != null && compere <= 0)
+                    if (compere == 0)
                     {
-                        if (compere == 0)
+                        if (!start.Del)
                         {
-                            if (!start.Del)
-                            {
-                                keylist.Add(start.Offset);
-                            }
+                            keylist.Add(start.Offset);
                         }
-                        else
+                    }
+                    else
+                    {
+                        var keyfile = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? GetKeyFile(tablename) : GetIndexFile(tablename, keyorindex);
+                        try
                         {
-                            using (var keyreader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+                            tablelocker.EnterReadLock();
+                            using (var keyreader = ObjTextReader.CreateReader(keyfile))
                             {
                                 keyreader.SetPostion(start.KeyOffset);
                                 foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0))
@@ -1656,17 +1679,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 }
                             }
                         }
+                        finally
+                        {
+                            tablelocker.ExitReadLock();
+                        }
                     }
                 }
             }
-            finally
-            {
-                tablelocker.ExitReadLock();
-            }
+
+            var keyindex=(string.IsNullOrWhiteSpace(keyorindex)||keyorindex==tablename)?tablename:(tablename+":"+keyorindex);
+            //内存查找
+            //keyindexmemlist[keyindex].fin
 
             if (keylist.Count > 0)
             {
-                keylist.Sort();
+                //keylist.Sort();
                 using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
                 {
                     foreach (var k in keylist)
