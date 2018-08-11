@@ -657,7 +657,7 @@ namespace Test2
 
         public void Fun100()
         {
-            var list = BigEntityTableEngine.LocalEngine.Scan<GubaBandResultEntity>("GubaBandResultEntity", "GubaCode_Uid_Recount", new object[] { "000001", "", 0 }, new object[] { "000002", "", 0 }).ToList();
+            var list = BigEntityTableEngine.LocalEngine.Scan<GubaBandResultEntity>("GubaBandResultEntity", "GubaCode_Uid_Recount", new object[] { "000001", "", 0 }, new object[] { "000002", "", 0 },1,int.MaxValue).ToList();
 
             StringBuilder sb = new StringBuilder();
             foreach (var item in list)
