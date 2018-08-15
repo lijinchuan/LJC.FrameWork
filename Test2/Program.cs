@@ -342,6 +342,11 @@ namespace Test2
                             funx = new Fun2();
                             break;
                         }
+                    case "3":
+                        {
+                            funx = new Fun3();
+                            break;
+                        }
                 }
 
                 if (funx != null)

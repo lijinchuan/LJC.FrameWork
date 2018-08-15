@@ -369,7 +369,7 @@ namespace LJC.FrameWork.Collections
                     while (posper2 <= this.Count - 1)
                     {
                         compare = ListSort[posper2].Tag.CompareTo(end);
-                        if (compare < 0 || posper2 == 0)
+                        if (compare > 0 || posper2 == 0)
                         {
                             break;
                         }

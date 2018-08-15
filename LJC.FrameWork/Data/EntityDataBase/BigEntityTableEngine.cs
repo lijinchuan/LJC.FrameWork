@@ -1563,7 +1563,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private BigEntityTableIndexItem GetNear(string tablename,string keyorindex, object[] value, bool start)
+        private BigEntityTableIndexItem GetDiskNear(string tablename,string keyorindex, object[] value, bool start)
         {
             var meta = GetMetaData(tablename);
             IndexInfo index = null;
@@ -1584,11 +1584,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 keyfile = GetIndexFile(tablename, index.IndexName);
             }
             var findkey = new BigEntityTableIndexItem { Key = value, Index = index };
-            BigEntityTableIndexItem findkeyitem = keyindexmemlist[keyname].Find(findkey);
-            if (findkeyitem != null)
-            {
-                return findkeyitem;
-            }
+
+            BigEntityTableIndexItem findkeyitem = null;
+            //BigEntityTableIndexItem findkeyitem = keyindexmemlist[keyname].Find(findkey);
+            //if (findkeyitem != null)
+            //{
+            //    return findkeyitem;
+            //}
 
             BigEntityTableIndexItem[] indexarr = keyindexdisklist[keyname];
             int mid = -1;
@@ -1643,45 +1645,48 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             var tablelocker = GetKeyLocker(tablename, string.Empty);
             List<long> keylist = new List<long>();
-            var start = GetNear(tablename, keyorindex, keystart, true);
+            var start = GetDiskNear(tablename, keyorindex, keystart, true);
             if (start != null)
             {
-                var end = GetNear(tablename, keyorindex, keyend, false);
-                var compere = start.CompareTo(end);
-                if (end != null && compere <= 0)
+                var end = GetDiskNear(tablename, keyorindex, keyend, false);
+                if (end != null)
                 {
-                    if (compere == 0)
+                    var compere = start.CompareTo(end);
+                    if (compere <= 0)
                     {
-                        if (!start.Del)
+                        if (compere == 0)
                         {
-                            keylist.Add(start.Offset);
-                        }
-                    }
-                    else
-                    {
-                        var keyfile = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? GetKeyFile(tablename) : GetIndexFile(tablename, keyorindex);
-                        try
-                        {
-                            tablelocker.EnterReadLock();
-                            using (var keyreader = ObjTextReader.CreateReader(keyfile))
+                            if (!start.Del)
                             {
-                                keyreader.SetPostion(start.KeyOffset);
-                                foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0))
+                                keylist.Add(start.Offset);
+                            }
+                        }
+                        else
+                        {
+                            var keyfile = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? GetKeyFile(tablename) : GetIndexFile(tablename, keyorindex);
+                            try
+                            {
+                                tablelocker.EnterReadLock();
+                                using (var keyreader = ObjTextReader.CreateReader(keyfile))
                                 {
-                                    if (k.KeyOffset >= end.KeyOffset)
+                                    keyreader.SetPostion(start.KeyOffset);
+                                    foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0))
                                     {
-                                        break;
-                                    }
-                                    if (!k.Del)
-                                    {
-                                        keylist.Add(k.Offset);
+                                        if (k.KeyOffset >= end.KeyOffset)
+                                        {
+                                            break;
+                                        }
+                                        if (!k.Del)
+                                        {
+                                            keylist.Add(k.Offset);
+                                        }
                                     }
                                 }
                             }
-                        }
-                        finally
-                        {
-                            tablelocker.ExitReadLock();
+                            finally
+                            {
+                                tablelocker.ExitReadLock();
+                            }
                         }
                     }
                 }
