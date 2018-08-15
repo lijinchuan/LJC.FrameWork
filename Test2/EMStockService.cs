@@ -167,6 +167,21 @@ namespace Test2
                         }
                     }
 
+                    if (DateTime.Now.Date >= bein && DateTime.Now.Date <= end && resp.info != null)
+                    {
+                        yield return new StockQuote
+                        {
+                            Close = ConvertPrice(resp.info.c),
+                            High = ConvertPrice(resp.info.h),
+                            Open = ConvertPrice(resp.info.o),
+                            Low = ConvertPrice(resp.info.l),
+                            Volumne = ConvertPrice(resp.info.v),
+                            Amount = ConvertPrice(resp.info.a),
+                            Time = DateTime.Parse(resp.info.time),
+                            InnerCode=resp.code
+                        };
+                    }
+
                     if (insertlist.Count > 0)
                     {
                         BigEntityTableEngine.LocalEngine.InsertBatch(TBName, insertlist);
