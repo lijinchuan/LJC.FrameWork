@@ -35,10 +35,21 @@ namespace Test2
 
         public class EMDayQuoteResponse
         {
+            public EMDayQuoteResponse()
+            {
+                stats = true;
+            }
+
             public string name { get; set; }
             public string code { get; set; }
             public EMQuoteInfo info { get; set; }
             public string[] data { get; set; }
+
+            public bool stats
+            {
+                get;
+                set;
+            }
         }
 
         public class EMQuoteInfo
@@ -91,6 +102,10 @@ namespace Test2
             if (quotetblist.Count() > 0)
             {
                 last = quotetblist.Last().Time;
+                if(last.DayOfWeek==DayOfWeek.Friday)
+                {
+                    last = last.AddDays(2);
+                }
             }
             if (last >= end)
             {
@@ -115,39 +130,47 @@ namespace Test2
                 var respjson = new HttpRequestEx().DoRequest(url, data);
                 respjson.ResponseContent = Encoding.UTF8.GetString(respjson.ResponseBytes);
                 var resp = JsonUtil<EMDayQuoteResponse>.Deserialize(respjson.ResponseContent.Substring(respjson.ResponseContent.IndexOf('(') + 1).TrimEnd(')'));
-                List<EMStockDayQuote> insertlist = new List<EMStockDayQuote>();
-                foreach (var s in resp.data)
+                if (resp.stats)
                 {
-                    var arr = s.Split(',');
-                    var quote = new EMStockDayQuote
+                    List<EMStockDayQuote> insertlist = new List<EMStockDayQuote>();
+                    foreach (var s in resp.data)
                     {
-                        Time = DateTime.Parse(arr[0]),
-                        Open = ConvertPrice(arr[1]),
-                        Close = ConvertPrice(arr[2]),
-                        High = ConvertPrice(arr[3]),
-                        Low = ConvertPrice(arr[4]),
-                        Volumne = ConvertPrice(arr[5]),
-                        Amount = ConvertPrice(arr[6]),
-                        ChangeRate = ConvertPrice(arr[7]),
-                        InnerCode=resp.code,
-                        
-                    };
-                    quote.Key = resp.code + "_" + quote.Time.ToString("yyyyMMdd");
+                        var arr = s.Split(',');
+                        var quote = new EMStockDayQuote
+                        {
+                            Time = DateTime.Parse(arr[0]).Date,
+                            Open = ConvertPrice(arr[1]),
+                            Close = ConvertPrice(arr[2]),
+                            High = ConvertPrice(arr[3]),
+                            Low = ConvertPrice(arr[4]),
+                            Volumne = ConvertPrice(arr[5]),
+                            Amount = ConvertPrice(arr[6]),
+                            ChangeRate = ConvertPrice(arr[7]),
+                            InnerCode = resp.code,
 
-                    if (quote.Time > last)
-                    {
-                        insertlist.Add(quote);
+                        };
+                        quote.Key = resp.code + "_" + quote.Time.ToString("yyyyMMdd");
+
+                        if (quote.Time == DateTime.Now.Date)
+                        {
+                            continue;
+                        }
+
+                        if (quote.Time > last)
+                        {
+                            insertlist.Add(quote);
+                        }
+
+                        if (quote.Time >= bein && quote.Time <= end)
+                        {
+                            yield return quote;
+                        }
                     }
 
-                    if (quote.Time >= bein && quote.Time <= end)
+                    if (insertlist.Count > 0)
                     {
-                        yield return quote;
+                        BigEntityTableEngine.LocalEngine.InsertBatch(TBName, insertlist);
                     }
-                }
-
-                if (insertlist.Count > 0)
-                {
-                    BigEntityTableEngine.LocalEngine.InsertBatch(TBName, insertlist);
                 }
             }
         }
