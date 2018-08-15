@@ -358,6 +358,10 @@ namespace LJC.FrameWork.Collections
                 {
                     //var sl = ListSort[mid + 1];
                     posper = mid + 1;
+                    if (posper == Count)
+                    {
+                        yield break;
+                    }
                 }
 
                 int mid2 = 0;
