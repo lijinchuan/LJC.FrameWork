@@ -86,7 +86,7 @@ namespace Test2
 
         public static IEnumerable<StockQuote> GetStockDayQuote(string code,DateTime bein,DateTime end)
         {
-            var quotetblist = BigEntityTableEngine.LocalEngine.Scan<EMStockDayQuote>(TBName, QuoteIndexName, new object[] { code, bein }, new object[] { code, end },1,int.MaxValue).ToList().OrderBy(p => p.Time);
+            var quotetblist = BigEntityTableEngine.LocalEngine.Scan<EMStockDayQuote>(TBName, QuoteIndexName, new object[] { code, bein }, new object[] { code, end },1,int.MaxValue).ToList();
             DateTime last = DateTime.MinValue;
             if (quotetblist.Count() > 0)
             {
@@ -115,6 +115,7 @@ namespace Test2
                 var respjson = new HttpRequestEx().DoRequest(url, data);
                 respjson.ResponseContent = Encoding.UTF8.GetString(respjson.ResponseBytes);
                 var resp = JsonUtil<EMDayQuoteResponse>.Deserialize(respjson.ResponseContent.Substring(respjson.ResponseContent.IndexOf('(') + 1).TrimEnd(')'));
+                List<EMStockDayQuote> insertlist = new List<EMStockDayQuote>();
                 foreach (var s in resp.data)
                 {
                     var arr = s.Split(',');
@@ -135,13 +136,18 @@ namespace Test2
 
                     if (quote.Time > last)
                     {
-                        BigEntityTableEngine.LocalEngine.Insert(TBName, quote);
+                        insertlist.Add(quote);
                     }
 
                     if (quote.Time >= bein && quote.Time <= end)
                     {
                         yield return quote;
                     }
+                }
+
+                if (insertlist.Count > 0)
+                {
+                    BigEntityTableEngine.LocalEngine.InsertBatch(TBName, insertlist);
                 }
             }
         }
