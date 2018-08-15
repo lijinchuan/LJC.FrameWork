@@ -1641,10 +1641,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return null;
         }
 
-        public IEnumerable<T> Scan<T>(string tablename,string keyorindex, object[] keystart, object[] keyend) where T : new()
+        public IEnumerable<T> Scan<T>(string tablename,string keyorindex, object[] keystart, object[] keyend,int pi,int ps) where T : new()
         {
             var tablelocker = GetKeyLocker(tablename, string.Empty);
-            List<long> keylist = new List<long>();
+            //List<long> keylist = new List<long>();
+            List<BigEntityTableIndexItem> keylist = new List<BigEntityTableIndexItem>();
+            List<BigEntityTableIndexItem> keylist2 = new List<BigEntityTableIndexItem>();
+            List<BigEntityTableIndexItem> keylist3 = new List<BigEntityTableIndexItem>();
             var start = GetDiskNear(tablename, keyorindex, keystart, true);
             if (start != null)
             {
@@ -1701,12 +1704,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 tablelocker.EnterReadLock();
                 foreach (var item in keyindexmemlist[keyindex].Scan(new BigEntityTableIndexItem { Index = index, Key = keystart }, new BigEntityTableIndexItem { Index = index, Key = keyend }))
                 {
-                    keylist.Add(item.Offset);
+                    keylist2.Add(item);
                 }
 
                 foreach (var item in keyindexmemtemplist[keyindex].Scan(new BigEntityTableIndexItem { Index = index, Key = keystart }, new BigEntityTableIndexItem { Index = index, Key = keyend }))
                 {
-                    keylist.Add(item.Offset);
+                    keylist3.Add(item);
                 }
             }
             finally
@@ -1714,15 +1717,27 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 tablelocker.ExitReadLock();
             }
 
-            if (keylist.Count > 0)
+            keylist2 = MergeAndSort2(keylist2, keylist3).ToList();
+
+            if (keylist.Count > 0 || keylist2.Count > 0)
             {
-                //keylist.Sort();
+                int skip = (pi - 1) * ps;
+                int curr = 0;
+                int take = 0;
                 using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
                 {
-                    foreach (var k in keylist)
+                    foreach (var k in MergeAndSort2(keylist, keylist2))
                     {
-                        otr.SetPostion(k);
+                        if ((++curr) <= skip)
+                        {
+                            continue;
+                        }
+                        otr.SetPostion(k.Offset);
                         yield return otr.ReadObject<EntityTableItem<T>>().Data;
+                        if ((++take) == ps)
+                        {
+                            break;
+                        }
                     }
                 }
             }
