@@ -86,7 +86,7 @@ namespace Test2
 
         public static IEnumerable<StockQuote> GetStockDayQuote(string code,DateTime bein,DateTime end)
         {
-            var quotetblist = BigEntityTableEngine.LocalEngine.Scan<EMStockDayQuote>(TBName, QuoteIndexName, new object[] { code, bein }, new object[] { code, end }).ToList().OrderBy(p => p.Time);
+            var quotetblist = BigEntityTableEngine.LocalEngine.Scan<EMStockDayQuote>(TBName, QuoteIndexName, new object[] { code, bein }, new object[] { code, end },1,int.MaxValue).ToList().OrderBy(p => p.Time);
             DateTime last = DateTime.MinValue;
             if (quotetblist.Count() > 0)
             {

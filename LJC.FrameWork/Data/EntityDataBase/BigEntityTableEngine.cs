@@ -1643,6 +1643,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public IEnumerable<T> Scan<T>(string tablename,string keyorindex, object[] keystart, object[] keyend,int pi,int ps) where T : new()
         {
+            var meta = GetMetaData(tablename);
+            var index = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? meta.KeyIndexInfo : meta.IndexInfos.First(p => p.IndexName == keyorindex);
+            var keyindex = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? tablename : (tablename + ":" + keyorindex);
+
             var tablelocker = GetKeyLocker(tablename, string.Empty);
             //List<long> keylist = new List<long>();
             List<BigEntityTableIndexItem> keylist = new List<BigEntityTableIndexItem>();
@@ -1661,7 +1665,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             if (!start.Del)
                             {
-                                keylist.Add(start.Offset);
+                                keylist.Add(start);
                             }
                         }
                         else
@@ -1681,7 +1685,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                         }
                                         if (!k.Del)
                                         {
-                                            keylist.Add(k.Offset);
+                                            k.SetIndex(index);
+                                            keylist.Add(k);
                                         }
                                     }
                                 }
@@ -1694,10 +1699,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                 }
             }
-
-            var meta=GetMetaData(tablename);
-            var index=(string.IsNullOrWhiteSpace(keyorindex)||keyorindex==tablename)?meta.KeyIndexInfo:meta.IndexInfos.First(p=>p.IndexName==keyorindex);
-            var keyindex=(string.IsNullOrWhiteSpace(keyorindex)||keyorindex==tablename)?tablename:(tablename+":"+keyorindex);
 
             try
             {
