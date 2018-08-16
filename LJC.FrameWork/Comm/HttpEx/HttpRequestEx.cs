@@ -71,6 +71,15 @@ namespace LJC.FrameWork.Comm
                 _refer = value;
             }
         }
+
+        private Dictionary<string, string> _headers = new Dictionary<string, string>();
+        public Dictionary<string, string> Headers
+        {
+            get
+            {
+                return _headers;
+            }
+        }
         #endregion
 
         #region 编码方式
@@ -532,10 +541,10 @@ namespace LJC.FrameWork.Comm
         public HttpResponseEx DoRequest(string url, byte[] buff, WebRequestMethodEnum method = WebRequestMethodEnum.GET, bool saveCookie = true, bool getContent = true,
             string contentType = "application/x-www-form-urlencoded;charset=UTF-8;")
         {
-            
+
             var ret = new HttpResponseEx();
             ret.RequestMills = Environment.TickCount & Int32.MaxValue;
-            
+
             try
             {
                 if (!CheckIsInDomain(url))
@@ -564,6 +573,10 @@ namespace LJC.FrameWork.Comm
                 {
                     //webRequest.Headers.Add(HttpRequestHeader.AcceptEncoding, "gzip, deflate");
                     webRequest.Headers.Add(HttpRequestHeader.AcceptEncoding, "gzip");
+                }
+                foreach (var kv in Headers)
+                {
+                    webRequest.Headers.Add(kv.Key, kv.Value);
                 }
                 if (!string.IsNullOrEmpty(Referer))
                     webRequest.Referer = Referer;
