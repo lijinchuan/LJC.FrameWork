@@ -22,8 +22,8 @@ namespace Test2
             var end = DateTime.Parse(Console.ReadLine());
 
             DateTime time = DateTime.Now;
-            var quotes = EMStockService.GetStockDayQuote(code, begin.Date, end.Date);
-            Console.WriteLine("完成用时:" + (DateTime.Now.Subtract(time).Milliseconds + "ms"));
+            var quotes = EMStockService.GetStockDayQuote(code, begin.Date, end.Date).ToList();
+            Console.WriteLine("完成用时:" + (DateTime.Now.Subtract(time).TotalMilliseconds + "ms"));
 
             foreach (var item in quotes)
             {
