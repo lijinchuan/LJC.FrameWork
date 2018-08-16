@@ -227,7 +227,7 @@ namespace LJC.FrameWork.Collections
 
             if (comparetoRt < 0)
             {
-                mid = rt-1;
+                mid = rt;
                 return -1;
             }
 
@@ -394,6 +394,10 @@ namespace LJC.FrameWork.Collections
                 for (int i=posper; i <= posper2; i++)
                 {
                     var sl = ListSort[i];
+                    if (sl == null)
+                    {
+                        break;
+                    }
 
                     foreach (var r in sl.GetList())
                     {
