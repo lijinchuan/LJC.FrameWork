@@ -626,7 +626,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return Insert2(tablename, items, meta);
         }
 
-        public bool Delete<T>(string tablename, string key) where T : new()
+        public bool Delete<T>(string tablename, object key) where T : new()
         {
             BigEntityTableMeta meta = GetMetaData(tablename);
 
@@ -741,12 +741,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new Exception("key不能为空");
             }
 
-            var key = keyobj.ToString();
-            var upitem = FindKey(tablename, keyobj.ToString());
+            var upitem = FindKey(tablename, keyobj);
 
             if (upitem != null)
             {
-                return Update2(tablename, key, item, meta);
+                return Update2(tablename, keyobj, item, meta);
             }
             else
             {
@@ -754,7 +753,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private bool Update2<T>(string tablename, string key, T item, BigEntityTableMeta meta) where T : new()
+        private bool Update2<T>(string tablename, object key, T item, BigEntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
             Tuple<long, long> offset = null;
@@ -1042,7 +1041,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         }
 
-        public BigEntityTableIndexItem FindKey(string tablename, string key)
+        public BigEntityTableIndexItem FindKey(string tablename, object key)
         {
             var meta = GetMetaData(tablename);
 
@@ -1391,7 +1390,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public IEnumerable<T> FindBatch<T>(string tablename, IEnumerable<string> keys) where T : new()
+        public IEnumerable<T> FindBatch<T>(string tablename, IEnumerable<object> keys) where T : new()
         {
             string tablefile = GetTableFile(tablename);
             BigEntityTableMeta meta = GetMetaData(tablename);
@@ -1747,10 +1746,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public IEnumerable<T> Find<T>(string tablename, Func<T, bool> findcondition) where T : new()
         {
+            var meta = GetMetaData(tablename);
             var buffer = new byte[1024 * 1024 * 10];
             using (var reader = ObjTextReader.CreateReader(GetTableFile(tablename)))
             {
-                foreach (var item in reader.ReadObjectsWating<EntityTableItem<T>>(1, null, buffer))
+                var curroffset = 0L;
+                foreach (var item in reader.ReadObjectsWating<EntityTableItem<T>>(1, p => curroffset = p, buffer))
                 {
                     if (item == null)
                     {
@@ -1760,6 +1761,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     if (item.Flag == EntityTableItemFlag.Del)
                     {
 
+                        continue;
+                    }
+
+                    var findkey = FindKey(tablename, meta.KeyProperty.GetValueMethed(item.Data));
+                    if (findkey == null || findkey.Offset != curroffset)
+                    {
                         continue;
                     }
 
