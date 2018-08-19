@@ -62,6 +62,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
             set;
         }
 
+        /// <summary>
+        /// 位置
+        /// </summary>
+        public long Pos
+        {
+            get;
+            set;
+        }
+
         private BigEntityTableIndexItem DeSerializeSimple(BinaryReader br,BigEntityTableIndexItem ret)
         {
             object[] objs = new object[this.Index.Indexs.Length];
@@ -145,7 +154,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             br = new System.IO.BinaryReader(ms);
             ret.ms = ms;
             ret.br = br;
-            ret.KeyOffset = br.ReadInt64();
+            //ret.KeyOffset = br.ReadInt64();
             ret.len = br.ReadInt32();
             ret.Offset = br.ReadInt64();
             ret.Del = br.ReadBoolean();
@@ -240,7 +249,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
-                ms.Write(BitConverter.GetBytes(this.KeyOffset), 0, 8);
+                //ms.Write(BitConverter.GetBytes(this.KeyOffset), 0, 8);
                 ms.Write(BitConverter.GetBytes(this.len), 0, 4);
                 ms.Write(BitConverter.GetBytes(this.Offset), 0, 8);
                 ms.Write(BitConverter.GetBytes(this.Del), 0, 1);

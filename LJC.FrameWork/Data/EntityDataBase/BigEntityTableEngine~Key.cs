@@ -29,6 +29,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             BigEntityTableIndexItem lastreadindex = null;
             List<BigEntityTableIndexItem> list = new List<BigEntityTableIndexItem>();
             long currentpos = 0;
+            long pos = 0;
             byte[] buffer = new byte[1024 * 1024 * 10];
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
@@ -36,6 +37,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
+                    newindex.Pos = pos++;
                     newindex.SetIndex(meta.KeyIndexInfo);
                     if (newindex.KeyOffset >= indexmergeinfo.IndexMergePos)
                     {
@@ -70,7 +72,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             BigEntityTableIndexItem[] oldindexitems = null;
             keyindexdisklist.TryRemove(tablename, out oldindexitems);
             keyindexdisklist.TryAdd(tablename, list.ToArray());
-
+            pos = 0;
             using (ObjTextReader idr = ObjTextReader.CreateReader(indexfile))
             {
                 Console.WriteLine("loadkey2");
@@ -86,6 +88,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
+                    newindex.Pos = pos++;
                     newindex.SetIndex(meta.KeyIndexInfo);
                     if (!newindex.Del)
                     {
@@ -102,6 +105,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p))
                     {
                         newindex.KeyOffset = currentpos;
+                        newindex.Pos = pos++;
                         newindex.SetIndex(meta.KeyIndexInfo);
                         if (!newindex.Del)
                         {
@@ -189,6 +193,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         len = p.len,
                         Offset = p.Offset,
                         Index=p.Index,
+                        Pos=p.Pos
                     }).ToList();
                     int readcount = listtemp.Count;
 

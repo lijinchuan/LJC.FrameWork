@@ -34,6 +34,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             BigEntityTableIndexItem lastreadindex = null;
             List<BigEntityTableIndexItem> list = new List<BigEntityTableIndexItem>();
             long currentpos = 0;
+            long pos = 0;
             byte[] buffer = new byte[1024 * 1024 * 10];
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
@@ -41,6 +42,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
+                    newindex.Pos = pos++;
                     newindex.SetIndex(index);
                     if (newindex.KeyOffset >= indexmergeinfo.IndexMergePos)
                     {
@@ -75,7 +77,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             BigEntityTableIndexItem[] oldindexitems = null;
             keyindexdisklist.TryRemove(indexkey, out oldindexitems);
             keyindexdisklist.TryAdd(indexkey, list.ToArray());
-
+            pos = 0;
             using (ObjTextReader idr = ObjTextReader.CreateReader(indexfile))
             {
                 Console.WriteLine("loadindex2:" + indexname);
@@ -91,6 +93,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
+                    newindex.Pos = pos++;
                     newindex.SetIndex(index);
                     if (!newindex.Del)
                     {
@@ -107,6 +110,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p))
                     {
                         newindex.KeyOffset = currentpos;
+                        newindex.Pos = pos++;
                         newindex.SetIndex(index);
                         if (!newindex.Del)
                         {
