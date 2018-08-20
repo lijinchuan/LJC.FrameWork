@@ -963,7 +963,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public int Count(string tablename)
+        public long Count(string tablename)
         {
             var meta = this.GetMetaData(tablename);
             var keylocker = GetKeyLocker(tablename, string.Empty);
@@ -972,7 +972,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 var memkeys = this.keyindexmemlist[tablename];
                 var mergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
-                return memkeys.Length() + keyindexmemtemplist[tablename].Length() + (mergeinfo == null ? 0 : mergeinfo.TotalCount);
+                var lastkeyitem = this.keyindexdisklist[tablename].LastOrDefault();
+                return memkeys.Length() + keyindexmemtemplist[tablename].Length() + (lastkeyitem == null ? 0 : lastkeyitem.RangeIndex + 1);
             }
             finally
             {

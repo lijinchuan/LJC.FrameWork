@@ -669,11 +669,17 @@ namespace Test2
             Console.WriteLine("000001总条数:" + list.Count);
         }
 
+        public void Fun101()
+        {
+            var cnt = BigEntityTableEngine.LocalEngine.Count("Man");
+            Console.WriteLine("man表count:" + cnt);
+        }
+
 
         public void Start()
         {
             Console.WriteLine(@"选择操作 1-写库 11-继续写库 2-读库 3-整理索引 4-测试删除 5-查找 51-遍历查找key 6-修改 7-scan 8-测试索引 
-9-写入关键字 91-查询关键字 92-测试删除关键字 93-测试修改关键字 94-count统计 95-遍历关键字 96-测试关键字 97-测试关键字查找数量 98-写入GubaBandResult测试数据");
+9-写入关键字 91-查询关键字 92-测试删除关键字 93-测试修改关键字 94-count统计 95-遍历关键字 96-测试关键字 97-测试关键字查找数量 98-写入GubaBandResult测试数据 99- 101-man的count");
             var cmd = Console.ReadLine();
 
             if (cmd == "1")
@@ -773,6 +779,11 @@ namespace Test2
             if (cmd == "100")
             {
                 Fun100();
+            }
+
+            if (cmd == "101")
+            {
+                Fun101();
             }
         }
     }
