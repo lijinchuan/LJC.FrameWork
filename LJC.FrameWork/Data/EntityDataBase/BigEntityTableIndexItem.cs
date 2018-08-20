@@ -63,9 +63,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
         }
 
         /// <summary>
-        /// 位置
+        /// 排位序号
         /// </summary>
-        public long Pos
+        public long RangeIndex
         {
             get;
             set;

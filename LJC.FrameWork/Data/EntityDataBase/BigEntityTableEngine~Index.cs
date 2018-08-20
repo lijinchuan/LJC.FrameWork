@@ -34,7 +34,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             BigEntityTableIndexItem lastreadindex = null;
             List<BigEntityTableIndexItem> list = new List<BigEntityTableIndexItem>();
             long currentpos = 0;
-            long pos = 0;
+            long currrankindex = 0;
             byte[] buffer = new byte[1024 * 1024 * 10];
             using (ObjTextReader idx = ObjTextReader.CreateReader(indexfile))
             {
@@ -42,7 +42,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
-                    newindex.Pos = pos++;
+                    newindex.RangeIndex = currrankindex++;
                     newindex.SetIndex(index);
                     if (newindex.KeyOffset >= indexmergeinfo.IndexMergePos)
                     {
@@ -77,7 +77,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
             BigEntityTableIndexItem[] oldindexitems = null;
             keyindexdisklist.TryRemove(indexkey, out oldindexitems);
             keyindexdisklist.TryAdd(indexkey, list.ToArray());
-            pos = 0;
             using (ObjTextReader idr = ObjTextReader.CreateReader(indexfile))
             {
                 Console.WriteLine("loadindex2:" + indexname);
@@ -89,11 +88,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 //Dictionary<string, BigEntityTableIndexItem> indexdic = new Dictionary<string, BigEntityTableIndexItem>();
                 //keyindexlistdic[tablename];
                 SortArrayList<BigEntityTableIndexItem> keymemlist = new SortArrayList<BigEntityTableIndexItem>();
-
                 foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
                     newindex.KeyOffset = currentpos;
-                    newindex.Pos = pos++;
                     newindex.SetIndex(index);
                     if (!newindex.Del)
                     {
@@ -110,7 +107,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var newindex in idr.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p))
                     {
                         newindex.KeyOffset = currentpos;
-                        newindex.Pos = pos++;
                         newindex.SetIndex(index);
                         if (!newindex.Del)
                         {
@@ -197,7 +193,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         KeyOffset = p.KeyOffset,
                         len = p.len,
                         Offset = p.Offset,
-                        Index=p.Index
+                        Index=p.Index,
+                        RangeIndex=p.RangeIndex
                     }).ToList();
                     int readcount = listtemp.Count;
 
@@ -216,6 +213,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     //优化确定哪些部分是不需要一个个读入的
                     long copystart = 0, copyend = 0;
                     var indexarray = keyindexdisklist[indexkey];
+                    long lastrankindex = 0;
                     using (var sortarray = new Collections.SorteArray<BigEntityTableIndexItem>(indexarray))
                     {
                         int mid = -1;
@@ -225,11 +223,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             //小于最小的
                             copystart = indexarray[mid].KeyOffset;
+                            lastrankindex = indexarray[mid].RangeIndex;
                             ProcessTraceUtil.Trace("老数据可以直接copy的部分:0->" + copystart);
                         }
                         else if (pos != -1)
                         {
                             copystart = indexarray[pos].KeyOffset;
+                            lastrankindex = indexarray[pos].RangeIndex;
                             ProcessTraceUtil.Trace("老数据可以直接copy的部分:0->" + copystart);
                         }
 
@@ -332,6 +332,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             foreach (var item in listordered)
                             {
                                 item.KeyOffset += copyoffset;
+                                item.RangeIndex = lastrankindex++;
                             }
 
                             ProcessTraceUtil.TraceMem("直接copy数据完成", "m");
@@ -371,6 +372,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     {
                                         item.KeyOffset = nw.GetWritePosition();
                                         nw.AppendObject(item);
+                                        item.RangeIndex = lastrankindex++;
                                     }
                                     newIndexMergePos = nw.GetWritePosition();
                                 }
@@ -426,7 +428,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                             KeyOffset = p.KeyOffset + offset,
                                             len = p.len,
                                             Offset = p.Offset,
-                                            Index=p.Index
+                                            Index = p.Index,
+                                            RangeIndex = p.RangeIndex + readcount
                                         });
                                     }
                                 }
@@ -449,10 +452,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     {
                                         //小于最小的
                                         newcopyend = indexarray[mid].KeyOffset;
+                                        lastrankindex = indexarray[mid].RangeIndex + readcount - listtemp.Count;
                                     }
                                     else if (pos != -1)
                                     {
                                         newcopyend = indexarray[pos].KeyOffset;
+                                        lastrankindex = indexarray[pos].RangeIndex + readcount - listtemp.Count;
                                     }
                                 }
                                 if (newcopyend > readstartpostion)
@@ -476,7 +481,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                                 KeyOffset = p.KeyOffset + offset,
                                                 len = p.len,
                                                 Offset = p.Offset,
-                                                Index=p.Index
+                                                Index = p.Index,
+                                                RangeIndex = p.RangeIndex +readcount- listtemp.Count
                                             });
                                         }
                                     }
@@ -506,7 +512,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                             KeyOffset = p.KeyOffset + offset,
                                             len = p.len,
                                             Offset = p.Offset,
-                                            Index=p.Index
+                                            Index = p.Index,
+                                            RangeIndex =p.RangeIndex+ readcount
                                         });
                                     }
                                 }
