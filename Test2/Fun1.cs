@@ -13,7 +13,7 @@ namespace Test2
     {
         static void TestBigLocaldb()
         {
-            int insertcount = 1210001;
+            int insertcount = 3210053;
             //Man 
             BigEntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
             //EntityTableEngine.LocalEngine.CreateTable("Man", "Name", typeof(Man));
