@@ -662,7 +662,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
 
                     string metafile = GetMetaFile(tablename);
-                    mergeinfo.IndexMergePos = newIndexMergePos;
+                    mergeinfo.IndexMergePos = lasmargepos;
                     LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(meta, metafile, true);
 
                     ProcessTraceUtil.Trace("更新元文件，更新索引完成");

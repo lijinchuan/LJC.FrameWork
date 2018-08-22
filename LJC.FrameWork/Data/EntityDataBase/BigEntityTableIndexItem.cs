@@ -150,14 +150,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             var ret = new BigEntityTableIndexItem();
 
-            ms = new System.IO.MemoryStream(bytes);
-            br = new System.IO.BinaryReader(ms);
-            ret.ms = ms;
-            ret.br = br;
+            ret.ms = new System.IO.MemoryStream(bytes);
+            ret.br = new System.IO.BinaryReader(ms);
             //ret.KeyOffset = br.ReadInt64();
-            ret.len = br.ReadInt32();
-            ret.Offset = br.ReadInt64();
-            ret.Del = br.ReadBoolean();
+            ret.len = ret.br.ReadInt32();
+            ret.Offset = ret.br.ReadInt64();
+            ret.Del = ret.br.ReadBoolean();
             
             //DeSerializeSimple(br, ret);
 
