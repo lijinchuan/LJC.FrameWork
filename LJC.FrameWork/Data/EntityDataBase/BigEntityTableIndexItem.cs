@@ -151,7 +151,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             var ret = new BigEntityTableIndexItem();
 
             ret.ms = new System.IO.MemoryStream(bytes);
-            ret.br = new System.IO.BinaryReader(ms);
+            ret.br = new System.IO.BinaryReader(ret.ms);
             //ret.KeyOffset = br.ReadInt64();
             ret.len = ret.br.ReadInt32();
             ret.Offset = ret.br.ReadInt64();
