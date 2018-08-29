@@ -657,16 +657,17 @@ namespace Test2
 
         public void Fun100()
         {
-            var list = BigEntityTableEngine.LocalEngine.Scan<GubaBandResultEntity>("GubaBandResultEntity", "GubaCode_Uid_Recount", new object[] { "000001", "", 0 }, new object[] { "000002", "", 0 },1,int.MaxValue).ToList();
+            var list = BigEntityTableEngine.LocalEngine.Scan<GubaBandResultEntity>("GubaBandResultEntity", "GubaCode_Uid_Recount", new object[] { "000001", "", 0 }, new object[] { "000002", "", 0 },266,13).ToList();
 
             StringBuilder sb = new StringBuilder();
             foreach (var item in list)
             {
-                sb.Append(JsonUtil<object>.Serialize(item));
-                sb.AppendLine();
+                //sb.Append(JsonUtil<object>.Serialize(item));
+                //sb.AppendLine();
+                Console.WriteLine(JsonUtil<object>.Serialize(item));
             }
-            LJC.FrameWork.LogManager.LogHelper.Instance.Info(sb.ToString());
-            Console.WriteLine("000001总条数:" + list.Count);
+            //LJC.FrameWork.LogManager.LogHelper.Instance.Info(sb.ToString());
+            //Console.WriteLine("000001总条数:" + list.Count);
         }
 
         public void Fun101()

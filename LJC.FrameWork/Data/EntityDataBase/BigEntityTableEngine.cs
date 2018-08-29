@@ -1612,15 +1612,16 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
 
             var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
-
+            
             using (var keyreader = ObjTextReader.CreateReader(keyfile))
             {
                 keyreader.SetPostion(indexarr[mid].KeyOffset);
                 var endoffset = indexarr[mid + 1].KeyOffset;
-
-                foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                long keyoffset = 0;
+                foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1,p=>keyoffset=p))
                 {
-                    if (item.KeyOffset > endoffset)
+                    item.KeyOffset = keyoffset;
+                    if (item.KeyOffset > endoffset || item.KeyOffset >= keymergeinfo.IndexMergePos)
                     {
                         break;
                     }
@@ -1674,11 +1675,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             try
                             {
                                 tablelocker.EnterReadLock();
+                                long keyoffset = 0;
                                 using (var keyreader = ObjTextReader.CreateReader(keyfile))
                                 {
                                     keyreader.SetPostion(start.KeyOffset);
-                                    foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0))
+                                    foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0,p=>keyoffset=p))
                                     {
+                                        k.KeyOffset = keyoffset;
                                         if (k.KeyOffset >= end.KeyOffset)
                                         {
                                             break;
@@ -1744,6 +1747,200 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
+        public IEnumerable<T> Scan2<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps) where T : new()
+        {
+            var meta = GetMetaData(tablename);
+            string keyfile = GetKeyFile(tablename);
+            string keyname = tablename;
+            IndexInfo index = null;
+
+            //开始的
+            BigEntityTableIndexItem findfirst = null, findend = null;
+
+            if (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename)
+            {
+                index = meta.KeyIndexInfo;
+            }
+            else
+            {
+                index = meta.IndexInfos.FirstOrDefault(p => p.IndexName == keyorindex);
+                if (index == null)
+                {
+                    throw new Exception("索引不存在:" + keyorindex);
+                }
+                keyname = tablename + ":" + index.IndexName;
+                keyfile = GetIndexFile(tablename, index.IndexName);
+            }
+
+            #region 找第一个
+            var findkeystart=new BigEntityTableIndexItem{ Index=index, Key=keystart};
+            var indexarr = keyindexdisklist[keyname];
+            int mid = -1;
+            int pos = -1;
+            pos = new SorteArray<BigEntityTableIndexItem>(indexarr).Find(findkeystart, ref mid);
+            if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+            {
+                if (mid == -1 && indexarr.Length > 0)
+                {
+                    pos = 0;
+                }
+            }
+            else if (pos > -1)
+            {
+                while (true)
+                {
+                    var item = indexarr[--pos];
+                    if (item.CompareTo(findkeystart) != 0)
+                    {
+                        break;
+                    }
+                    if (pos == 0)
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                pos = mid;
+            }
+
+            if (pos >= 0)
+            {
+                var rangeindexstart = indexarr[pos].RangeIndex;
+                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
+
+                using (var keyreader = ObjTextReader.CreateReader(keyfile))
+                {
+                    keyreader.SetPostion(indexarr[mid].KeyOffset);
+                    var endoffset = indexarr[mid + 1].KeyOffset;
+
+                    foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    {
+                        if (item.KeyOffset > endoffset || item.KeyOffset >= keymergeinfo.IndexMergePos)
+                        {
+                            break;
+                        }
+
+                        item.SetIndex(index);
+                        item.RangeIndex = ++rangeindexstart;
+
+                        if (item.CompareTo(findkeystart) >= 0)
+                        {
+                            findfirst = item;
+                            break;
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region 找最后一个
+            var findkeyend = new BigEntityTableIndexItem { Index = index, Key = keystart };
+            mid = -1;
+            pos = -1;
+            pos = new SorteArray<BigEntityTableIndexItem>(indexarr).Find(findkeyend, ref mid);
+            if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
+            {
+                if (mid == indexarr.Length - 1 && indexarr.Length > 0)
+                {
+                    pos = indexarr.Length - 1;
+                }
+            }
+            else if (pos > -1)
+            {
+                while (true)
+                {
+                    var item = indexarr[++pos];
+                    if (item.CompareTo(findkeystart) != 0)
+                    {
+                        pos--;
+                        break;
+                    }
+                    if (pos == indexarr.Length - 1)
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                if (mid > 0)
+                {
+                    pos = mid - 1;
+                }
+            }
+
+            if (pos >= 0)
+            {
+                var rangeindexend = indexarr[pos].RangeIndex;
+                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
+
+                using (var keyreader = ObjTextReader.CreateReader(keyfile))
+                {
+                    keyreader.SetPostion(indexarr[pos].KeyOffset);
+
+                    foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    {
+                        if (item.KeyOffset >= keymergeinfo.IndexMergePos)
+                        {
+                            break;
+                        }
+
+                        item.SetIndex(index);
+                        item.RangeIndex = ++rangeindexend;
+
+                        if (item.CompareTo(findend) > 0)
+                        {
+                            break;
+                        }
+                        findend = item;
+                    }
+                }
+            }
+            #endregion
+
+            List<BigEntityTableIndexItem> totallist = new List<BigEntityTableIndexItem>();
+            
+            if (findfirst != null)
+            {
+                totallist.AddRange(indexarr.Where(p => p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
+                if (totallist.Count == 0 || totallist.First().KeyOffset > findfirst.KeyOffset)
+                {
+                    totallist.Insert(0, findfirst);
+                }
+            }
+            if (findend != null)
+            {
+                if (totallist.Count == 0 || totallist.Last().KeyOffset < findend.KeyOffset)
+                {
+                    totallist.Add(findend);
+                }
+            }
+            
+            totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
+            totallist.AddRange(keyindexmemtemplist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
+
+            totallist.Sort();
+
+            long pageoffset = 0;
+            long pagestartkeyoffset;
+            long skip = (pi - 1) * ps;
+            
+            foreach (var item in totallist)
+            {
+                if (item.RangeIndex == 0)
+                {
+                    pageoffset++;
+                }
+                else
+                {
+                    pageoffset = findfirst == null ? item.RangeIndex : item.RangeIndex - findfirst.RangeIndex;
+                }
+            }
+
+            return null;
+        }
 
         public IEnumerable<T> Find<T>(string tablename, Func<T, bool> findcondition) where T : new()
         {
