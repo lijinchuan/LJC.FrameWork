@@ -125,7 +125,8 @@ namespace Test2
                     code += 2;
                 }
                 var token = Guid.NewGuid().ToString("N");
-                string url = string.Format("http://pdfm.eastmoney.com/EM_UBG_PDTI_Fast/api/js?token={0}&rtntype=6&id={1}&type=k&authorityType=fa&cb=jsonp{2}", token, code, DateTimeHelper.GetTimeStamp());
+                var enurl = "cMXn904uKPCJelRpEAcghwYB+4nSbdyWjKrUHW3qLbz4FB7QUU31MroUMQusDPABRPqEytkH3h3xLQDn6ej4Q5TTKDy4FKH7xE9krSqGDCSNzATn2VqYX6KPuyKt4rpzUY5EKBZ1gsO/CQRe4u8hU799cUo5UIac/jDtZTQQ6t0=";
+                string url = string.Format(new LJC.FrameWork.Comm.EncryHelper().Decrypto(enurl), token, code, DateTimeHelper.GetTimeStamp());
                 byte[] data = null;
                 var respjson = new HttpRequestEx().DoRequest(url, data);
                 respjson.ResponseContent = Encoding.UTF8.GetString(respjson.ResponseBytes);
