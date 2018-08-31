@@ -675,5 +675,34 @@ namespace LJC.FrameWork.Comm
             Regex isStrongPwdReg = new Regex(string.Format(@"^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{{{0},{1}}}$",minlen,maxlen));
             return isStrongPwdReg.IsMatch(input);
         }
+
+        public static string Substring(string str, int startIndex)
+        {
+            if (str == null)
+            {
+                return str;
+            }
+            var strlen = str.Length;
+            if (strlen <= startIndex)
+            {
+                return string.Empty;
+            }
+            return str.Substring(startIndex);
+        }
+
+        public static string Substring(string str, int startIndex, int len)
+        {
+            if (str == null)
+            {
+                return str;
+            }
+            var strlen = str.Length;
+            if (strlen <= startIndex)
+            {
+                return string.Empty;
+            }
+
+            return str.Substring(startIndex, Math.Min(strlen - startIndex, len));
+        }
     }
 }
