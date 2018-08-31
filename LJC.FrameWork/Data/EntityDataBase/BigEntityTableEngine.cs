@@ -1747,7 +1747,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public IEnumerable<T> Scan2<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps) where T : new()
+        public List<T> Scan2<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps,ref long total) where T : new()
         {
             var meta = GetMetaData(tablename);
             string keyfile = GetKeyFile(tablename);
@@ -1812,18 +1812,19 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 using (var keyreader = ObjTextReader.CreateReader(keyfile))
                 {
-                    keyreader.SetPostion(indexarr[mid].KeyOffset);
-                    var endoffset = indexarr[mid + 1].KeyOffset;
-
-                    foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    keyreader.SetPostion(indexarr[pos].KeyOffset);
+                    //var endoffset = indexarr[pos + 1].KeyOffset;
+                    long keyoffset=0;
+                    foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1,p=>keyoffset=p))
                     {
-                        if (item.KeyOffset > endoffset || item.KeyOffset >= keymergeinfo.IndexMergePos)
+                        item.KeyOffset = keyoffset;
+                        if (/*item.KeyOffset > endoffset ||*/ item.KeyOffset >= keymergeinfo.IndexMergePos)
                         {
                             break;
                         }
 
                         item.SetIndex(index);
-                        item.RangeIndex = ++rangeindexstart;
+                        item.RangeIndex = rangeindexstart++;
 
                         if (item.CompareTo(findkeystart) >= 0)
                         {
@@ -1836,7 +1837,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             #endregion
 
             #region 找最后一个
-            var findkeyend = new BigEntityTableIndexItem { Index = index, Key = keystart };
+            var findkeyend = new BigEntityTableIndexItem { Index = index, Key = keyend };
             mid = -1;
             pos = -1;
             pos = new SorteArray<BigEntityTableIndexItem>(indexarr).Find(findkeyend, ref mid);
@@ -1852,7 +1853,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 while (true)
                 {
                     var item = indexarr[++pos];
-                    if (item.CompareTo(findkeystart) != 0)
+                    if (item.CompareTo(findkeyend) != 0)
                     {
                         pos--;
                         break;
@@ -1880,17 +1881,19 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     keyreader.SetPostion(indexarr[pos].KeyOffset);
 
-                    foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1))
+                    long keyoffset = 0;
+                    foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1,p=>keyoffset=p))
                     {
+                        item.KeyOffset = keyoffset;
                         if (item.KeyOffset >= keymergeinfo.IndexMergePos)
                         {
                             break;
                         }
 
                         item.SetIndex(index);
-                        item.RangeIndex = ++rangeindexend;
+                        item.RangeIndex = rangeindexend++;
 
-                        if (item.CompareTo(findend) > 0)
+                        if (item.CompareTo(findkeyend) > 0)
                         {
                             break;
                         }
@@ -1916,6 +1919,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     totallist.Add(findend);
                 }
+
+                total = findend.RangeIndex - findfirst.RangeIndex + 1 + keyindexmemlist[keyname].GetList().Where(p => p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count()
+                    + keyindexmemtemplist[keyname].GetList().Where(p => p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count();
             }
             
             totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
@@ -1923,23 +1929,102 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             totallist.Sort();
 
-            long pageoffset = 0;
-            long pagestartkeyoffset;
-            long skip = (pi - 1) * ps;
-            
+            long rankoffset = 0;
+            BigEntityTableIndexItem takefirstindexitem = null, takelastindexitem = null;
+            bool istakekeyoffsetstart = false;
+            long takerankskip = (pi - 1) * ps;
             foreach (var item in totallist)
             {
                 if (item.RangeIndex == 0)
                 {
-                    pageoffset++;
+                    rankoffset++;
                 }
                 else
                 {
-                    pageoffset = findfirst == null ? item.RangeIndex : item.RangeIndex - findfirst.RangeIndex;
+                    item.RangeIndex += rankoffset;
+
+                    if (!istakekeyoffsetstart)
+                    {
+                        if (item.RangeIndex >= takerankskip)
+                        {
+                            if (item.RangeIndex == takerankskip)
+                            {
+                                takefirstindexitem = item;
+                            }
+                            continue;
+                        }
+                        takefirstindexitem = item;
+                    }
+
+                    if (item.RangeIndex >= takerankskip + ps)
+                    {
+                        break;
+                    }
+                    takelastindexitem = item;
+                    rankoffset = 0;
                 }
             }
 
-            return null;
+            List<BigEntityTableIndexItem> result = new List<BigEntityTableIndexItem>();
+            
+            if (takefirstindexitem != null && takelastindexitem != null)
+            {
+                int prerank = (int)(takerankskip - (takefirstindexitem.RangeIndex - findfirst.RangeIndex + 1));
+                if (prerank > 0)
+                {
+                    var preranklist = totallist.Where(p => p.CompareTo(takefirstindexitem) < 0).ToList();
+                    result.AddRange(preranklist.Skip(preranklist.Count - prerank).Take(prerank));
+                }
+
+                var rangindex = takefirstindexitem.RangeIndex;
+                using (var keyreader = ObjTextReader.CreateReader(keyfile))
+                {
+                    keyreader.SetPostion(takefirstindexitem.KeyOffset);
+
+                    long keyoffset = 0;
+                    foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
+                    {
+                        item.KeyOffset = keyoffset;
+
+                        item.SetIndex(index);
+
+                        if (item.Del)
+                        {
+                            continue;
+                        }
+
+                        item.RangeIndex = rangindex++;
+
+                        if (item.RangeIndex - findfirst.RangeIndex >= takerankskip)
+                        {
+                            result.Add(item);
+                        }
+
+                        if (item.RangeIndex - findfirst.RangeIndex > takerankskip + ps)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                var lastrank = (int)(takerankskip + ps - (takelastindexitem.RangeIndex - findfirst.RangeIndex + 1));
+                if (lastrank > 0)
+                {
+                    var lastranklist = totallist.Where(p => p.CompareTo(takelastindexitem) > 0).ToList();
+                    result.AddRange(lastranklist.Take(lastrank));
+                }
+            }
+
+            List<T> resultlist = new List<T>();
+            using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
+            {
+                foreach (var k in result)
+                {
+                    otr.SetPostion(k.Offset);
+                    resultlist.Add(otr.ReadObject<EntityTableItem<T>>().Data);
+                }
+            }
+            return resultlist;
         }
 
         public IEnumerable<T> Find<T>(string tablename, Func<T, bool> findcondition) where T : new()
