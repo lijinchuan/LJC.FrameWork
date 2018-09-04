@@ -758,22 +758,22 @@ namespace LJC.FrameWork.Data.EntityDataBase
             string tablefile = GetTableFile(tablename);
             Tuple<long, long> offset = null;
 
+            BigEntityTableIndexItem oldindexitem = FindKey(tablename, key);
+            if (oldindexitem == null)
+            {
+                throw new Exception("查找索引失败:" + key);
+            }
+
+            var olditem = Find<T>(tablename, key);
+            if (olditem == null)
+            {
+                throw new Exception("查找数据失败");
+            }
+
             var tablelocker = GetKeyLocker(tablename, string.Empty);
+            tablelocker.EnterWriteLock();
             try
             {
-                BigEntityTableIndexItem oldindexitem = FindKey(tablename, key);
-                if (oldindexitem == null)
-                {
-                    throw new Exception("查找索引失败:" + key);
-                }
-
-                var olditem = Find<T>(tablename, key);
-                if (olditem == null)
-                {
-                    throw new Exception("查找数据失败");
-                }
-
-                tablelocker.EnterWriteLock();
                 string keyindexfile = GetKeyFile(tablename);
 
                 var keyvalue = meta.KeyProperty.GetValueMethed(item);
@@ -800,23 +800,23 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 BigEntityTableIndexItem newkey = new BigEntityTableIndexItem
                 {
-                    Key =new object[] { keyvalue },
+                    Key = new object[] { keyvalue },
                     Offset = offset.Item1,
                     len = (oldindexitem.Offset == offset.Item1) ? oldindexitem.len : (int)(offset.Item2 - offset.Item1),
                     KeyOffset = oldindexitem.KeyOffset,
                     Del = false,
-                    Index=meta.KeyIndexInfo
+                    Index = meta.KeyIndexInfo
                 };
 
                 //更新索引
                 foreach (var idx in meta.IndexInfos)
                 {
-                    var oldidxval = idx.GetIndexValues(olditem,meta);
+                    var oldidxval = idx.GetIndexValues(olditem, meta);
                     var newidxval = idx.GetIndexValues(item, meta);
                     bool equal = true;
                     if (oldidxval.Length == newidxval.Length)
                     {
-                        for(int i = 0; i < oldidxval.Length; i++)
+                        for (int i = 0; i < oldidxval.Length; i++)
                         {
                             if (oldidxval[i] != newidxval[i])
                             {
@@ -917,9 +917,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new Exception("key不能为空");
             }
 
-            string key = keyobj.ToString();
-
-            return Update2(tablename, key, item, meta);
+            return Update2(tablename, keyobj, item, meta);
         }
         #endregion
 
@@ -2153,5 +2151,78 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
         #endregion
+
+        public BigEntityTableIndexItem First(string tablename, string indexname)
+        {
+            var meta = GetMetaData(tablename);
+            var index =meta.KeyIndexInfo.IndexName==indexname?meta.KeyIndexInfo: meta.IndexInfos.FirstOrDefault(p => p.IndexName == indexname);
+            var keyindex = meta.KeyIndexInfo.IndexName == indexname ? tablename : (tablename + ":" + indexname);
+            if (index == null)
+            {
+                throw new Exception("索引不存在:" + indexname);
+            }
+            var locker = GetKeyLocker(tablename, string.Empty);
+            locker.EnterReadLock();
+            try
+            {
+                if (keyindexdisklist[keyindex].Count() > 0)
+                {
+                    return keyindexdisklist[keyindex].First();
+                }
+                else
+                {
+                    if (keyindexmemtemplist[keyindex].GetList().Count() > 0)
+                    {
+                        return keyindexmemtemplist[keyindex].GetList().First();
+                    }
+                    else if (keyindexmemlist[keyindex].GetList().Count() > 0)
+                    {
+                        return keyindexmemlist[keyindex].GetList().First();
+                    }
+                }
+
+                return null;
+            }
+            finally
+            {
+                locker.ExitReadLock();
+            }
+        }
+
+        public BigEntityTableIndexItem Last(string tablename, string indexname)
+        {
+            var meta = GetMetaData(tablename);
+            var index = meta.KeyIndexInfo.IndexName == indexname ? meta.KeyIndexInfo : meta.IndexInfos.FirstOrDefault(p => p.IndexName == indexname);
+            var keyindex = meta.KeyIndexInfo.IndexName == indexname ? tablename : (tablename + ":" + indexname);
+            if (index == null)
+            {
+                throw new Exception("索引不存在:" + indexname);
+            }
+            var locker = GetKeyLocker(tablename, string.Empty);
+            locker.EnterReadLock();
+            try
+            {
+                if (keyindexmemlist[keyindex].GetList().Count() > 0)
+                {
+                    return keyindexmemlist[keyindex].GetList().Last();
+                }
+                else
+                {
+                    if (keyindexmemtemplist[keyindex].GetList().Count() > 0)
+                    {
+                        return keyindexmemtemplist[keyindex].GetList().Last();
+                    }
+                    else if (keyindexdisklist[keyindex].Count() > 0)
+                    {
+                        return keyindexdisklist[keyindex].Last();
+                    }
+                }
+                return null;
+            }
+            finally
+            {
+                locker.ExitReadLock();
+            }
+        }
     }
 }
