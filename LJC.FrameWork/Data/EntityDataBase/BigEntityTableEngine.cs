@@ -2155,7 +2155,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public BigEntityTableIndexItem First(string tablename, string indexname)
         {
             var meta = GetMetaData(tablename);
-            var index =meta.KeyIndexInfo.IndexName==indexname?meta.KeyIndexInfo: meta.IndexInfos.FirstOrDefault(p => p.IndexName == indexname);
+
+            var index = meta.KeyIndexInfo.IndexName == indexname ? meta.KeyIndexInfo : meta.IndexInfos.FirstOrDefault(p => p.IndexName == indexname);
             var keyindex = meta.KeyIndexInfo.IndexName == indexname ? tablename : (tablename + ":" + indexname);
             if (index == null)
             {
@@ -2165,19 +2166,60 @@ namespace LJC.FrameWork.Data.EntityDataBase
             locker.EnterReadLock();
             try
             {
-                if (keyindexdisklist[keyindex].Count() > 0)
+                var disklist = keyindexdisklist[keyindex];
+                if (disklist.Count() > 0)
                 {
-                    return keyindexdisklist[keyindex].First();
-                }
-                else
-                {
-                    if (keyindexmemtemplist[keyindex].GetList().Count() > 0)
+                    int i = 0;
+                    foreach (var item in disklist)
                     {
-                        return keyindexmemtemplist[keyindex].GetList().First();
+                        if (!item.Del)
+                        {
+                            break;
+                        }
+                        i++;
                     }
-                    else if (keyindexmemlist[keyindex].GetList().Count() > 0)
+                    if (i == 0 || meta.IndexMergeInfos.Find(p => p.IndexName.Equals(indexname)).LoadFactor == 1)
                     {
-                        return keyindexmemlist[keyindex].GetList().First();
+                        return disklist[i];
+                    }
+
+                    if (i < disklist.Count())
+                    {
+                        var indexfile = GetIndexFile(tablename, indexname);
+                        using (var reader = ObjTextReader.CreateReader(indexfile))
+                        {
+                            reader.SetPostion(disklist[i - 1].KeyOffset);
+                            while (true)
+                            {
+                                var pos = reader.ReadedPostion();
+                                var indexitem = reader.ReadObject<BigEntityTableIndexItem>();
+                                if (indexitem == null)
+                                {
+                                    break;
+                                }
+                                indexitem.SetIndex(index);
+                                if (!indexitem.Del)
+                                {
+                                    indexitem.KeyOffset = pos;
+                                    return indexitem;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                foreach (var item in keyindexmemtemplist[keyindex].GetList())
+                {
+                    if (!item.Del)
+                    {
+                        return item;
+                    }
+                }
+                foreach (var item in keyindexmemlist[keyindex].GetList())
+                {
+                    if (!item.Del)
+                    {
+                        return item;
                     }
                 }
 
@@ -2202,21 +2244,71 @@ namespace LJC.FrameWork.Data.EntityDataBase
             locker.EnterReadLock();
             try
             {
-                if (keyindexmemlist[keyindex].GetList().Count() > 0)
+                foreach (var item in keyindexmemlist[keyindex].GetList().Reverse())
                 {
-                    return keyindexmemlist[keyindex].GetList().Last();
-                }
-                else
-                {
-                    if (keyindexmemtemplist[keyindex].GetList().Count() > 0)
+                    if (!item.Del)
                     {
-                        return keyindexmemtemplist[keyindex].GetList().Last();
-                    }
-                    else if (keyindexdisklist[keyindex].Count() > 0)
-                    {
-                        return keyindexdisklist[keyindex].Last();
+                        return item;
                     }
                 }
+
+                foreach (var item in keyindexmemtemplist[keyindex].GetList().Reverse())
+                {
+                    if (!item.Del)
+                    {
+                        return item;
+                    }
+                }
+
+                int i = keyindexdisklist[keyindex].Count() - 1;
+                int count = i + 1;
+                foreach (var item in keyindexdisklist[keyindex].Reverse())
+                {
+                    if (!item.Del)
+                    {
+                        if (i == count - 1)
+                        {
+                            return item;
+                        }
+                        break;
+                    }
+                    i--;
+                }
+
+
+                if (i > 0)
+                {
+                    var disklist = keyindexdisklist[keyindex];
+                    var indexfile = GetIndexFile(tablename, indexname);
+                    List<BigEntityTableIndexItem> tempindexlist = new List<BigEntityTableIndexItem>();
+                    var stopkeyoffset = disklist[i + 1].KeyOffset;
+                    using (var reader = ObjTextReader.CreateReader(indexfile))
+                    {
+                        reader.SetPostion(disklist[i].KeyOffset);
+                        while (true)
+                        {
+                            var pos = reader.ReadedPostion();
+                            if (pos >= stopkeyoffset)
+                            {
+                                break;
+                            }
+                            var indexitem = reader.ReadObject<BigEntityTableIndexItem>();
+                            if (indexitem == null)
+                            {
+                                break;
+                            }
+                            indexitem.SetIndex(index);
+                            if (!indexitem.Del)
+                            {
+                                indexitem.KeyOffset = pos;
+                                tempindexlist.Add(indexitem);
+                            }
+                        }
+                    }
+
+                    return tempindexlist.Last();
+                }
+
                 return null;
             }
             finally
