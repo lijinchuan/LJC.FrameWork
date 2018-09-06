@@ -1643,8 +1643,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public IEnumerable<T> Scan<T>(string tablename,string keyorindex, object[] keystart, object[] keyend,int pi,int ps) where T : new()
         {
             var meta = GetMetaData(tablename);
-            var index = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? meta.KeyIndexInfo : meta.IndexInfos.First(p => p.IndexName == keyorindex);
-            var keyindex = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? tablename : (tablename + ":" + keyorindex);
+            var index = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? meta.KeyIndexInfo : meta.IndexInfos.FirstOrDefault(p => p.IndexName == keyorindex);
+            if (index == null)
+            {
+                throw new Exception("索引不存在:" + keyorindex);
+            }
+
+            var keyindex = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename||keyorindex==meta.KeyIndexInfo.IndexName) ? tablename : (tablename + ":" + keyorindex);
 
             var tablelocker = GetKeyLocker(tablename, string.Empty);
             //List<long> keylist = new List<long>();
@@ -1745,7 +1750,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public List<T> Scan2<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps,ref long total) where T : new()
+        public List<T> Scan<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps,ref long total) where T : new()
         {
             var meta = GetMetaData(tablename);
             string keyfile = GetKeyFile(tablename);
