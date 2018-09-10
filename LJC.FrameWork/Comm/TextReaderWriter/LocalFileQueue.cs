@@ -100,6 +100,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
                     {
                         //_queueWriter = ObjTextWriter.CreateWriter(queuefilepath, ObjTextReaderWriterEncodeType.jsonbuf);
                         _queueWriter = ObjTextWriter.CreateWriter(queuefilepath, ObjTextReaderWriterEncodeType.entitybuf);
+                        _queueWriter.Flush();
                         break;
                     }
                     catch (Exception ex)
