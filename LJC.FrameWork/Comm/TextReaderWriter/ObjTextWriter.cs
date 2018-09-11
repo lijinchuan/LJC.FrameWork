@@ -322,7 +322,14 @@ namespace LJC.FrameWork.Comm
                 {
                     lock (this)
                     {
-                        _sw.Close();
+                        try
+                        {
+                            _sw.Close();
+                        }
+                        catch
+                        {
+
+                        }
                     }
                 }
                 GC.SuppressFinalize(this);
