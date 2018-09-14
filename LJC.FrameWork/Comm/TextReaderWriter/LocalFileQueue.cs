@@ -16,6 +16,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
         private DateTime _lastCfgChageTime = DateTime.MinValue;
         private object _lock = new object();
         private bool IsRuning = false;
+        
         /// <summary>
         /// 注册队列投递处理方法，返回true表示处理成功，将会继续投递下一条，返回false或者异常，会继承投递之前未成功的那一条数据
         /// </summary>
@@ -45,6 +46,19 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
         {
             get;
             set;
+        }
+
+        private bool _onerrorresumenext = false;
+        public bool OnErrorResumeNext
+        {
+            get
+            {
+                return _onerrorresumenext;
+            }
+            set
+            {
+                _onerrorresumenext = value;
+            }
         }
 
         private void SaveConfig()
@@ -276,7 +290,10 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             }
             catch (Exception ex)
             {
-                _queueReader.SetPostion(_logger.LastPos);
+                if (OnErrorResumeNext)
+                {
+                    _queueReader.SetPostion(_logger.LastPos);
+                }
                 if (OnProcessError != null)
                 {
                     OnProcessError(last, ex);
