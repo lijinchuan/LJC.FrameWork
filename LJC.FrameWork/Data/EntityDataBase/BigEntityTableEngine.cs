@@ -682,6 +682,17 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     keywriter.SetPosition(oldoffset);
                 }
+                if (delkey.RangeIndex > 0)
+                {
+                    foreach (var item in keyindexdisklist[tablename])
+                    {
+                        if (item.RangeIndex > delkey.RangeIndex)
+                        {
+                            item.RangeIndex -= 1;
+                        }
+                    }
+                    delkey.RangeIndex -= 1;
+                }
 
                 foreach (var idx in meta.IndexInfos)
                 {
@@ -715,6 +726,18 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     if (!success)
                     {
                         throw new Exception(string.Format("查找索引失败:{0}.{1}", tablename, key));
+                    }
+
+                    if (idxitem.RangeIndex > 0)
+                    {
+                        foreach (var item in keyindexdisklist[tablename + ":" + idx.IndexName])
+                        {
+                            if (item.RangeIndex > idxitem.RangeIndex)
+                            {
+                                item.RangeIndex -= 1;
+                            }
+                        }
+                        idxitem.RangeIndex -= 1;
                     }
                 }
             }
@@ -862,6 +885,18 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             idxwriter.SetPosition(idxitem.KeyOffset);
                             idxwriter.AppendObject(idxitem);
                             idxwriter.SetPosition(posend);
+
+                            if (idxitem.RangeIndex > 0)
+                            {
+                                foreach (var k in keyindexdisklist[tablename + ":" + idx.IndexName])
+                                {
+                                    if (k.RangeIndex > idxitem.RangeIndex)
+                                    {
+                                        k.RangeIndex -= 1;
+                                    }
+                                }
+                                idxitem.RangeIndex -= 1;
+                            }
 
                             var newidxitem = new BigEntityTableIndexItem
                             {
@@ -1056,6 +1091,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         return null;
                     }
+                    findkeyitem.RangeIndex = 0;
                     return findkeyitem;
                 }
                 findkeyitem = keyindexmemtemplist[tablename].Find(findkey);
@@ -1065,6 +1101,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         return null;
                     }
+                    findkeyitem.RangeIndex = 0;
                     return findkeyitem;
                 }
 
@@ -1100,6 +1137,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var posstart = indexarr[mid].KeyOffset;
                     var posend = indexarr[mid + 1].KeyOffset;
 
+                    var rangestart=indexarr[mid].RangeIndex;
                     var buffer = new byte[1024];
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
@@ -1112,12 +1150,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             {
                                 return null;
                             }
+                            if (item.Del)
+                            {
+                                continue;
+                            }
+                            item.RangeIndex = ++rangestart;
                             if (item.Key.Equals(key))
                             {
-                                if (item.Del)
-                                {
-                                    return null;
-                                }
                                 return item;
                             }
                         }
@@ -1200,7 +1239,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 var posstart = indexarr[pospev].KeyOffset;
                 var posend = indexarr[posnext].KeyOffset;
-
+                var rangeindexstart = indexarr[pospev].RangeIndex;
                 var buffer = new byte[1024];
                 int skipcount = 0;
                 using (var reader = ObjTextReader.CreateReader(GetIndexFile(tablename, index.IndexName)))
@@ -1218,6 +1257,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         item.SetIndex(index);
                         if (!item.Del)
                         {
+                            item.RangeIndex = ++rangeindexstart;
                             if (item.CompareTo(findkey) == 0)
                             {
                                 yield return item;
@@ -1237,12 +1277,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
             //内存里查找
             foreach (var item in keyindexmemtemplist[indexkey].FindAll(findkey))
             {
+                item.RangeIndex = 0;
                 yield return item;
             }
 
             ProcessTraceUtil.Trace("find in mem");
             foreach (var item in keyindexmemlist[indexkey].FindAll(findkey))
             {
+                item.RangeIndex = 0;
                 yield return item;
             }
 
@@ -1347,7 +1389,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     var posstart = indexarr[mid].KeyOffset;
                     var posend = indexarr[mid + 1].KeyOffset;
-
+                    var rangeindexstart = indexarr[mid].RangeIndex;
                     var buffer = new byte[1024];
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
@@ -1359,6 +1401,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             {
                                 break;
                             }
+                            if (item.Del)
+                            {
+                                continue;
+                            }
+                            item.RangeIndex = ++rangeindexstart;
                             if (item.Key.Equals(key))
                             {
                                 findkeyitem = item;
