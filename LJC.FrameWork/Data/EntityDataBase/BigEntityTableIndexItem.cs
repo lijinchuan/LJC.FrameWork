@@ -373,10 +373,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
             }
 
-            if (compare == 0 && other.Offset > 0 && Offset > 0)
-            {
-                return Offset.CompareTo(other.Offset);
-            }
+            ////if (compare == 0 && other.Offset > 0 && Offset > 0)
+            ////{
+            ////    return Offset.CompareTo(other.Offset);
+            ////}
 
             return compare;
         }

@@ -636,6 +636,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new Exception(string.Format("主键查找失败:{0}.{1}", tablename, key));
             }
 
+            var oldodelkeyffset = delkey.Offset;
+
             var delitem = Find<T>(tablename, key);
             if (delitem == null)
             {
@@ -677,7 +679,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var oldoffset = keywriter.GetWritePosition();
                     delkey.Del = true;
 
-                    keywriter.SetPosition(delkey.KeyOffset);
+                    keywriter.SetPosition(oldodelkeyffset);
                     keywriter.AppendObject(delkey);
 
                     keywriter.SetPosition(oldoffset);
@@ -704,12 +706,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         idxvals[i] = idxval;
                     }
                     //var idxfindkey = new BigEntityTableIndexItem { Key = idxval, Offset=delkey.Offset };
-                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, idxvals, delkey.Offset).FirstOrDefault();
+                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, idxvals, oldodelkeyffset).FirstOrDefault(p => p.Offset == oldodelkeyffset);
 
                     if (idxitem == null)
                     {
-                        throw new Exception("查找索引失败:" + idx);
+                        throw new Exception("查找索引失败:" + idx.IndexName);
                     }
+
+                    //巨大问题，offset变了，会影响索引的排序(内存索引和磁盘索引都会有影响)
 
                     bool success = false;
                     using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf2))
@@ -860,7 +864,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     //这里有问题。索引重排后会变的
                     var idxfindkey = new BigEntityTableIndexItem { Key = oldidxval, Offset = oldindexitem.Offset };
                     var idxkey = tablename + ":" + idx.IndexName;
-                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, oldidxval, oldindexitem.Offset).FirstOrDefault();
+                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, oldidxval, oldindexitem.Offset).FirstOrDefault(p=>p.Offset==oldindexitem.Offset);
 
                     if (idxitem == null)
                     {
@@ -904,8 +908,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 Key = newidxval,
                                 KeyOffset = posend,
                                 len = newkey.len,
-                                Offset = newkey.Offset
+                                Offset = newkey.Offset,
+                                Index=idx
                             };
+                            
                             idxwriter.AppendObject(newidxitem);
                             keyindexmemlist[idxkey].Add(newidxitem);
                         }
@@ -1823,7 +1829,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             var tablelocker = GetKeyLocker(tablename, string.Empty);
-
+            List<BigEntityTableIndexItem> result = new List<BigEntityTableIndexItem>();
             tablelocker.EnterReadLock();
             try
             {
@@ -1962,7 +1968,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 if (findfirst != null)
                 {
-                    totallist.AddRange(indexarr.Where(p => p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
+                    totallist.AddRange(indexarr.Where(p =>!p.Del&& p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
                     if (totallist.Count == 0 || totallist.First().KeyOffset > findfirst.KeyOffset)
                     {
                         totallist.Insert(0, findfirst);
@@ -1975,15 +1981,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         totallist.Add(findend);
                     }
 
-                    total = findend.RangeIndex - findfirst.RangeIndex + 1 + keyindexmemlist[keyname].GetList().Where(p => p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count()
-                        + keyindexmemtemplist[keyname].GetList().Where(p => p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count();
+                    total = findend.RangeIndex - findfirst.RangeIndex + 1 + keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count()
+                        + keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count();
                 }
 
-                List<BigEntityTableIndexItem> result = new List<BigEntityTableIndexItem>();
                 if (totallist.Count > 0)
                 {
-                    totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
-                    totallist.AddRange(keyindexmemtemplist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
+                    totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p =>!p.Del&& p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
+                    totallist.AddRange(keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
 
                     totallist.Sort();
 
@@ -1999,13 +2004,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                         else
                         {
-                            item.RangeIndex += rankoffset;
+                            rankoffset += item.RangeIndex;
+                            //item.RangeIndex += rankoffset;
 
                             if (!istakekeyoffsetstart)
                             {
-                                if (item.RangeIndex >= takerankskip)
+                                if (rankoffset >= takerankskip)
                                 {
-                                    if (item.RangeIndex == takerankskip)
+                                    if (rankoffset == takerankskip)
                                     {
                                         takefirstindexitem = item;
                                     }
@@ -2014,7 +2020,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 takefirstindexitem = item;
                             }
 
-                            if (item.RangeIndex >= takerankskip + ps)
+                            if (rankoffset >= takerankskip + ps)
                             {
                                 break;
                             }
@@ -2049,14 +2055,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     continue;
                                 }
 
-                                item.RangeIndex = rangindex++;
+                                rangindex++;
 
-                                if (item.RangeIndex - findfirst.RangeIndex >= takerankskip)
+                                if (rangindex - findfirst.RangeIndex >= takerankskip)
                                 {
                                     result.Add(item);
                                 }
 
-                                if (item.RangeIndex - findfirst.RangeIndex > takerankskip + ps)
+                                if (rangindex - findfirst.RangeIndex > takerankskip + ps)
                                 {
                                     break;
                                 }
@@ -2073,8 +2079,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 else
                 {
-                    totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
-                    totallist.AddRange(keyindexmemtemplist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
+                    totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
+                    totallist.AddRange(keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
 
                     totallist.Sort();
 
@@ -2082,22 +2088,22 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     result = totallist.Skip((pi - 1) * ps).Take(ps).ToList();
                 }
-
-                List<T> resultlist = new List<T>();
-                using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
-                {
-                    foreach (var k in result)
-                    {
-                        otr.SetPostion(k.Offset);
-                        resultlist.Add(otr.ReadObject<EntityTableItem<T>>().Data);
-                    }
-                }
-                return resultlist;
             }
             finally
             {
                 tablelocker.ExitReadLock();
             }
+
+            List<T> resultlist = new List<T>();
+            using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
+            {
+                foreach (var k in result)
+                {
+                    otr.SetPostion(k.Offset);
+                    resultlist.Add(otr.ReadObject<EntityTableItem<T>>().Data);
+                }
+            }
+            return resultlist;
         }
 
         public IEnumerable<T> Find<T>(string tablename, Func<T, bool> findcondition) where T : new()
