@@ -97,8 +97,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             }
                             meta.KeyProperty = new PropertyInfoEx(pp);
                             var keyentitytype = EntityBuf2.EntityBufCore2.GetTypeBufType(pp.PropertyType).Item1.EntityType;
-                            meta.EntityTypeDic.Add(keyname, keyentitytype);                         
-                            meta.KeyIndexInfo=new IndexInfo
+                            meta.EntityTypeDic.Add(keyname, keyentitytype);
+                            meta.KeyIndexInfo = new IndexInfo
                             {
                                 IndexName = keyname,
                                 Indexs = new IndexItem[]{
@@ -114,7 +114,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             if (indexs != null && indexs.Length > 0)
                             {
                                 var dupkeys = indexs.GroupBy(p => p.IndexName).FirstOrDefault(p => p.Count() > 1);
-                                if (dupkeys!=null)
+                                if (dupkeys != null)
                                 {
                                     throw new Exception("索引名称不能重复:" + dupkeys.Key);
                                 }
@@ -509,7 +509,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             throw new Exception("key值不能为空");
                         }
 
-                        findkey.Key =new object[] { keyvalue };
+                        findkey.Key = new object[] { keyvalue };
                         findkey.Index = meta.KeyIndexInfo;
                         if (KeyExsitsInner(tablename, findkey, keyreader))
                         {
@@ -528,7 +528,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             Index = meta.KeyIndexInfo
                         };
 
-                        for(int j=0;j<meta.IndexInfos.Length;j++)
+                        for (int j = 0; j < meta.IndexInfos.Length; j++)
                         {
                             var idx = meta.IndexInfos[j];
                             string indexfile = GetIndexFile(tablename, idx.IndexName);
@@ -543,7 +543,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 Key = indexvalues,
                                 Offset = newkey.Offset,
                                 len = newkey.len,
-                                Index=idx
+                                Index = idx
                             };
 
                             ObjTextWriter idxwriter = null;
@@ -636,6 +636,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new Exception(string.Format("主键查找失败:{0}.{1}", tablename, key));
             }
 
+            var oldodelkeyffset = delkey.Offset;
+
             var delitem = Find<T>(tablename, key);
             if (delitem == null)
             {
@@ -677,10 +679,21 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var oldoffset = keywriter.GetWritePosition();
                     delkey.Del = true;
 
-                    keywriter.SetPosition(delkey.KeyOffset);
+                    keywriter.SetPosition(oldodelkeyffset);
                     keywriter.AppendObject(delkey);
 
                     keywriter.SetPosition(oldoffset);
+                }
+                if (delkey.RangeIndex > 0)
+                {
+                    foreach (var item in keyindexdisklist[tablename])
+                    {
+                        if (item.RangeIndex > delkey.RangeIndex)
+                        {
+                            item.RangeIndex -= 1;
+                        }
+                    }
+                    delkey.RangeIndex -= 1;
                 }
 
                 foreach (var idx in meta.IndexInfos)
@@ -693,12 +706,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         idxvals[i] = idxval;
                     }
                     //var idxfindkey = new BigEntityTableIndexItem { Key = idxval, Offset=delkey.Offset };
-                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, idxvals, delkey.Offset).FirstOrDefault();
+                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, idxvals, oldodelkeyffset).FirstOrDefault(p => p.Offset == oldodelkeyffset);
 
                     if (idxitem == null)
                     {
-                        throw new Exception("查找索引失败:" + idx);
+                        throw new Exception("查找索引失败:" + idx.IndexName);
                     }
+
+                    //巨大问题，offset变了，会影响索引的排序(内存索引和磁盘索引都会有影响)
 
                     bool success = false;
                     using (ObjTextWriter idxwriter = ObjTextWriter.CreateWriter(indexfile, ObjTextReaderWriterEncodeType.entitybuf2))
@@ -715,6 +730,18 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     if (!success)
                     {
                         throw new Exception(string.Format("查找索引失败:{0}.{1}", tablename, key));
+                    }
+
+                    if (idxitem.RangeIndex > 0)
+                    {
+                        foreach (var item in keyindexdisklist[tablename + ":" + idx.IndexName])
+                        {
+                            if (item.RangeIndex > idxitem.RangeIndex)
+                            {
+                                item.RangeIndex -= 1;
+                            }
+                        }
+                        idxitem.RangeIndex -= 1;
                     }
                 }
             }
@@ -837,7 +864,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     //这里有问题。索引重排后会变的
                     var idxfindkey = new BigEntityTableIndexItem { Key = oldidxval, Offset = oldindexitem.Offset };
                     var idxkey = tablename + ":" + idx.IndexName;
-                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, oldidxval, oldindexitem.Offset).FirstOrDefault();
+                    BigEntityTableIndexItem idxitem = FindIndex(tablename, meta, idx, oldidxval, oldindexitem.Offset).FirstOrDefault(p => p.Offset == oldindexitem.Offset);
 
                     if (idxitem == null)
                     {
@@ -863,14 +890,28 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             idxwriter.AppendObject(idxitem);
                             idxwriter.SetPosition(posend);
 
+                            if (idxitem.RangeIndex > 0)
+                            {
+                                foreach (var k in keyindexdisklist[tablename + ":" + idx.IndexName])
+                                {
+                                    if (k.RangeIndex > idxitem.RangeIndex)
+                                    {
+                                        k.RangeIndex -= 1;
+                                    }
+                                }
+                                idxitem.RangeIndex -= 1;
+                            }
+
                             var newidxitem = new BigEntityTableIndexItem
                             {
                                 Del = false,
                                 Key = newidxval,
                                 KeyOffset = posend,
                                 len = newkey.len,
-                                Offset = newkey.Offset
+                                Offset = newkey.Offset,
+                                Index = idx
                             };
+
                             idxwriter.AppendObject(newidxitem);
                             keyindexmemlist[idxkey].Add(newidxitem);
                         }
@@ -1056,6 +1097,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         return null;
                     }
+                    findkeyitem.RangeIndex = 0;
                     return findkeyitem;
                 }
                 findkeyitem = keyindexmemtemplist[tablename].Find(findkey);
@@ -1065,6 +1107,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         return null;
                     }
+                    findkeyitem.RangeIndex = 0;
                     return findkeyitem;
                 }
 
@@ -1072,8 +1115,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 int mid = -1;
                 int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
                 {
-                    Key = new object[] { key},
-                    Index=meta.KeyIndexInfo
+                    Key = new object[] { key },
+                    Index = meta.KeyIndexInfo
                 }, ref mid);
 
                 if (pos == -1 && (mid == -1 || mid == indexarr.Length - 1))
@@ -1100,6 +1143,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var posstart = indexarr[mid].KeyOffset;
                     var posend = indexarr[mid + 1].KeyOffset;
 
+                    var rangestart = indexarr[mid].RangeIndex;
                     var buffer = new byte[1024];
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
@@ -1112,12 +1156,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             {
                                 return null;
                             }
+                            if (item.Del)
+                            {
+                                continue;
+                            }
+                            item.RangeIndex = ++rangestart;
                             if (item.Key.Equals(key))
                             {
-                                if (item.Del)
-                                {
-                                    return null;
-                                }
                                 return item;
                             }
                         }
@@ -1200,7 +1245,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 var posstart = indexarr[pospev].KeyOffset;
                 var posend = indexarr[posnext].KeyOffset;
-
+                var rangeindexstart = indexarr[pospev].RangeIndex;
                 var buffer = new byte[1024];
                 int skipcount = 0;
                 using (var reader = ObjTextReader.CreateReader(GetIndexFile(tablename, index.IndexName)))
@@ -1218,6 +1263,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         item.SetIndex(index);
                         if (!item.Del)
                         {
+                            item.RangeIndex = ++rangeindexstart;
                             if (item.CompareTo(findkey) == 0)
                             {
                                 yield return item;
@@ -1237,12 +1283,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
             //内存里查找
             foreach (var item in keyindexmemtemplist[indexkey].FindAll(findkey))
             {
+                item.RangeIndex = 0;
                 yield return item;
             }
 
             ProcessTraceUtil.Trace("find in mem");
             foreach (var item in keyindexmemlist[indexkey].FindAll(findkey))
             {
+                item.RangeIndex = 0;
                 yield return item;
             }
 
@@ -1347,7 +1395,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     var posstart = indexarr[mid].KeyOffset;
                     var posend = indexarr[mid + 1].KeyOffset;
-
+                    var rangeindexstart = indexarr[mid].RangeIndex;
                     var buffer = new byte[1024];
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
@@ -1359,6 +1407,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             {
                                 break;
                             }
+                            if (item.Del)
+                            {
+                                continue;
+                            }
+                            item.RangeIndex = ++rangeindexstart;
                             if (item.Key.Equals(key))
                             {
                                 findkeyitem = item;
@@ -1409,7 +1462,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         foreach (var key in keys)
                         {
-                            findkey.Key = new object[] { key};
+                            findkey.Key = new object[] { key };
                             indexitem = keyindexmemlist[tablename].Find(findkey) ??
                                 keyindexmemtemplist[tablename].Find(findkey);
                             if (indexitem != null)
@@ -1481,8 +1534,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     int mid = -1;
                                     int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(new BigEntityTableIndexItem
                                     {
-                                        Key = new object[] { key},
-                                        Index=meta.KeyIndexInfo
+                                        Key = new object[] { key },
+                                        Index = meta.KeyIndexInfo
                                     }, ref mid);
 
                                     BigEntityTableIndexItem findkeyitem = null;
@@ -1561,7 +1614,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        private BigEntityTableIndexItem GetDiskNear(string tablename,string keyorindex, object[] value, bool start)
+        private BigEntityTableIndexItem GetDiskNear(string tablename, string keyorindex, object[] value, bool start)
         {
             var meta = GetMetaData(tablename);
             IndexInfo index = null;
@@ -1610,13 +1663,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
 
             var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
-            
+
             using (var keyreader = ObjTextReader.CreateReader(keyfile))
             {
                 keyreader.SetPostion(indexarr[mid].KeyOffset);
                 var endoffset = indexarr[mid + 1].KeyOffset;
                 long keyoffset = 0;
-                foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1,p=>keyoffset=p))
+                foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
                 {
                     item.KeyOffset = keyoffset;
                     if (item.KeyOffset > endoffset || item.KeyOffset >= keymergeinfo.IndexMergePos)
@@ -1640,7 +1693,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return null;
         }
 
-        public IEnumerable<T> Scan<T>(string tablename,string keyorindex, object[] keystart, object[] keyend,int pi,int ps) where T : new()
+        public IEnumerable<T> Scan<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps) where T : new()
         {
             var meta = GetMetaData(tablename);
             var index = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? meta.KeyIndexInfo : meta.IndexInfos.FirstOrDefault(p => p.IndexName == keyorindex);
@@ -1649,7 +1702,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 throw new Exception("索引不存在:" + keyorindex);
             }
 
-            var keyindex = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename||keyorindex==meta.KeyIndexInfo.IndexName) ? tablename : (tablename + ":" + keyorindex);
+            var keyindex = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename || keyorindex == meta.KeyIndexInfo.IndexName) ? tablename : (tablename + ":" + keyorindex);
 
             var tablelocker = GetKeyLocker(tablename, string.Empty);
             //List<long> keylist = new List<long>();
@@ -1682,7 +1735,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 using (var keyreader = ObjTextReader.CreateReader(keyfile))
                                 {
                                     keyreader.SetPostion(start.KeyOffset);
-                                    foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0,p=>keyoffset=p))
+                                    foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0, p => keyoffset = p))
                                     {
                                         k.KeyOffset = keyoffset;
                                         if (k.KeyOffset >= end.KeyOffset)
@@ -1750,7 +1803,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
-        public List<T> Scan<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps,ref long total) where T : new()
+        public List<T> Scan<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps, ref long total) where T : new()
         {
             var meta = GetMetaData(tablename);
             string keyfile = GetKeyFile(tablename);
@@ -1776,7 +1829,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             var tablelocker = GetKeyLocker(tablename, string.Empty);
-
+            List<BigEntityTableIndexItem> result = new List<BigEntityTableIndexItem>();
             tablelocker.EnterReadLock();
             try
             {
@@ -1915,7 +1968,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 if (findfirst != null)
                 {
-                    totallist.AddRange(indexarr.Where(p => p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
+                    totallist.AddRange(indexarr.Where(p => !p.Del && p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
                     if (totallist.Count == 0 || totallist.First().KeyOffset > findfirst.KeyOffset)
                     {
                         totallist.Insert(0, findfirst);
@@ -1928,69 +1981,72 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         totallist.Add(findend);
                     }
 
-                    total = findend.RangeIndex - findfirst.RangeIndex + 1 + keyindexmemlist[keyname].GetList().Where(p => p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count()
-                        + keyindexmemtemplist[keyname].GetList().Where(p => p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count();
+                    total = findend.RangeIndex - findfirst.RangeIndex + 1 + keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count()
+                        + keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count();
                 }
 
-                List<BigEntityTableIndexItem> result = new List<BigEntityTableIndexItem>();
                 if (totallist.Count > 0)
                 {
-                    totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
-                    totallist.AddRange(keyindexmemtemplist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
+                    if (index.Indexs.First().Direction == 1)
+                    {
+                        var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                        var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                        templist1 = MergeAndSort2(templist1, templist2).ToList();
+                        totallist = MergeAndSort2(totallist, templist1).ToList();
+                    }
+                    else
+                    {
+                        var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                        var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                        templist1 = MergeAndSort2(templist2, templist1).ToList();
+                        totallist = MergeAndSort2(templist1, totallist).ToList();
+                    }
 
-                    totallist.Sort();
+                    //totallist.Sort();
 
-                    long rankoffset = 0;
+                    long temprankoffset = 0, rankoffset = 0;
+                    long takefirstrankoffset = 0, taklastrankoffset = 0;
                     BigEntityTableIndexItem takefirstindexitem = null, takelastindexitem = null;
-                    bool istakekeyoffsetstart = false;
                     long takerankskip = (pi - 1) * ps;
                     foreach (var item in totallist)
                     {
-                        if (item.RangeIndex == 0)
+                        if (item.RangeIndex == -1)
                         {
-                            rankoffset++;
+                            temprankoffset++;
                         }
                         else
                         {
-                            item.RangeIndex += rankoffset;
-
-                            if (!istakekeyoffsetstart)
+                            rankoffset = item.RangeIndex - findfirst.RangeIndex + temprankoffset;
+                            if (rankoffset <= takerankskip)
                             {
-                                if (item.RangeIndex >= takerankskip)
-                                {
-                                    if (item.RangeIndex == takerankskip)
-                                    {
-                                        takefirstindexitem = item;
-                                    }
-                                    continue;
-                                }
                                 takefirstindexitem = item;
+                                takefirstrankoffset = rankoffset;
                             }
 
-                            if (item.RangeIndex >= takerankskip + ps)
+                            if (rankoffset >= takerankskip + ps)
                             {
                                 break;
                             }
                             takelastindexitem = item;
-                            rankoffset = 0;
+                            taklastrankoffset = rankoffset;
                         }
                     }
 
                     if (takefirstindexitem != null && takelastindexitem != null)
                     {
-                        int prerank = (int)(takerankskip - (takefirstindexitem.RangeIndex - findfirst.RangeIndex + 1));
+                        int prerank = (int)(takerankskip - (takefirstrankoffset + 1));
                         if (prerank > 0)
                         {
                             var preranklist = totallist.Where(p => p.CompareTo(takefirstindexitem) < 0).ToList();
                             result.AddRange(preranklist.Skip(preranklist.Count - prerank).Take(prerank));
                         }
 
-                        var rangindex = takefirstindexitem.RangeIndex;
                         using (var keyreader = ObjTextReader.CreateReader(keyfile))
                         {
                             keyreader.SetPostion(takefirstindexitem.KeyOffset);
 
                             long keyoffset = 0;
+                            long rangindex = takefirstrankoffset;
                             foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
                             {
                                 item.KeyOffset = keyoffset;
@@ -2002,14 +2058,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     continue;
                                 }
 
-                                item.RangeIndex = rangindex++;
+                                rangindex++;
 
-                                if (item.RangeIndex - findfirst.RangeIndex >= takerankskip)
+                                if (rangindex - findfirst.RangeIndex >= takerankskip)
                                 {
                                     result.Add(item);
                                 }
 
-                                if (item.RangeIndex - findfirst.RangeIndex > takerankskip + ps)
+                                if (rangindex - findfirst.RangeIndex > takerankskip + ps)
                                 {
                                     break;
                                 }
@@ -2026,31 +2082,40 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 else
                 {
-                    totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
-                    totallist.AddRange(keyindexmemtemplist[keyname].GetList().Where(p => p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
+                    var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                    var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
 
-                    totallist.Sort();
+                    if (index.Indexs.First().Direction == 1)
+                    {
+                        templist1 = MergeAndSort2(templist1, templist2).ToList();
+                        totallist = MergeAndSort2(totallist, templist1).ToList();
+                    }
+                    else
+                    {
+                        templist1 = MergeAndSort2(templist2, templist1).ToList();
+                        totallist = MergeAndSort2(templist1, totallist).ToList();
+                    }
 
                     total = totallist.Count;
 
                     result = totallist.Skip((pi - 1) * ps).Take(ps).ToList();
                 }
-
-                List<T> resultlist = new List<T>();
-                using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
-                {
-                    foreach (var k in result)
-                    {
-                        otr.SetPostion(k.Offset);
-                        resultlist.Add(otr.ReadObject<EntityTableItem<T>>().Data);
-                    }
-                }
-                return resultlist;
             }
             finally
             {
                 tablelocker.ExitReadLock();
             }
+
+            List<T> resultlist = new List<T>();
+            using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
+            {
+                foreach (var k in result)
+                {
+                    otr.SetPostion(k.Offset);
+                    resultlist.Add(otr.ReadObject<EntityTableItem<T>>().Data);
+                }
+            }
+            return resultlist;
         }
 
         public IEnumerable<T> Find<T>(string tablename, Func<T, bool> findcondition) where T : new()
@@ -2096,14 +2161,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
             var index = meta.IndexInfos.First(p => p.IndexName == indexname);
             if (index == null)
             {
-                throw new Exception("索引不存在:"+indexname);
+                throw new Exception("索引不存在:" + indexname);
             }
             var locker = GetKeyLocker(tablename, string.Empty);
             List<BigEntityTableIndexItem> indexlist = null;
             locker.EnterReadLock();
             try
             {
-                indexlist = FindIndex(tablename, meta,index , value).ToList();
+                indexlist = FindIndex(tablename, meta, index, value).ToList();
             }
             finally
             {
