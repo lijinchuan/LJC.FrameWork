@@ -1987,63 +1987,66 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 if (totallist.Count > 0)
                 {
-                    totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p =>!p.Del&& p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
-                    totallist.AddRange(keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
+                    if (index.Indexs.First().Direction == 1)
+                    {
+                        var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                        var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                        templist1 = MergeAndSort2(templist1, templist2).ToList();
+                        totallist = MergeAndSort2(totallist, templist1).ToList();
+                    }
+                    else
+                    {
+                        var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                        var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                        templist1 = MergeAndSort2(templist2, templist1).ToList();
+                        totallist = MergeAndSort2(templist1, totallist).ToList();
+                    }
 
-                    totallist.Sort();
+                    //totallist.Sort();
 
-                    long rankoffset = 0;
-                    BigEntityTableIndexItem takefirstindexitem = null, takelastindexitem = null;
-                    bool istakekeyoffsetstart = false;
+                    long temprankoffset = 0,rankoffset=0;
+                    long takefirstrankoffset = 0, taklastrankoffset = 0;
+                    BigEntityTableIndexItem takefirstindexitem = null, takelastindexitem=null;
                     long takerankskip = (pi - 1) * ps;
                     foreach (var item in totallist)
                     {
-                        if (item.RangeIndex == 0)
+                        if (item.RangeIndex == -1)
                         {
-                            rankoffset++;
+                            temprankoffset++;
                         }
                         else
                         {
-                            rankoffset += item.RangeIndex;
-                            //item.RangeIndex += rankoffset;
-
-                            if (!istakekeyoffsetstart)
+                            rankoffset = item.RangeIndex-findfirst.RangeIndex + temprankoffset;
+                            if (rankoffset <= takerankskip)
                             {
-                                if (rankoffset >= takerankskip)
-                                {
-                                    if (rankoffset == takerankskip)
-                                    {
-                                        takefirstindexitem = item;
-                                    }
-                                    continue;
-                                }
                                 takefirstindexitem = item;
+                                takefirstrankoffset = rankoffset;
                             }
-
+                        
                             if (rankoffset >= takerankskip + ps)
                             {
                                 break;
                             }
                             takelastindexitem = item;
-                            rankoffset = 0;
+                            taklastrankoffset = rankoffset;
                         }
                     }
 
                     if (takefirstindexitem != null && takelastindexitem != null)
                     {
-                        int prerank = (int)(takerankskip - (takefirstindexitem.RangeIndex - findfirst.RangeIndex + 1));
+                        int prerank = (int)(takerankskip - (takefirstrankoffset + 1));
                         if (prerank > 0)
                         {
                             var preranklist = totallist.Where(p => p.CompareTo(takefirstindexitem) < 0).ToList();
                             result.AddRange(preranklist.Skip(preranklist.Count - prerank).Take(prerank));
                         }
 
-                        var rangindex = takefirstindexitem.RangeIndex;
                         using (var keyreader = ObjTextReader.CreateReader(keyfile))
                         {
                             keyreader.SetPostion(takefirstindexitem.KeyOffset);
 
                             long keyoffset = 0;
+                            long rangindex = takefirstrankoffset;
                             foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
                             {
                                 item.KeyOffset = keyoffset;
