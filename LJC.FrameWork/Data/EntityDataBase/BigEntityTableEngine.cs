@@ -2082,10 +2082,16 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 else
                 {
-                    totallist.AddRange(keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
-                    totallist.AddRange(keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0));
-
-                    totallist.Sort();
+                    var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                    var templist2=keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                    if (index.Indexs.First().Direction == 1)
+                    {
+                        totallist = MergeAndSort2(templist1, templist2).ToList();
+                    }
+                    else
+                    {
+                        totallist = MergeAndSort2(templist2, templist1).ToList();
+                    }
 
                     total = totallist.Count;
 
