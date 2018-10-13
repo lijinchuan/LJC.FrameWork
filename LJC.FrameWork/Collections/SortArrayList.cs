@@ -379,10 +379,10 @@ namespace LJC.FrameWork.Collections
                         }
                         posper2++;
                     }
-                    if (compare != 0)
-                    {
-                        posper2--;
-                    }
+                    //if (compare != 0)
+                    //{
+                    //    posper2--;
+                    //}
                 }
                 else
                 {

@@ -1966,6 +1966,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 List<BigEntityTableIndexItem> totallist = new List<BigEntityTableIndexItem>();
 
+                //var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                //var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                var templist1 = keyindexmemlist[keyname].Scan(findkeystart,findkeyend).Where(p=>!p.Del).ToList();
+                var templist2 = keyindexmemtemplist[keyname].Scan(findkeystart, findkeyend).Where(p => !p.Del).ToList();
+
                 if (findfirst != null)
                 {
                     totallist.AddRange(indexarr.Where(p => !p.Del && p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
@@ -1981,23 +1986,20 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         totallist.Add(findend);
                     }
 
-                    total = findend.RangeIndex - findfirst.RangeIndex + 1 + keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count()
-                        + keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findfirst) >= 0 && p.CompareTo(findend) <= 0).Count();
+                    total = findend.RangeIndex - findfirst.RangeIndex + 1 + templist1.Count()
+                        + templist2.Count();
                 }
 
                 if (totallist.Count > 0)
                 {
                     if (index.Indexs.First().Direction == 1)
                     {
-                        var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
-                        var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
+                       
                         templist1 = MergeAndSort2(templist1, templist2).ToList();
                         totallist = MergeAndSort2(totallist, templist1).ToList();
                     }
                     else
                     {
-                        var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
-                        var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
                         templist1 = MergeAndSort2(templist2, templist1).ToList();
                         totallist = MergeAndSort2(templist1, totallist).ToList();
                     }
@@ -2082,9 +2084,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 else
                 {
-                    var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
-                    var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
-
                     if (index.Indexs.First().Direction == 1)
                     {
                         templist1 = MergeAndSort2(templist1, templist2).ToList();
