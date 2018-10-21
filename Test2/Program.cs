@@ -322,10 +322,41 @@ namespace Test2
             Console.WriteLine("修改后:" + engine.Find<Person>("testperson", "ljc2").First().Age);
         }
 
+        static bool SimpleObjectsEq(object[] obj1, object[] obj2)
+        {
+            if (obj1 == null && obj2 == null)
+            {
+                return true;
+            }
+            if (obj1 == null || obj2 == null)
+            {
+                return false;
+            }
+            if (obj1.Length != obj2.Length)
+            {
+                return false;
+            }
+            for (int i = 0; i < obj1.Length; i++)
+            {
+                if (!obj1[i].Equals(obj2[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
+            object[] obj = new object[] { "123456",DateTime.Now.Date};
+            object[] obj1 = new object[] { "123456", DateTime.Now.Date };
+
+            Console.WriteLine("=:"+(obj==obj1)+",eq:"+obj.Equals(obj1)+",oeq:"+SimpleObjectsEq(obj1,obj));
+
+            Console.Read();
+
             var cmd = PrintCmd();
             IFun funx = null;
             while (cmd != "0")

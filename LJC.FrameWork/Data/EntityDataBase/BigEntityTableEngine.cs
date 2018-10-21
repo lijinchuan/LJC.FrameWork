@@ -780,6 +780,31 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
         }
 
+        static bool SimpleObjectsEq(object[] obj1, object[] obj2)
+        {
+            if (obj1 == null && obj2 == null)
+            {
+                return true;
+            }
+            if (obj1 == null || obj2 == null)
+            {
+                return false;
+            }
+            if (obj1.Length != obj2.Length)
+            {
+                return false;
+            }
+            for (int i = 0; i < obj1.Length; i++)
+            {
+                if (!obj1[i].Equals(obj2[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private bool Update2<T>(string tablename, object key, T item, BigEntityTableMeta meta) where T : new()
         {
             string tablefile = GetTableFile(tablename);
@@ -875,7 +900,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         var posend = idxwriter.GetWritePosition();
 
-                        if (oldidxval == newidxval)
+                        if (SimpleObjectsEq(oldidxval,newidxval))
                         {
                             idxitem.Offset = newkey.Offset;
                             idxitem.len = newkey.len;
