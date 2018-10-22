@@ -865,22 +865,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     var oldidxval = idx.GetIndexValues(olditem, meta);
                     var newidxval = idx.GetIndexValues(item, meta);
-                    bool equal = true;
-                    if (oldidxval.Length == newidxval.Length)
-                    {
-                        for (int i = 0; i < oldidxval.Length; i++)
-                        {
-                            if (oldidxval[i] != newidxval[i])
-                            {
-                                equal = false;
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        equal = false;
-                    }
+                    bool equal = SimpleObjectsEq(oldidxval,newidxval);
                     if (equal && oldindexitem.Offset == offset.Item1)
                     {
                         continue;
