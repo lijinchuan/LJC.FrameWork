@@ -117,7 +117,7 @@ namespace LJC.FrameWork.Comm
                     }
                     sb.AppendLine(string.Format("{0}ms:  {1}", tp.Item2 - timeline, tp.Item1));
                 }
-
+                TraceDic.TryRemove(traceid, out queue);
                 return sb.ToString();
             }
             catch
