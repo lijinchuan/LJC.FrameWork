@@ -110,6 +110,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             i++;
                         }
                     }
+
+                    if (idr.Length() - currentpos > 10240)
+                    {
+                        throw new Exception(tablename+"主键索引大量数据未读取");
+                    }
+
                     //keyindexlistdic[tablename] = indexdic;
                     keyindexmemlist[tablename] = keymemlist;
                 }

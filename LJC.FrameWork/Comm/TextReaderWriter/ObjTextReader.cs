@@ -397,6 +397,11 @@ namespace LJC.FrameWork.Comm
             return false;
         }
 
+        public long Length()
+        {
+            return this._sr.BaseStream.Length;
+        }
+
         public void Dispose()
         {
             if (_sr != null)

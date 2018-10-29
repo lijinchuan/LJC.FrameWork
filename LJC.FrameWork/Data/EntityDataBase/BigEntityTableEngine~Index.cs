@@ -117,6 +117,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
                     //keyindexlistdic[tablename] = indexdic;
                     keyindexmemlist[indexkey] = keymemlist;
+
+                    if (idr.Length() - currentpos > 10240)
+                    {
+                        throw new Exception(tablename + "的" + indexname + "索引大量数据未读取");
+                    }
                 }
                 finally
                 {
