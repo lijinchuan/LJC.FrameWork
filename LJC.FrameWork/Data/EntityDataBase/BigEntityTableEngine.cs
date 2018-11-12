@@ -679,7 +679,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var oldoffset = keywriter.GetWritePosition();
                     delkey.Del = true;
 
-                    keywriter.SetPosition(oldodelkeyffset);
+                    keywriter.SetPosition(delkey.KeyOffset);
                     keywriter.AppendObject(delkey);
 
                     keywriter.SetPosition(oldoffset);
