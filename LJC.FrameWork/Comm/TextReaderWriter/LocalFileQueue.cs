@@ -290,7 +290,7 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             }
             catch (Exception ex)
             {
-                if (OnErrorResumeNext)
+                if (!OnErrorResumeNext)
                 {
                     _queueReader.SetPostion(_logger.LastPos);
                 }
