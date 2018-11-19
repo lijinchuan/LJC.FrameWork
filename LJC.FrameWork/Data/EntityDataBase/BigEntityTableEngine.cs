@@ -1703,7 +1703,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             return null;
         }
 
-        public IEnumerable<T> Scan<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps) where T : new()
+        public List<T> Scan<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps) where T : new()
         {
             var meta = GetMetaData(tablename);
             var index = (string.IsNullOrWhiteSpace(keyorindex) || keyorindex == tablename) ? meta.KeyIndexInfo : meta.IndexInfos.FirstOrDefault(p => p.IndexName == keyorindex);
@@ -1789,28 +1789,40 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             keylist2 = MergeAndSort2(keylist2, keylist3).ToList();
 
+            List<BigEntityTableIndexItem> result = new List<BigEntityTableIndexItem>();
             if (keylist.Count > 0 || keylist2.Count > 0)
             {
                 int skip = (pi - 1) * ps;
                 int curr = 0;
                 int take = 0;
-                using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
+
+                foreach (var k in MergeAndSort2(keylist, keylist2))
                 {
-                    foreach (var k in MergeAndSort2(keylist, keylist2))
+                    if ((++curr) <= skip)
                     {
-                        if ((++curr) <= skip)
-                        {
-                            continue;
-                        }
-                        otr.SetPostion(k.Offset);
-                        yield return otr.ReadObject<EntityTableItem<T>>().Data;
-                        if ((++take) == ps)
-                        {
-                            break;
-                        }
+                        continue;
+                    }
+                    result.Add(k);
+                    if ((++take) == ps)
+                    {
+                        break;
                     }
                 }
+
             }
+
+            T[] resultarray = new T[result.Count];
+            int idx = 0;
+            var resultdic = result.OrderBy(p => p.Offset).ToDictionary(p => idx++, p => p);
+            using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
+            {
+                foreach (var kv in resultdic)
+                {
+                    otr.SetPostion(kv.Value.Offset);
+                    resultarray[kv.Key] = otr.ReadObject<EntityTableItem<T>>().Data;
+                }
+            }
+            return resultarray.ToList();
         }
 
         public List<T> Scan<T>(string tablename, string keyorindex, object[] keystart, object[] keyend, int pi, int ps, ref long total) where T : new()
@@ -2115,16 +2127,18 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 tablelocker.ExitReadLock();
             }
 
-            List<T> resultlist = new List<T>();
+            T[] resultarray = new T[result.Count];
+            int idx=0;
+            var resultdic = result.OrderBy(p=>p.Offset).ToDictionary(p => idx++, p => p);
             using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
             {
-                foreach (var k in result)
+                foreach (var kv in resultdic)
                 {
-                    otr.SetPostion(k.Offset);
-                    resultlist.Add(otr.ReadObject<EntityTableItem<T>>().Data);
+                    otr.SetPostion(kv.Value.Offset);
+                    resultarray[kv.Key] = otr.ReadObject<EntityTableItem<T>>().Data;
                 }
             }
-            return resultlist;
+            return resultarray.ToList();
         }
 
         public IEnumerable<T> Find<T>(string tablename, Func<T, bool> findcondition) where T : new()
