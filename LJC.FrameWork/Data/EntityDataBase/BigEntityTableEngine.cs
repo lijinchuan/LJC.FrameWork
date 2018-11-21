@@ -1407,10 +1407,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     var posend = indexarr[mid + 1].KeyOffset;
                     var rangeindexstart = indexarr[mid].RangeIndex;
                     var buffer = new byte[1024];
+                    var keyoffset = 0L;
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
                         reader.SetPostion(posstart);
-                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, p=>keyoffset=p, buffer))
                         {
                             //var item = reader.ReadObject<BigEntityTableIndexItem>();
                             if (reader.ReadedPostion() > posend)
@@ -1421,6 +1422,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             {
                                 continue;
                             }
+                            item.KeyOffset = keyoffset;
                             item.RangeIndex = ++rangeindexstart;
                             if (item.Key.Equals(key))
                             {
@@ -1578,7 +1580,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                                         keyreader.SetPostion(posstart);
                                         var buffer = new byte[1024];
-                                        foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+                                        var keyoffset = 0L;
+                                        foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p=>keyoffset=p, buffer))
                                         {
                                             item.SetIndex(meta.KeyIndexInfo);
                                             //var item = keyreader.ReadObject<BigEntityTableIndexItem>();
@@ -1588,6 +1591,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                             }
                                             if (item.CompareTo(findkey) == 0)
                                             {
+                                                item.KeyOffset = keyoffset;
                                                 findkeyitem = item;
                                                 break;
                                             }
