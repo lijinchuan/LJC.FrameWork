@@ -2004,18 +2004,19 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         totallist.Insert(0, findfirst);
                     }
-                }
-                if (findend != null)
-                {
-                    if (totallist.Count == 0 || totallist.Last().KeyOffset < findend.KeyOffset)
+                    if (findend != null)
                     {
-                        totallist.Add(findend);
-                    }
+                        if (totallist.Count == 0 || totallist.Last().KeyOffset < findend.KeyOffset)
+                        {
+                            totallist.Add(findend);
+                        }
 
-                    total = findend.RangeIndex - findfirst.RangeIndex + 1 + templist1.Count()
-                        + templist2.Count();
+                        total = findend.RangeIndex - (findfirst.RangeIndex) + 1;
+                    }
                 }
 
+                total += templist1.Count() + templist2.Count();
+                
                 if (totallist.Count > 0)
                 {
                     if (index.Indexs.First().Direction == 1)
@@ -2035,6 +2036,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     long temprankoffset = 0;
                     BigEntityTableIndexItem takefirstindexitem = null, takelastindexitem = null;
                     long takerankskip = (pi - 1) * ps;
+                    //看排了序的中间有多少未排序的，重新调整下
                     foreach (var item in totallist)
                     {
                         if (item.RangeIndex == -1)
@@ -2047,8 +2049,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             if (rankoffset <= takerankskip)
                             {
                                 item.CopyTo(ref takefirstindexitem).RangeIndex += temprankoffset;
+                                item.CopyTo(ref takelastindexitem).RangeIndex += temprankoffset;
                             }
 
+                            //这里只是大致的退出条件
                             if (rankoffset >= takerankskip + ps)
                             {
                                 break;
@@ -2057,7 +2061,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                     }
 
-                    if (takefirstindexitem != null && takelastindexitem != null)
+                    //这里都是从已经排好了序的索引里面查找的
+                    if (takefirstindexitem != null && takelastindexitem != null && takelastindexitem.RangeIndex - findfirst.RangeIndex >= takerankskip)
                     {
                         int prerank = 0;
                         if (prerank > 0)
@@ -2066,6 +2071,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             result.AddRange(preranklist.Skip(preranklist.Count - prerank).Take(prerank));
                         }
                         var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
+                        //只能取这么多，不然会出错
+                        long takecount = takelastindexitem.RangeIndex - findfirst.RangeIndex - takerankskip + 1;
                         using (var keyreader = ObjTextReader.CreateReader(keyfile))
                         {
                             keyreader.SetPostion(takefirstindexitem.KeyOffset);
@@ -2095,18 +2102,29 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 if (rangindex - findfirst.RangeIndex >= takerankskip)
                                 {
                                     result.Add(item);
+                                    if (--takecount == 0)
+                                    {
+                                        break;
+                                    }
                                 }
 
                                 rangindex++;
                             }
                         }
+                    }
 
-                        //var lastrank = (int)(takerankskip + ps - (taklastrankoffset - findfirst.RangeIndex + 1));
-                        //if (lastrank > 0)
-                        //{
-                        //    var lastranklist = totallist.Where(p => p.CompareTo(takelastindexitem) > 0).ToList();
-                        //    result.AddRange(lastranklist.Take(lastrank));
-                        //}
+                    //从内存里面找
+                    if (result.Count < ps)
+                    {
+                        if (takefirstindexitem != null && takelastindexitem != null)
+                        {
+                            var skip = takerankskip - (takelastindexitem.RangeIndex - findfirst.RangeIndex + 1);
+                            result.AddRange(templist1.Where(p => p.CompareTo(takelastindexitem) > 0).Skip((int)skip).Take(ps - result.Count));
+                        }
+                        else
+                        {
+                            result.AddRange(templist1.Skip((int)takerankskip).Take(ps - result.Count));
+                        }
                     }
                 }
                 else
