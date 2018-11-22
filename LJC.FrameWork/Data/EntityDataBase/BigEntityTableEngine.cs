@@ -1994,7 +1994,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 //var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
                 //var templist2 = keyindexmemtemplist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
-                var templist1 = keyindexmemlist[keyname].Scan(findkeystart,findkeyend).Where(p=>!p.Del).ToList();
+                var templist1 = keyindexmemlist[keyname].Scan(findkeystart, findkeyend).Where(p => !p.Del).ToList();
                 var templist2 = keyindexmemtemplist[keyname].Scan(findkeystart, findkeyend).Where(p => !p.Del).ToList();
 
                 if (findfirst != null)
@@ -2020,7 +2020,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     if (index.Indexs.First().Direction == 1)
                     {
-                       
+
                         templist1 = MergeAndSort2(templist1, templist2).ToList();
                         totallist = MergeAndSort2(totallist, templist1).ToList();
                     }
@@ -2032,8 +2032,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     //totallist.Sort();
 
-                    long temprankoffset = 0, rankoffset = 0;
-                    long takefirstrankoffset = 0, taklastrankoffset = 0;
+                    long temprankoffset = 0;
                     BigEntityTableIndexItem takefirstindexitem = null, takelastindexitem = null;
                     long takerankskip = (pi - 1) * ps;
                     foreach (var item in totallist)
@@ -2044,40 +2043,42 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                         else
                         {
-                            rankoffset = item.RangeIndex - findfirst.RangeIndex + temprankoffset;
+                            var rankoffset = item.RangeIndex - findfirst.RangeIndex + temprankoffset;
                             if (rankoffset <= takerankskip)
                             {
-                                takefirstindexitem = item;
-                                takefirstrankoffset = rankoffset;
+                                item.CopyTo(ref takefirstindexitem).RangeIndex += temprankoffset;
                             }
 
                             if (rankoffset >= takerankskip + ps)
                             {
                                 break;
                             }
-                            takelastindexitem = item;
-                            taklastrankoffset = rankoffset;
+                            item.CopyTo(ref takelastindexitem).RangeIndex += temprankoffset;
                         }
                     }
 
                     if (takefirstindexitem != null && takelastindexitem != null)
                     {
-                        int prerank = (int)(takerankskip - (takefirstrankoffset + 1));
+                        int prerank = 0;
                         if (prerank > 0)
                         {
                             var preranklist = totallist.Where(p => p.CompareTo(takefirstindexitem) < 0).ToList();
                             result.AddRange(preranklist.Skip(preranklist.Count - prerank).Take(prerank));
                         }
-
+                        var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
                         using (var keyreader = ObjTextReader.CreateReader(keyfile))
                         {
                             keyreader.SetPostion(takefirstindexitem.KeyOffset);
 
                             long keyoffset = 0;
-                            long rangindex = takefirstrankoffset;
+                            long rangindex = takefirstindexitem.RangeIndex;
                             foreach (var item in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
                             {
                                 item.KeyOffset = keyoffset;
+                                if (item.KeyOffset >= keymergeinfo.IndexMergePos)
+                                {
+                                    break;
+                                }
 
                                 item.SetIndex(index);
 
@@ -2086,26 +2087,26 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     continue;
                                 }
 
-                                rangindex++;
+                                if (rangindex - findfirst.RangeIndex >= takerankskip + ps)
+                                {
+                                    break;
+                                }
 
                                 if (rangindex - findfirst.RangeIndex >= takerankskip)
                                 {
                                     result.Add(item);
                                 }
 
-                                if (rangindex - findfirst.RangeIndex > takerankskip + ps)
-                                {
-                                    break;
-                                }
+                                rangindex++;
                             }
                         }
 
-                        var lastrank = (int)(takerankskip + ps - (takelastindexitem.RangeIndex - findfirst.RangeIndex + 1));
-                        if (lastrank > 0)
-                        {
-                            var lastranklist = totallist.Where(p => p.CompareTo(takelastindexitem) > 0).ToList();
-                            result.AddRange(lastranklist.Take(lastrank));
-                        }
+                        //var lastrank = (int)(takerankskip + ps - (taklastrankoffset - findfirst.RangeIndex + 1));
+                        //if (lastrank > 0)
+                        //{
+                        //    var lastranklist = totallist.Where(p => p.CompareTo(takelastindexitem) > 0).ToList();
+                        //    result.AddRange(lastranklist.Take(lastrank));
+                        //}
                     }
                 }
                 else
@@ -2132,8 +2133,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             T[] resultarray = new T[result.Count];
-            int idx=0;
-            var resultdic = result.OrderBy(p=>p.Offset).ToDictionary(p => idx++, p => p);
+            int idx = 0;
+            var resultdic = result.OrderBy(p => p.Offset).ToDictionary(p => idx++, p => p);
             using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
             {
                 foreach (var kv in resultdic)

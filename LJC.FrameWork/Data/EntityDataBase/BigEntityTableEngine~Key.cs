@@ -87,6 +87,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     newindex.KeyOffset = currentpos;
                     newindex.SetIndex(meta.KeyIndexInfo);
+                    newindex.RangeIndex = -1;
                     if (!newindex.Del)
                     {
                         //indexdic.Add(newindex.Key, newindex);
@@ -103,6 +104,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         newindex.KeyOffset = currentpos;
                         newindex.SetIndex(meta.KeyIndexInfo);
+                        newindex.RangeIndex = -1;
                         if (!newindex.Del)
                         {
                             //indexdic.Add(newindex.Key, newindex);

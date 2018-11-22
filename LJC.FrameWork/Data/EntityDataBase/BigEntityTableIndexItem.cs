@@ -380,5 +380,22 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
             return compare;
         }
+
+        public BigEntityTableIndexItem CopyTo(ref BigEntityTableIndexItem newitem)
+        {
+            if (newitem == null)
+            {
+                newitem = new BigEntityTableIndexItem();
+            }
+
+            newitem.Key = this.Key;
+            newitem.Index = this.Index;
+            newitem.Del = this.Del;
+            newitem.KeyOffset = this.KeyOffset;
+            newitem.len = this.len;
+            newitem.Offset = this.Offset;
+            newitem.RangeIndex = this.RangeIndex;
+            return newitem;
+        }
     }
 }
