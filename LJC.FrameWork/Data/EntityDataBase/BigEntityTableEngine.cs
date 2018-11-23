@@ -495,7 +495,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 var keyreader = ObjTextReader.CreateReader(keyindexfile);
                 Dictionary<string, ObjTextWriter> idxwriterdic = new Dictionary<string, ObjTextWriter>();
                 var tableitem = new EntityTableItem<T>();
-                tableitem.Flag = EntityTableItemFlag.Ok;
+                tableitem.Flag = (byte)EntityTableItemFlag.Ok;
 
                 try
                 {
@@ -655,7 +655,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 tablelocker.EnterWriteLock();
 
                 var tableitem = new EntityTableItem<T>(delitem);
-                tableitem.Flag = EntityTableItemFlag.Del;
+                tableitem.Flag = (byte)EntityTableItemFlag.Del;
                 using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                 {
                     var posend = otw.GetWritePosition();
@@ -836,7 +836,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     throw new Exception("key值不能为空");
                 }
                 var tableitem = new EntityTableItem<T>(item);
-                tableitem.Flag = EntityTableItemFlag.Ok;
+                tableitem.Flag = (byte)EntityTableItemFlag.Ok;
                 using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                 {
                     var posend = otw.GetWritePosition();
@@ -996,7 +996,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         yield break;
                     }
 
-                    if (item.Flag == EntityTableItemFlag.Del)
+                    if (item.Flag == (byte)EntityTableItemFlag.Del)
                     {
                         continue;
                     }
@@ -2213,7 +2213,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         yield break;
                     }
 
-                    if (item.Flag == EntityTableItemFlag.Del)
+                    if (item.Flag == (byte)EntityTableItemFlag.Del)
                     {
 
                         continue;
@@ -2264,7 +2264,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         reader.SetPostion(item.Offset);
                         var data = reader.ReadObject<EntityTableItem<T>>();
-                        if (data.Flag == EntityTableItemFlag.Ok)
+                        if (data.Flag == (byte)EntityTableItemFlag.Ok)
                         {
                             yield return data.Data;
                         }

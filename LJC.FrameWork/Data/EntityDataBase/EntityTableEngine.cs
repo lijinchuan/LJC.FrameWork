@@ -608,7 +608,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
 
                         var tableitem = new EntityTableItem<T>(item);
-                        tableitem.Flag = EntityTableItemFlag.Ok;
+                        tableitem.Flag = (byte)EntityTableItemFlag.Ok;
 
                         //using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                         //var otw = GetWriter(tablefile);
@@ -826,7 +826,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     throw new Exception("key值不能为空");
                 }
                 var tableitem = new EntityTableItem<T>(item);
-                tableitem.Flag = EntityTableItemFlag.Ok;
+                tableitem.Flag = (byte)EntityTableItemFlag.Ok;
                 using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
                 //ObjTextWriter otw = GetWriter(tablefile);
                 {

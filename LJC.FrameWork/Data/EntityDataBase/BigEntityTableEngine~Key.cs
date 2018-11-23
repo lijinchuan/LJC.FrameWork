@@ -36,6 +36,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 Console.WriteLine("loadkey");
                 foreach (var newindex in idx.ReadObjectsWating<BigEntityTableIndexItem>(1, p => currentpos = p, buffer))
                 {
+                    if (newindex.Del)
+                    {
+                        continue;
+                    }
                     newindex.KeyOffset = currentpos;
                     newindex.RangeIndex = currrankindex++;
                     newindex.SetIndex(meta.KeyIndexInfo);
@@ -51,15 +55,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                         break;
                     }
-                    if (!newindex.Del)
+
+                    if (indexmergeinfo.LoadFactor == 1 || i % indexmergeinfo.LoadFactor == 0)
                     {
-                        if (indexmergeinfo.LoadFactor == 1 || i % indexmergeinfo.LoadFactor == 0)
-                        {
-                            list.Add(newindex);
-                        }
-                        i++;
-                        lastreadindex = newindex;
+                        list.Add(newindex);
                     }
+                    i++;
+                    lastreadindex = newindex;
+
                 }
 
                 if (list.Count > 0 && list.Last().KeyOffset != lastreadindex.KeyOffset)

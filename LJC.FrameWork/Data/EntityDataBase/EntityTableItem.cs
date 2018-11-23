@@ -8,7 +8,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 {
     public class EntityTableItem<T> where T : new()
     {
-        public EntityTableItemFlag Flag
+        public byte Flag
         {
             get;
             set;
@@ -22,7 +22,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
         public EntityTableItem(T item)
         {
             Data=item;
-            Flag = EntityTableItemFlag.Ok;
+            Flag = (byte)EntityTableItemFlag.Ok;
         }
 
         public T Data
