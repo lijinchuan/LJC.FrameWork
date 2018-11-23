@@ -1157,12 +1157,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     var rangestart = indexarr[mid].RangeIndex;
                     var buffer = new byte[1024];
+                    var keyoffset = 0L;
                     using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
                     {
                         reader.SetPostion(posstart);
 
-                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p, buffer))
                         {
+                            item.KeyOffset = keyoffset;
                             //var item = reader.ReadObject<BigEntityTableIndexItem>();
                             if (reader.ReadedPostion() > posend)
                             {
@@ -1172,8 +1174,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             {
                                 continue;
                             }
+                            item.SetIndex(meta.KeyIndexInfo);
                             item.RangeIndex = ++rangestart;
-                            if (item.Key.Equals(key))
+                            if (item.CompareTo(findkey) == 0)
                             {
                                 return item;
                             }
@@ -1260,13 +1263,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 var rangeindexstart = indexarr[pospev].RangeIndex;
                 var buffer = new byte[1024];
                 int skipcount = 0;
+                var keyoffset = 0L;
                 using (var reader = ObjTextReader.CreateReader(GetIndexFile(tablename, index.IndexName)))
                 {
                     ProcessTraceUtil.Trace("open indexfile");
                     reader.SetPostion(posstart);
                     ProcessTraceUtil.Trace("set pos:" + posstart);
-                    foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+                    foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, p=>keyoffset=p, buffer))
                     {
+                        item.KeyOffset = keyoffset;
                         skipcount++;
                         if (skipcount == 1)
                         {
@@ -1425,8 +1430,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 continue;
                             }
                             item.KeyOffset = keyoffset;
+                            item.SetIndex(findkey.Index);
                             item.RangeIndex = ++rangeindexstart;
-                            if (item.Key.Equals(key))
+                            if (item.CompareTo(findkey) == 0)
                             {
                                 findkeyitem = item;
                                 break;
@@ -2042,6 +2048,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     BigEntityTableIndexItem lastIndexItem = null;
                     int idx = 0;
                     bool isfirst = true;
+                    bool iscontainflag = true;
                     bool needorder = false;
                     var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
                     using (var keyreader = ObjTextReader.CreateReader(keyfile))
@@ -2092,23 +2099,23 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                                 break;
                                             }
 
+                                            if (indexitem.Del)
+                                            {
+                                                continue;
+                                            }
+
                                             //这个不能放到后面，因为cnt++
                                             if (lastIndexItem.RangeIndex + cnt++ < takerankskip)
                                             {
                                                 continue;
                                             }
 
-                                            if (!isfirst && lastIndexItem.KeyOffset == indexitem.KeyOffset)
+                                            if (!iscontainflag && lastIndexItem.KeyOffset == indexitem.KeyOffset)
                                             {
                                                 continue;
                                             }
 
                                             indexitem.SetIndex(index);
-
-                                            if (indexitem.Del)
-                                            {
-                                                continue;
-                                            }
 
                                             result.Add(indexitem);
                                             if (result.Count == ps)
@@ -2124,6 +2131,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     }
                                 }
                                 isfirst = false;
+                                if (lastIndexItem != null)
+                                {
+                                    iscontainflag = false;
+                                }
                                 item.CopyTo(ref lastIndexItem).RangeIndex += temprankoffset;
                             }
 
