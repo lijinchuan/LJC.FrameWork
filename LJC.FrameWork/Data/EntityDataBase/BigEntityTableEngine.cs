@@ -525,7 +525,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             Key = new object[] { keyvalue },
                             Offset = offset.Item1,
                             len = (int)(offset.Item2 - offset.Item1),
-                            Index = meta.KeyIndexInfo
+                            Index = meta.KeyIndexInfo,
+                            RangeIndex=-1
                         };
 
                         for (int j = 0; j < meta.IndexInfos.Length; j++)
@@ -543,7 +544,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 Key = indexvalues,
                                 Offset = newkey.Offset,
                                 len = newkey.len,
-                                Index = idx
+                                Index = idx,
+                                RangeIndex=-1
                             };
 
                             ObjTextWriter idxwriter = null;
@@ -2135,7 +2137,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
 
                     //最后一条数据的处理
-                    if (result.Count < ps && lastIndexItem != null && !result.Contains(lastIndexItem) && lastIndexItem.RangeIndex >= takerankskip && lastIndexItem.RangeIndex <= takerankskip + ps)
+                    if (result.Count < ps && lastIndexItem != null && !result.Any(p => p.Offset == lastIndexItem.Offset) && lastIndexItem.RangeIndex >= takerankskip && lastIndexItem.RangeIndex <= takerankskip + ps)
                     {
                         result.Add(lastIndexItem);
                     }
