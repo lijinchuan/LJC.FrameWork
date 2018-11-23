@@ -1990,11 +1990,6 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 #endregion
 
-                if (findend == null)
-                {
-                    return new List<T>();
-                }
-
                 List<BigEntityTableIndexItem> totallist = new List<BigEntityTableIndexItem>();
 
                 //var templist1 = keyindexmemlist[keyname].GetList().Where(p => !p.Del && p.CompareTo(findkeystart) >= 0 && p.CompareTo(findkeyend) <= 0).ToList();
@@ -2004,20 +1999,22 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 if (findfirst != null)
                 {
+                    if (findend == null)
+                    {
+                        throw new Exception("查询结束参数错误");
+                    }
                     totallist.AddRange(indexarr.Where(p => !p.Del && p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
                     if (totallist.Count == 0 || totallist.First().KeyOffset > findfirst.KeyOffset)
                     {
                         totallist.Insert(0, findfirst);
                     }
-                    if (findend != null)
-                    {
-                        if (totallist.Count == 0 || totallist.Last().KeyOffset < findend.KeyOffset)
-                        {
-                            totallist.Add(findend);
-                        }
 
-                        total = findend.RangeIndex - (findfirst.RangeIndex) + 1;
+                    if (totallist.Count == 0 || totallist.Last().KeyOffset < findend.KeyOffset)
+                    {
+                        totallist.Add(findend);
                     }
+
+                    total = findend.RangeIndex - (findfirst.RangeIndex) + 1;
                 }
 
                 total += templist1.Count() + templist2.Count();
