@@ -2038,6 +2038,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     //totallist.Sort();
                     long temprankoffset = 0;
+                    long temprankoffsetreset = 0;
                     long takerankskip = (pi - 1) * ps;
                     BigEntityTableIndexItem lastIndexItem = null;
                     int idx = 0;
@@ -2051,9 +2052,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             if (item.RangeIndex == -1)
                             {
                                 temprankoffset++;
-                                if (!isfirst&&result.Count<ps)
+                                temprankoffsetreset++;
+                                if (!isfirst && result.Count < ps)
                                 {
-                                    if (lastIndexItem != null && lastIndexItem.RangeIndex >= takerankskip)
+                                    if (lastIndexItem != null && lastIndexItem.RangeIndex + temprankoffsetreset >= takerankskip)
                                     {
                                         needorder = true;
                                         result.Add(item);
@@ -2062,7 +2064,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             }
                             else
                             {
-                                
+                                temprankoffsetreset = 0;
                                 //偏移后的位置，如0->1=1
                                 var rankoffset = item.RangeIndex - findfirst.RangeIndex + temprankoffset;
 
@@ -2086,20 +2088,25 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                         foreach (var indexitem in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
                                         {
                                             indexitem.KeyOffset = keyoffset;
-                                            if (indexitem.KeyOffset >= keymergeinfo.IndexMergePos
-                                                || indexitem.KeyOffset == item.KeyOffset)
+                                            if (indexitem.KeyOffset > item.KeyOffset || indexitem.KeyOffset >= keymergeinfo.IndexMergePos)
                                             {
                                                 break;
                                             }
 
+                                            //这个不能放到后面，因为cnt++
                                             if (lastIndexItem.RangeIndex + cnt++ < takerankskip)
+                                            {
+                                                continue;
+                                            }
+
+                                            if (!isfirst && lastIndexItem.KeyOffset == indexitem.KeyOffset)
                                             {
                                                 continue;
                                             }
 
                                             indexitem.SetIndex(index);
 
-                                            if (item.Del)
+                                            if (indexitem.Del)
                                             {
                                                 continue;
                                             }
