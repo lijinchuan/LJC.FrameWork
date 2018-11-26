@@ -2090,6 +2090,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 temprankoffsetreset++;
                                 if (!isfirst && result.Count < ps)
                                 {
+                                    //中间的数据也要算
                                     if (lastIndexItem != null && lastIndexItem.RangeIndex + temprankoffsetreset >= takerankskip)
                                     {
                                         needorder = true;
@@ -2105,18 +2106,35 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                                 if (rankoffset >= takerankskip)
                                 {
-                                    if (isfirst && rankoffset > takerankskip)
+                                    //如是前面数据都是内存中的情况
+                                    if (lastIndexItem == null)
                                     {
                                         var take = rankoffset - takerankskip;
-                                        var lastidx = idx - 1;
-                                        while (take-->0)
+                                        if (take > 0)
                                         {
-                                            result.Insert(0, totallist[lastidx--]);
+                                            var lastidx = idx - 1;
+                                            while (take-- > 0)
+                                            {
+                                                result.Insert(0, totallist[lastidx--]);
+                                            }
                                         }
                                     }
+                                    //如果是内存数据混合情况，第一次加载数据
+
+                                    var templist = new List<BigEntityTableIndexItem>();
 
                                     if (lastIndexItem != null)
                                     {
+                                        var fisrtload=lastIndexItem.RangeIndex - findfirst.RangeIndex < takerankskip;
+                                        if (fisrtload)
+                                        {
+                                            var lastidx = idx - 1;
+                                            while (totallist[lastidx].RangeIndex == -1)
+                                            {
+                                                templist.Insert(0, totallist[lastidx--]);
+                                            }
+                                        }
+
                                         keyreader.SetPostion(lastIndexItem.KeyOffset);
                                         long keyoffset = 0;
                                         int cnt = 0;
@@ -2134,23 +2152,37 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                             }
 
                                             //这个不能放到后面，因为cnt++
-                                            if (lastIndexItem.RangeIndex + cnt++ < takerankskip)
-                                            {
-                                                continue;
-                                            }
+                                            //if (lastIndexItem.RangeIndex + cnt++ < takerankskip)
+                                            //{
+                                            //    continue;
+                                            //}
 
                                             if (!iscontainflag && lastIndexItem.KeyOffset == indexitem.KeyOffset)
                                             {
                                                 continue;
                                             }
+                                            iscontainflag = false;
 
                                             indexitem.SetIndex(index);
 
-                                            result.Add(indexitem);
-                                            if (result.Count == ps)
+                                            templist.Add(indexitem);
+                                        }
+
+                                        if (fisrtload)
+                                        {
+                                            templist.Sort();
+                                            cnt = 0;
+                                            foreach (var temp in templist)
                                             {
-                                                break;
+                                                if (lastIndexItem.RangeIndex + cnt++ >= takerankskip)
+                                                {
+                                                    result.Add(temp);
+                                                }
                                             }
+                                        }
+                                        else
+                                        {
+                                            result.AddRange(templist);
                                         }
 
                                         if (result.Count >= ps)
@@ -2159,12 +2191,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                         }
                                     }
                                 }
-                                isfirst = false;
-                                if (lastIndexItem != null)
-                                {
-                                    iscontainflag = false;
-                                }
+                                
                                 item.CopyTo(ref lastIndexItem).RangeIndex += temprankoffset;
+                                isfirst = false;
                             }
 
                             if (result.Count >= ps)
@@ -2185,6 +2214,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     if (needorder)
                     {
                         result.Sort();
+                    }
+                    if (result.Count > ps)
+                    {
+                        result = result.Take(ps).ToList();
                     }
                 }
                 else
