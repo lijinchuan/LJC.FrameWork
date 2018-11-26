@@ -688,14 +688,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 if (delkey.RangeIndex > 0)
                 {
+                    var delrangeindex = delkey.RangeIndex;
+                    delkey.RangeIndex -= 1;
                     foreach (var item in keyindexdisklist[tablename])
                     {
-                        if (item.RangeIndex > delkey.RangeIndex)
+                        if (item.RangeIndex >= delrangeindex)
                         {
                             item.RangeIndex -= 1;
                         }
                     }
-                    delkey.RangeIndex -= 1;
                 }
 
                 foreach (var idx in meta.IndexInfos)
@@ -736,14 +737,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                     if (idxitem.RangeIndex > 0)
                     {
+                        var delrangeindex = idxitem.RangeIndex;
+                        idxitem.RangeIndex -= 1;
                         foreach (var item in keyindexdisklist[tablename + ":" + idx.IndexName])
                         {
-                            if (item.RangeIndex > idxitem.RangeIndex)
+                            if (item.RangeIndex >=delrangeindex)
                             {
                                 item.RangeIndex -= 1;
                             }
                         }
-                        idxitem.RangeIndex -= 1;
                     }
                 }
             }
@@ -1175,7 +1177,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 continue;
                             }
                             item.SetIndex(meta.KeyIndexInfo);
-                            item.RangeIndex = ++rangestart;
+                            item.RangeIndex = rangestart++;
                             if (item.CompareTo(findkey) == 0)
                             {
                                 return item;
@@ -1255,6 +1257,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 }
             }
+            //如果在内存里面的，应该返回内存中的数据，否则会造成当前内存里面删除不了
             ProcessTraceUtil.Trace("start scan disk index");
             if (pospev != -1 && posnext != -1 && pospev <= posnext)
             {
@@ -1264,6 +1267,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 var buffer = new byte[1024];
                 int skipcount = 0;
                 var keyoffset = 0L;
+                var posloop = pospev;
                 using (var reader = ObjTextReader.CreateReader(GetIndexFile(tablename, index.IndexName)))
                 {
                     ProcessTraceUtil.Trace("open indexfile");
@@ -1278,17 +1282,31 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             ProcessTraceUtil.Trace("find first index");
                         }
                         item.SetIndex(index);
+                        
                         if (!item.Del)
                         {
-                            item.RangeIndex = ++rangeindexstart;
+                            item.RangeIndex = rangeindexstart++;
+
+
                             if (item.CompareTo(findkey) == 0)
                             {
-                                yield return item;
+                                if (item.Offset == indexarr[posloop].Offset)
+                                {
+                                    yield return indexarr[posloop];
+                                }
+                                else
+                                {
+                                    yield return item;
+                                }
                             }
                         }
                         if (reader.ReadedPostion() > posend)
                         {
                             break;
+                        }
+                        if (item.Offset == indexarr[posloop].Offset)
+                        {
+                            posloop++;
                         }
                     }
                 }
@@ -1300,14 +1318,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
             //内存里查找
             foreach (var item in keyindexmemtemplist[indexkey].FindAll(findkey))
             {
-                item.RangeIndex = 0;
+                item.RangeIndex = -1;
                 yield return item;
             }
 
             ProcessTraceUtil.Trace("find in mem");
             foreach (var item in keyindexmemlist[indexkey].FindAll(findkey))
             {
-                item.RangeIndex = 0;
+                item.RangeIndex = -1;
                 yield return item;
             }
 
@@ -1903,6 +1921,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 if (pos >= 0)
                 {
                     var rangeindexstart = indexarr[pos].RangeIndex;
+                    findfirst = indexarr[pos];
                     var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
 
                     using (var keyreader = ObjTextReader.CreateReader(keyfile))
@@ -1916,6 +1935,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             if (/*item.KeyOffset > endoffset ||*/ item.KeyOffset >= keymergeinfo.IndexMergePos)
                             {
                                 break;
+                            }
+                            if (item.Del)
+                            {
+                                continue;
                             }
 
                             item.SetIndex(index);
@@ -1970,6 +1993,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 if (pos >= 0)
                 {
                     var rangeindexend = indexarr[pos].RangeIndex;
+                    findend = indexarr[pos];
                     var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
 
                     using (var keyreader = ObjTextReader.CreateReader(keyfile))
@@ -1984,6 +2008,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             {
                                 break;
                             }
+                            if (item.Del)
+                            {
+                                continue;
+                            }
 
                             item.SetIndex(index);
                             item.RangeIndex = rangeindexend++;
@@ -1994,6 +2022,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             }
                             findend = item;
                         }
+                        
                     }
                 }
                 #endregion
@@ -2148,7 +2177,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     }
 
                     //最后一条数据的处理
-                    if (result.Count < ps && lastIndexItem != null && !result.Any(p => p.Offset == lastIndexItem.Offset) && lastIndexItem.RangeIndex >= takerankskip && lastIndexItem.RangeIndex <= takerankskip + ps)
+                    if (result.Count < ps && lastIndexItem != null && !lastIndexItem.Del && !result.Any(p => p.Offset == lastIndexItem.Offset) && lastIndexItem.RangeIndex >= takerankskip && lastIndexItem.RangeIndex <= takerankskip + ps)
                     {
                         result.Add(lastIndexItem);
                     }
