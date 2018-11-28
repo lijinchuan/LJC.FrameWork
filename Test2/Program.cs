@@ -215,6 +215,8 @@ namespace Test2
         {
             Console.WriteLine("1-测试BigEntityTable");
             Console.WriteLine("2-测试二分法排序");
+            Console.WriteLine("3-测试股票");
+            Console.WriteLine("4-运行BigEntityTable测试用户");
             Console.WriteLine("0-退出");
             return Console.ReadLine();
         }
@@ -350,12 +352,6 @@ namespace Test2
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static void Main(string[] args)
         {
-            object[] obj = new object[] { "123456",DateTime.Now.Date};
-            object[] obj1 = new object[] { "123456", DateTime.Now.Date };
-
-            Console.WriteLine("=:"+(obj==obj1)+",eq:"+obj.Equals(obj1)+",oeq:"+SimpleObjectsEq(obj1,obj));
-
-            Console.Read();
 
             var cmd = PrintCmd();
             IFun funx = null;
@@ -376,6 +372,12 @@ namespace Test2
                     case "3":
                         {
                             funx = new Fun3();
+                            break;
+                        }
+                    case "4":
+                        {
+                            funx = new LocalDUnitBTest();
+
                             break;
                         }
                 }

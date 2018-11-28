@@ -685,6 +685,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     keywriter.AppendObject(delkey);
 
                     keywriter.SetPosition(oldoffset);
+
+                    LogManager.LogHelper.Instance.Debug("删除修改索引:"+delkey.KeyOffset+","+delkey.Key[0].ToString());
                 }
                 if (delkey.RangeIndex > 0)
                 {
@@ -906,14 +908,15 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                             if (idxitem.RangeIndex > 0)
                             {
+                                var delrangeindex = idxitem.RangeIndex;
+                                idxitem.RangeIndex -= 1;
                                 foreach (var k in keyindexdisklist[tablename + ":" + idx.IndexName])
                                 {
-                                    if (k.RangeIndex > idxitem.RangeIndex)
+                                    if (k.RangeIndex >= delrangeindex)
                                     {
                                         k.RangeIndex -= 1;
                                     }
                                 }
-                                idxitem.RangeIndex -= 1;
                             }
 
                             var newidxitem = new BigEntityTableIndexItem
@@ -923,7 +926,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 KeyOffset = posend,
                                 len = newkey.len,
                                 Offset = newkey.Offset,
-                                Index = idx
+                                Index = idx,
+                                RangeIndex=-1
                             };
 
                             idxwriter.AppendObject(newidxitem);
@@ -1842,13 +1846,17 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
 
             T[] resultarray = new T[result.Count];
-            int idx = 0;
-            var resultdic = result.OrderBy(p => p.Offset).ToDictionary(p => idx++, p => p);
+
+            var resultdic = new Dictionary<int, long>();
+            for (int i = 0; i < result.Count; i++)
+            {
+                resultdic.Add(i, result[i].Offset);
+            }
             using (ObjTextReader otr = ObjTextReader.CreateReader(GetTableFile(tablename)))
             {
-                foreach (var kv in resultdic)
+                foreach (var kv in resultdic.OrderBy(p => p.Value))
                 {
-                    otr.SetPostion(kv.Value.Offset);
+                    otr.SetPostion(kv.Value);
                     resultarray[kv.Key] = otr.ReadObject<EntityTableItem<T>>().Data;
                 }
             }
@@ -2070,15 +2078,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         totallist = MergeAndSort2(templist1, totallist).ToList();
                     }
 
-                    //totallist.Sort();
                     long temprankoffset = 0;
-                    long temprankoffsetreset = 0;
                     long takerankskip = (pi - 1) * ps;
                     BigEntityTableIndexItem lastIndexItem = null;
                     int idx = 0;
-                    bool isfirst = true;
+                    int lasIndexItemIdx = 0;
                     bool iscontainflag = true;
-                    bool needorder = false;
                     var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
                     using (var keyreader = ObjTextReader.CreateReader(keyfile))
                     {                
@@ -2087,20 +2092,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             if (item.RangeIndex == -1)
                             {
                                 temprankoffset++;
-                                temprankoffsetreset++;
-                                if (!isfirst && result.Count < ps)
-                                {
-                                    //中间的数据也要算
-                                    if (lastIndexItem != null && lastIndexItem.RangeIndex + temprankoffsetreset >= takerankskip)
-                                    {
-                                        needorder = true;
-                                        result.Add(item);
-                                    }
-                                }
+                                
                             }
                             else
                             {
-                                temprankoffsetreset = 0;
+                                //temprankoffsetreset = 0;
                                 //偏移后的位置，如0->1=1
                                 var rankoffset = item.RangeIndex - findfirst.RangeIndex + temprankoffset;
 
@@ -2122,17 +2118,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                     //如果是内存数据混合情况，第一次加载数据
 
                                     var templist = new List<BigEntityTableIndexItem>();
-
+                                    bool fisrtload = false;
                                     if (lastIndexItem != null)
                                     {
-                                        var fisrtload=lastIndexItem.RangeIndex - findfirst.RangeIndex < takerankskip;
-                                        if (fisrtload)
+                                        var lastidx = idx - 1;
+                                        while (totallist[lastidx].RangeIndex == -1)
                                         {
-                                            var lastidx = idx - 1;
-                                            while (totallist[lastidx].RangeIndex == -1)
-                                            {
-                                                templist.Insert(0, totallist[lastidx--]);
-                                            }
+                                            templist.Insert(0, totallist[lastidx--]);
+                                            fisrtload = true;
                                         }
 
                                         keyreader.SetPostion(lastIndexItem.KeyOffset);
@@ -2171,19 +2164,16 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                         if (fisrtload)
                                         {
                                             templist.Sort();
-                                            cnt = 0;
-                                            foreach (var temp in templist)
+                                        }
+                                        cnt = 0;
+                                        foreach (var temp in templist)
+                                        {
+                                            if (lastIndexItem.RangeIndex + cnt++ >= takerankskip)
                                             {
-                                                if (lastIndexItem.RangeIndex + cnt++ >= takerankskip)
-                                                {
-                                                    result.Add(temp);
-                                                }
+                                                result.Add(temp);
                                             }
                                         }
-                                        else
-                                        {
-                                            result.AddRange(templist);
-                                        }
+   
 
                                         if (result.Count >= ps)
                                         {
@@ -2193,7 +2183,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 }
                                 
                                 item.CopyTo(ref lastIndexItem).RangeIndex += temprankoffset;
-                                isfirst = false;
+                                lasIndexItemIdx = idx;
+                                //isfirst = false;
                             }
 
                             if (result.Count >= ps)
@@ -2205,16 +2196,30 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                     }
 
+
                     //最后一条数据的处理
                     if (result.Count < ps && lastIndexItem != null && !lastIndexItem.Del && !result.Any(p => p.Offset == lastIndexItem.Offset) && lastIndexItem.RangeIndex >= takerankskip && lastIndexItem.RangeIndex <= takerankskip + ps)
                     {
                         result.Add(lastIndexItem);
                     }
 
-                    if (needorder)
+                    if (result.Count < ps && lasIndexItemIdx < totallist.Count)
                     {
-                        result.Sort();
+                        var rank = lastIndexItem.RangeIndex;
+                        for (int i = lasIndexItemIdx + 1; i < totallist.Count; i++)
+                        {
+                            rank++;
+                            if (rank >= takerankskip && rank <= takerankskip + ps)
+                            {
+                                result.Add(totallist[i]);
+                                if (result.Count == ps)
+                                {
+                                    break;
+                                }
+                            }
+                        }
                     }
+
                     if (result.Count > ps)
                     {
                         result = result.Take(ps).ToList();
