@@ -241,7 +241,6 @@ namespace Test2
                 throw new Exception("删除测试数据过少");
             }
 
-            Thread.Sleep(10000);
             Console.WriteLine("开始删除");
 
             List<PersonInfo> dellist = new List<PersonInfo>();
@@ -250,9 +249,24 @@ namespace Test2
                 var cnt = memlist.Count();
                 var idx = new Random(Guid.NewGuid().GetHashCode()).Next(0, cnt);
                 dellist.Add(memlist[idx]);
-                if (!BigEntityTableEngine.LocalEngine.Delete<PersonInfo>("PersonInfo", memlist[idx].ID))
+                while (true)
                 {
-                    throw new Exception("删除失败:" + memlist[idx].ID);
+                    try
+                    {
+                        BigEntityTableEngine.LocalEngine.Delete<PersonInfo>("PersonInfo", memlist[idx].ID);
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.Message.IndexOf("合并索引") > -1)
+                        {
+                            Thread.Sleep(10);
+                        }
+                        else
+                        {
+                            throw ex;
+                        }
+                    }
                 }
                 memlist.RemoveAt(idx);
             }
@@ -305,8 +319,26 @@ namespace Test2
                     uplist.Remove(exitem);
                 }
                 uplist.Add(item);
-                LJC.FrameWork.Data.EntityDataBase.BigEntityTableEngine.LocalEngine.Update<PersonInfo>("PersonInfo", item);
-                
+
+                while (true)
+                {
+                    try
+                    {
+                        LJC.FrameWork.Data.EntityDataBase.BigEntityTableEngine.LocalEngine.Update<PersonInfo>("PersonInfo", item);
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.Message.IndexOf("合并索引") > -1)
+                        {
+                            Thread.Sleep(10);
+                        }
+                        else
+                        {
+                            throw ex;
+                        }
+                    }
+                }
             }
 
             foreach (var item in uplist)
@@ -396,8 +428,8 @@ namespace Test2
             ////TestScan3(memlist);
 
             //删除
-            ////Console.WriteLine("测试删除");
-            ////TestDel(ref memlist);
+            Console.WriteLine("测试删除");
+            TestDel(ref memlist);
 
             //测试更新
             TestUpdate(ref memlist);

@@ -122,5 +122,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
             get;
             set;
         }
+
+        [XmlIgnore]
+        public bool IsMerging
+        {
+            get;
+            set;
+        }
     }
 }

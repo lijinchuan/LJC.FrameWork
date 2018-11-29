@@ -238,24 +238,37 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     foreach (var tablename in metadic.Keys)
                     {
                         BigEntityTableMeta meta = metadic[tablename];
-                        if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT ||
-                        (this.keyindexmemlist.ContainsKey(tablename) && keyindexmemlist[tablename].Length() >= MERGE_TRIGGER_NEW_COUNT))
-                        {
-                            //meta.NewAddCount = 0;
-                            MergeKey(tablename, meta.KeyName);
-                        }
+                        var tablelocker = GetKeyLocker(tablename, string.Empty);
 
-                        if (meta.IndexInfos != null && meta.IndexInfos.Length > 0)
+                        tablelocker.EnterWriteLock();
+                        meta.IsMerging = true;
+                        tablelocker.ExitWriteLock();
+
+                        try
                         {
-                            foreach (var index in meta.IndexInfos)
+                            if (meta.NewAddCount >= MERGE_TRIGGER_NEW_COUNT ||
+                            (this.keyindexmemlist.ContainsKey(tablename) && keyindexmemlist[tablename].Length() >= MERGE_TRIGGER_NEW_COUNT))
                             {
-                                var indexkey = tablename + ":" + index.IndexName;
-                                if (this.keyindexmemlist.ContainsKey(indexkey) && keyindexmemlist[indexkey].Length() >= MERGE_TRIGGER_NEW_COUNT)
-                                {
-                                    MergeIndex(tablename, index.IndexName);
-                                }
-
+                                //meta.NewAddCount = 0;
+                                MergeKey(tablename, meta.KeyName);
                             }
+
+                            if (meta.IndexInfos != null && meta.IndexInfos.Length > 0)
+                            {
+                                foreach (var index in meta.IndexInfos)
+                                {
+                                    var indexkey = tablename + ":" + index.IndexName;
+                                    if (this.keyindexmemlist.ContainsKey(indexkey) && keyindexmemlist[indexkey].Length() >= MERGE_TRIGGER_NEW_COUNT)
+                                    {
+                                        MergeIndex(tablename, index.IndexName);
+                                    }
+
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            meta.IsMerging = false;
                         }
                     }
 
@@ -654,6 +667,11 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 Tuple<long, long> offset = null;
                 tablelocker.EnterWriteLock();
 
+                if (meta.IsMerging)
+                {
+                    throw new Exception("正在合并索引，不能执行更新操作");
+                }
+
                 var tableitem = new EntityTableItem<T>(delitem);
                 tableitem.Flag = (byte)EntityTableItemFlag.Del;
                 using (ObjTextWriter otw = ObjTextWriter.CreateWriter(tablefile, ObjTextReaderWriterEncodeType.entitybuf))
@@ -832,6 +850,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             tablelocker.EnterWriteLock();
             try
             {
+                if (meta.IsMerging)
+                {
+                    throw new Exception("正在合并索引，不能执行更新操作");
+                }
                 string keyindexfile = GetKeyFile(tablename);
 
                 var keyvalue = meta.KeyProperty.GetValueMethed(item);
