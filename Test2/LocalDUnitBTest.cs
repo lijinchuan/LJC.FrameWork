@@ -49,17 +49,21 @@ namespace Test2
         public static void TestScan(List<PersonInfo> memlist,int psstart=1,int psend=100)
         {
             int pi = 1, ps = psstart;
+            memlist=memlist.OrderBy(p => p.Name).ToList();
             while (true)
             {
                 pi = 1;
+                
                 while (true)
                 {
+                    ProcessTraceUtil.StartTrace();
+                    ProcessTraceUtil.Trace("开始排序，第" + pi + "页");
                     long total=0;
-                    var pagelist = memlist.OrderBy(p=>p.Name).Skip((pi - 1) * ps).Take(ps).ToList();
-
+                    var pagelist = memlist.Skip((pi - 1) * ps).Take(ps).ToList();
+                    ProcessTraceUtil.Trace("内存排序完成");
                     var pagelist2 = BigEntityTableEngine.LocalEngine.Scan<PersonInfo>("PersonInfo", "Name_1", new object[] { string.Empty }, new object[] { "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" },
                         pi, ps,ref total);
-
+                    ProcessTraceUtil.Trace("本地排序完成");
                     if (total != memlist.Count)
                     {
                         throw new Exception("scan返回的总数错误");
@@ -82,7 +86,8 @@ namespace Test2
                     {
                         break;
                     }
-
+                    ProcessTraceUtil.Trace("比较完成");
+                    Console.WriteLine(ProcessTraceUtil.PrintTrace());
                     pi++;
                 }
                 ps++;
@@ -398,10 +403,11 @@ namespace Test2
                 throw new Exception("插入数据后统计数据测试不通过");
             }
 
-            ////TestScan(memlist);
+            TestScan(memlist,9,11);
+            TestScan2(memlist);
 
             //再写入1万条
-            var insertmore = 10000;
+            var insertmore = 1000000;
             var templist = new List<PersonInfo>();
             for (int i = 0; i < insertmore; i++) 
             {
@@ -418,21 +424,21 @@ namespace Test2
 
             DateTime now = DateTime.Now;
             BigEntityTableEngine.LocalEngine.InsertBatch<PersonInfo>("PersonInfo", templist);
-            Console.WriteLine("写入万条数据完成:" + DateTime.Now.Subtract(now).TotalMilliseconds + "ms");
+            Console.WriteLine("写入百万条数据完成:" + DateTime.Now.Subtract(now).TotalMilliseconds + "ms");
             memlist.AddRange(templist);
 
-            ////Console.WriteLine("再次测试scan");
-            ////TestScan(memlist);
+            Console.WriteLine("再次测试scan");
+            TestScan(memlist,999,999);
 
-            ////TestScan2(memlist);
+            TestScan2(memlist);
             ////TestScan3(memlist);
 
-            //删除
-            Console.WriteLine("测试删除");
-            TestDel(ref memlist);
+            ////删除
+            //Console.WriteLine("测试删除");
+            //TestDel(ref memlist);
 
-            //测试更新
-            TestUpdate(ref memlist);
+            ////测试更新
+            //TestUpdate(ref memlist);
         }
 
         public void Start()
