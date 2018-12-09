@@ -124,7 +124,7 @@ namespace Test2
                 BigEntityTableEngine.LocalEngine.Insert<PersonInfo>("PersonInfo", newpersoninfo);
 
                 var tempmemelist = memlist.OrderBy(p => p.Name).Where(p => p.Name.CompareTo(newpersoninfo.Name) <= 0).ToList();
-                int pi = 1, ps = 3;
+                int pi = 1, ps = 999;
                 while (true)
                 {
                     pi = 1;
@@ -407,25 +407,28 @@ namespace Test2
             TestScan2(memlist);
 
             //再写入1万条
-            var insertmore = 1000000;
-            var templist = new List<PersonInfo>();
-            for (int i = 0; i < insertmore; i++) 
+            var insertmore = 1000;
+            for (int k = 0; k < 3030; k++)
             {
-                var id = Guid.NewGuid().ToString();
-                templist.Add(new PersonInfo
+                var templist = new List<PersonInfo>();
+                for (int i = 0; i < insertmore; i++)
                 {
-                    Name = "n" + id,
-                    Addr = "addr",
-                    Age = new Random(id.GetHashCode()).Next(1, 101),
-                    ID = id,
-                    Sex = new Random(id.GetHashCode()).Next(0, 2)
-                });
-            }
+                    var id = Guid.NewGuid().ToString();
+                    templist.Add(new PersonInfo
+                    {
+                        Name = "n" + id,
+                        Addr = "addr",
+                        Age = new Random(id.GetHashCode()).Next(1, 101),
+                        ID = id,
+                        Sex = new Random(id.GetHashCode()).Next(0, 2)
+                    });
+                }
 
-            DateTime now = DateTime.Now;
-            BigEntityTableEngine.LocalEngine.InsertBatch<PersonInfo>("PersonInfo", templist);
-            Console.WriteLine("写入百万条数据完成:" + DateTime.Now.Subtract(now).TotalMilliseconds + "ms");
-            memlist.AddRange(templist);
+                DateTime now = DateTime.Now;
+                BigEntityTableEngine.LocalEngine.InsertBatch<PersonInfo>("PersonInfo", templist);
+                Console.WriteLine("写入百万条数据完成:" + DateTime.Now.Subtract(now).TotalMilliseconds + "ms");
+                memlist.AddRange(templist);
+            }
 
             Console.WriteLine("再次测试scan");
             TestScan(memlist,999,999);

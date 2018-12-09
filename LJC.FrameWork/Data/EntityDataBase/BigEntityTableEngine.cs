@@ -1110,7 +1110,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         return false;
                     }
-                    if (item.Key.Equals(key))
+                    if (SimpleObjectsEq(item.Key, key.Key))
                     {
                         return !item.Del;
                     }
