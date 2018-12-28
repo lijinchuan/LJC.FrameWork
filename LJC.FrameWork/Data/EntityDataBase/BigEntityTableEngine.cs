@@ -31,7 +31,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 1000000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 100000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
@@ -1052,7 +1052,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 var memkeys = this.keyindexmemlist[tablename];
                 var mergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
                 var lastkeyitem = this.keyindexdisklist[tablename].LastOrDefault();
-                return memkeys.Length() + keyindexmemtemplist[tablename].Length() + (lastkeyitem == null ? 0 : lastkeyitem.RangeIndex + 1);
+                return memkeys.GetList().Where(p=>!p.Del).Count() + keyindexmemtemplist[tablename].GetList().Where(p=>!p.Del).Count() + (lastkeyitem == null ? 0 : lastkeyitem.RangeIndex + 1);
             }
             finally
             {
@@ -1344,6 +1344,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             //内存里查找
             foreach (var item in keyindexmemtemplist[indexkey].FindAll(findkey))
             {
+                if (item.Del)
+                {
+                    continue;
+                }
                 item.RangeIndex = -1;
                 yield return item;
             }
@@ -1351,6 +1355,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             ProcessTraceUtil.Trace("find in mem");
             foreach (var item in keyindexmemlist[indexkey].FindAll(findkey))
             {
+                if (item.Del)
+                {
+                    continue;
+                }
                 item.RangeIndex = -1;
                 yield return item;
             }
@@ -2577,6 +2585,53 @@ namespace LJC.FrameWork.Data.EntityDataBase
             finally
             {
                 locker.ExitReadLock();
+            }
+        }
+
+        public void UnLoadTable(string tablename)
+        {
+            BigEntityTableMeta meta = null;
+            var metalocker = GetKeyLocker(tablename, "GetMetaData");
+            metalocker.EnterWriteLock();
+            try
+            {
+                if (metadic.TryGetValue(tablename, out meta) && meta != null)
+                {
+                    BigEntityTableIndexItem[] oldindexitems = null;
+                    SortArrayList<BigEntityTableIndexItem> oldsortarraylist = null;
+
+                    var tablelocker = GetKeyLocker(tablename, string.Empty);
+                    tablelocker.EnterWriteLock();
+                    try
+                    {
+
+                        keyindexdisklist.TryRemove(tablename, out oldindexitems);
+                        keyindexmemlist.TryRemove(tablename, out oldsortarraylist);
+                        keyindexmemtemplist.TryRemove(tablename, out oldsortarraylist);
+
+                        foreach (var idx in meta.IndexInfos)
+                        {
+                            var idxkey = tablename + ":" + idx.IndexName;
+
+                            keyindexdisklist.TryRemove(idxkey, out oldindexitems);
+
+                            keyindexmemlist.TryRemove(idxkey, out oldsortarraylist);
+
+                            keyindexmemtemplist.TryRemove(idxkey, out oldsortarraylist);
+                        }
+
+                        metadic.Remove(tablename);
+
+                    }
+                    finally
+                    {
+                        tablelocker.ExitWriteLock();
+                    }
+                }
+            }
+            finally
+            {
+                metalocker.ExitWriteLock();
             }
         }
     }
