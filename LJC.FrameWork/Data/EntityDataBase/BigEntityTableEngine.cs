@@ -1110,7 +1110,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         return false;
                     }
-                    if (item.Key.Equals(key))
+                    if (SimpleObjectsEq(item.Key, key.Key))
                     {
                         return !item.Del;
                     }
@@ -2115,6 +2115,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     int lasIndexItemIdx = 0;
                     bool iscontainflag = true;
                     var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(index.IndexName));
+                    var readbuffer = new byte[4096];
                     using (var keyreader = ObjTextReader.CreateReader(keyfile))
                     {                
                         foreach (var item in totallist)
@@ -2161,7 +2162,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                         keyreader.SetPostion(lastIndexItem.KeyOffset);
                                         long keyoffset = 0;
                                         int cnt = 0;
-                                        foreach (var indexitem in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p))
+                                        foreach (var indexitem in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p,readbuffer))
                                         {
                                             indexitem.KeyOffset = keyoffset;
                                             if (indexitem.KeyOffset > item.KeyOffset || indexitem.KeyOffset >= keymergeinfo.IndexMergePos)
