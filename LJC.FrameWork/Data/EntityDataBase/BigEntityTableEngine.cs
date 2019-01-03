@@ -1727,6 +1727,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     return indexarr[0];
                 }
+                else if (mid == indexarr.Length - 1)
+                {
+                    return indexarr[mid];
+                }
                 return null;
             }
             else if (pos > -1)
@@ -1784,6 +1788,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
             List<BigEntityTableIndexItem> keylist2 = new List<BigEntityTableIndexItem>();
             List<BigEntityTableIndexItem> keylist3 = new List<BigEntityTableIndexItem>();
             var start = GetDiskNear(tablename, keyorindex, keystart, true);
+            var smallbuffer = new byte[4096];
             if (start != null)
             {
                 var end = GetDiskNear(tablename, keyorindex, keyend, false);
@@ -1809,7 +1814,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 using (var keyreader = ObjTextReader.CreateReader(keyfile))
                                 {
                                     keyreader.SetPostion(start.KeyOffset);
-                                    foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0, p => keyoffset = p))
+                                    foreach (var k in keyreader.ReadObjectsWating<BigEntityTableIndexItem>(0, p => keyoffset = p,smallbuffer))
                                     {
                                         k.KeyOffset = keyoffset;
                                         if (k.KeyOffset >= end.KeyOffset)
@@ -1940,7 +1945,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     while (true)
                     {
-                        var item = indexarr[--pos];
+                        var item = indexarr[pos];
                         if (item.CompareTo(findkeystart) != 0)
                         {
                             break;
@@ -1949,6 +1954,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             break;
                         }
+                        pos--;
                     }
                 }
                 else
@@ -2008,7 +2014,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     while (true)
                     {
-                        var item = indexarr[++pos];
+                        var item = indexarr[pos];
                         if (item.CompareTo(findkeyend) != 0)
                         {
                             pos--;
@@ -2018,6 +2024,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         {
                             break;
                         }
+                        pos++;
                     }
                 }
                 else
