@@ -31,7 +31,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
         public static BigEntityTableEngine LocalEngine = new BigEntityTableEngine(null);
 
-        private const int MERGE_TRIGGER_NEW_COUNT = 100000;
+        private const int MERGE_TRIGGER_NEW_COUNT = 1000000;
         /// <summary>
         /// 最大单个key占用内存
         /// </summary>
@@ -1064,15 +1064,20 @@ namespace LJC.FrameWork.Data.EntityDataBase
         {
             var meta = GetMetaData(tablename);
 
-            BigEntityTableIndexItem findkeyitem = keyindexmemlist[tablename].Find(key);
-            if (findkeyitem != null)
+            foreach (var findkeyitem in keyindexmemlist[tablename].FindAll(key))
             {
-                return !findkeyitem.Del;
+                if (!findkeyitem.Del)
+                {
+                    return true;
+                }
             }
-            findkeyitem = keyindexmemtemplist[tablename].Find(key);
-            if (findkeyitem != null)
+
+            foreach (var findkeyitem in keyindexmemtemplist[tablename].FindAll(key))
             {
-                return !findkeyitem.Del;
+                if (!findkeyitem.Del)
+                {
+                    return true;
+                }
             }
 
             var indexarr = keyindexdisklist[tablename];
@@ -1085,34 +1090,37 @@ namespace LJC.FrameWork.Data.EntityDataBase
             }
             else if (pos > -1)
             {
-                findkeyitem = indexarr[pos];
-                return !findkeyitem.Del;
+                var findkeyitem = indexarr[pos];
+                if (!findkeyitem.Del)
+                {
+                    return true;
+                }
             }
 
-            if (findkeyitem == null)
+            var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+            if (pos == -1 && keymergeinfo.LoadFactor == 1)
             {
-                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
-                if (pos == -1 && keymergeinfo.LoadFactor == 1)
+                return false;
+            }
+
+            var posstart = indexarr[mid].KeyOffset;
+            var posend = indexarr[mid + 1].KeyOffset;
+
+            var buffer = new byte[1024];
+            keyReader.SetPostion(posstart);
+
+            foreach (var item in keyReader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+            {
+                item.SetIndex(meta.KeyIndexInfo);
+                if (keyReader.ReadedPostion() > posend)
                 {
                     return false;
                 }
-
-                var posstart = indexarr[mid].KeyOffset;
-                var posend = indexarr[mid + 1].KeyOffset;
-
-                var buffer = new byte[1024];
-                keyReader.SetPostion(posstart);
-
-                foreach (var item in keyReader.ReadObjectsWating<BigEntityTableIndexItem>(1, null, buffer))
+                if (SimpleObjectsEq(item.Key, key.Key))
                 {
-                    item.SetIndex(meta.KeyIndexInfo);
-                    if (keyReader.ReadedPostion() > posend)
+                    if(!item.Del)
                     {
-                        return false;
-                    }
-                    if (SimpleObjectsEq(item.Key, key.Key))
-                    {
-                        return !item.Del;
+                        return true;
                     }
                 }
             }
@@ -1130,25 +1138,23 @@ namespace LJC.FrameWork.Data.EntityDataBase
             try
             {
                 locker.EnterReadLock();
-                BigEntityTableIndexItem findkeyitem = keyindexmemlist[tablename].Find(findkey);
-                if (findkeyitem != null)
+                foreach (var findkeyitem in keyindexmemlist[tablename].FindAll(findkey))
                 {
-                    if (findkeyitem.Del)
+                    if (!findkeyitem.Del)
                     {
-                        return null;
+                        findkeyitem.RangeIndex = 0;
+                        return findkeyitem;
                     }
-                    findkeyitem.RangeIndex = 0;
-                    return findkeyitem;
+                    
                 }
-                findkeyitem = keyindexmemtemplist[tablename].Find(findkey);
-                if (findkeyitem != null)
+
+                foreach (var findkeyitem in keyindexmemtemplist[tablename].FindAll(findkey))
                 {
                     if (findkeyitem.Del)
                     {
-                        return null;
+                        findkeyitem.RangeIndex = 0;
+                        return findkeyitem;
                     }
-                    findkeyitem.RangeIndex = 0;
-                    return findkeyitem;
                 }
 
                 var indexarr = keyindexdisklist[tablename];
@@ -1165,54 +1171,51 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 }
                 else if (pos > -1)
                 {
-                    findkeyitem = indexarr[pos];
-                    if (findkeyitem.Del)
+                    var findkeyitem = indexarr[pos];
+                    if (!findkeyitem.Del)
                     {
-                        return null;
+                        return findkeyitem;
                     }
                 }
 
-                if (findkeyitem == null)
+                var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
+                if (pos == -1 && keymergeinfo.LoadFactor == 1)
                 {
-                    var keymergeinfo = meta.IndexMergeInfos.Find(p => p.IndexName.Equals(meta.KeyName));
-                    if (pos == -1 && keymergeinfo.LoadFactor == 1)
+                    return null;
+                }
+
+                var posstart = indexarr[mid].KeyOffset;
+                var posend = indexarr[mid + 1].KeyOffset;
+
+                var rangestart = indexarr[mid].RangeIndex;
+                var buffer = new byte[1024];
+                var keyoffset = 0L;
+                using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
+                {
+                    reader.SetPostion(posstart);
+
+                    foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p, buffer))
                     {
-                        return null;
-                    }
-
-                    var posstart = indexarr[mid].KeyOffset;
-                    var posend = indexarr[mid + 1].KeyOffset;
-
-                    var rangestart = indexarr[mid].RangeIndex;
-                    var buffer = new byte[1024];
-                    var keyoffset = 0L;
-                    using (var reader = ObjTextReader.CreateReader(GetKeyFile(tablename)))
-                    {
-                        reader.SetPostion(posstart);
-
-                        foreach (var item in reader.ReadObjectsWating<BigEntityTableIndexItem>(1, p => keyoffset = p, buffer))
+                        item.KeyOffset = keyoffset;
+                        //var item = reader.ReadObject<BigEntityTableIndexItem>();
+                        if (reader.ReadedPostion() > posend)
                         {
-                            item.KeyOffset = keyoffset;
-                            //var item = reader.ReadObject<BigEntityTableIndexItem>();
-                            if (reader.ReadedPostion() > posend)
-                            {
-                                return null;
-                            }
-                            if (item.Del)
-                            {
-                                continue;
-                            }
-                            item.SetIndex(meta.KeyIndexInfo);
-                            item.RangeIndex = rangestart++;
-                            if (item.CompareTo(findkey) == 0)
-                            {
-                                return item;
-                            }
+                            return null;
+                        }
+                        if (item.Del)
+                        {
+                            continue;
+                        }
+                        item.SetIndex(meta.KeyIndexInfo);
+                        item.RangeIndex = rangestart++;
+                        if (item.CompareTo(findkey) == 0)
+                        {
+                            return item;
                         }
                     }
                 }
 
-                return findkeyitem;
+                return null;
             }
             finally
             {
@@ -1372,15 +1375,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             BigEntityTableMeta meta = GetMetaData(tablename);
             var memlist = keyindexmemlist[tablename];
             var findkey = new BigEntityTableIndexItem() { Key = new object[] { key }, Index = meta.KeyIndexInfo };
-            BigEntityTableIndexItem indexitem = memlist.Find(findkey) ??
-                keyindexmemtemplist[tablename].Find(findkey);
+            BigEntityTableIndexItem indexitem = memlist.FindAll(findkey).FirstOrDefault(p => !p.Del) ??
+                keyindexmemtemplist[tablename].FindAll(findkey).FirstOrDefault(p => !p.Del);
             if (indexitem != null)
             {
-                if (indexitem.Del)
-                {
-                    return default(T);
-                }
-
                 //先找到offset
                 using (ObjTextReader otw = ObjTextReader.CreateReader(tablefile))
                 {
@@ -1450,7 +1448,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     findkeyitem = indexarr[pos];
                     if (findkeyitem.Del)
                     {
-                        return default(T);
+                        findkeyitem = null;
                     }
                 }
 

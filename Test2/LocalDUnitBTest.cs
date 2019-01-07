@@ -465,6 +465,7 @@ namespace Test2
             //删除
             //Console.WriteLine("测试删除");
             TestDel(ref memlist);
+            TestMulDel(ref memlist);
             //TestScan2(memlist);
             //TestScan3(memlist);
             TestAgeCount(memlist);
@@ -536,6 +537,71 @@ namespace Test2
             }
 
             Console.WriteLine("总记录数测试通过,用时:" + (DateTime.Now.Subtract(st).TotalMilliseconds + "ms"));
+        }
+
+        public static void TestMulDel(ref List<PersonInfo> memlist)
+        {
+            //LJC.FrameWorkV3.Data.EntityDataBase.BigEntityTableEngine.LocalEngine.TruncateTable("PersonInfo");
+
+            //BigEntityTableEngine.LocalEngine.CreateTable("PersonInfo", "ID", false, typeof(PersonInfo), new IndexInfo[]
+            //{
+            //    new IndexInfo
+            //    {
+            //      IndexName="Name_1",
+            //      Indexs=new IndexItem[]{
+            //          new IndexItem{
+            //              Direction=1,
+            //              Field="Name",
+            //              FieldType=EntityType.STRING
+            //          }
+            //      }
+            //    }
+            //    ,new IndexInfo
+            //    {
+            //        IndexName="Age-1",
+            //        Indexs=new IndexItem[]
+            //        {
+            //            new IndexItem
+            //            {
+            //                Direction=-1,
+            //                Field="Age",
+            //                FieldType=EntityType.INT32
+            //            }
+            //        }
+            //    }
+            //});
+
+            //插入一条记录
+            var guid = Guid.NewGuid();
+            PersonInfo p = new PersonInfo
+            {
+                Addr = "add" + guid.ToString("N"),
+                Age = 30,
+                Name = "n" + guid.ToString("N"),
+                ID = "id" + guid.ToString("N"),
+                Sex = 1
+            };
+            memlist.Add(p);
+            BigEntityTableEngine.LocalEngine.Insert<PersonInfo>("PersonInfo", p);
+            memlist.Remove(p);
+            BigEntityTableEngine.LocalEngine.Delete<PersonInfo>("PersonInfo", p.ID);
+            var entity = BigEntityTableEngine.LocalEngine.Find<PersonInfo>("PersonInfo", p.ID);
+            if (entity != null)
+            {
+                throw new Exception("删除失败,仍然存在:" + p.ID);
+            }
+            for (int i = 0; i < 10; i++)
+            {
+                memlist.Add(p);
+                BigEntityTableEngine.LocalEngine.Insert<PersonInfo>("PersonInfo", p);
+                BigEntityTableEngine.LocalEngine.Delete<PersonInfo>("PersonInfo", p.ID);
+                memlist.Remove(p);
+                entity = BigEntityTableEngine.LocalEngine.Find<PersonInfo>("PersonInfo", p.ID);
+                if (entity != null)
+                {
+                    throw new Exception("删除失败,仍然存在:" + p.ID);
+                }
+            }
         }
 
         public void TestFullLoad()
