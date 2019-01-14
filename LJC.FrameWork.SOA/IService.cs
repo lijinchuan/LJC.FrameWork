@@ -10,7 +10,7 @@ namespace LJC.FrameWork.SOA
     {
         bool RegisterService();
 
-        object DoResponse(int funcId, byte[] request);
+        object DoResponse(int funcId, byte[] request,string clientid);
 
     }
 }

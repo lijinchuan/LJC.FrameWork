@@ -8,7 +8,7 @@ namespace LJC.FrameWork.SOA
 {
     public class ESBRedirectService : SessionServer
     {
-        public Func<int, byte[], object> DoResponseAction;
+        public Func<int, byte[], string,object> DoResponseAction;
 
         public ESBRedirectService(string[] ips, int port)
             : base(ips, port)
@@ -35,7 +35,7 @@ namespace LJC.FrameWork.SOA
                     if (DoResponseAction != null)
                     {
                         var reqbag = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<SOARedirectRequest>(message.MessageBuffer);
-                        var obj = DoResponseAction(reqbag.FuncId, reqbag.Param);
+                        var obj = DoResponseAction(reqbag.FuncId, reqbag.Param, session.SessionID);
 
                         if (!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
                         {

@@ -141,6 +141,11 @@ namespace LJC.FrameWork.SocketEasy.Client
 
                     try
                     {
+                        if (socketAsyncEvent != null)
+                        {
+                            socketAsyncEvent.Completed -= socketAsyncEvent_Completed;
+                        }
+
                         IPAddress connectip;
                         if (!string.IsNullOrEmpty(serverIp))
                             connectip = IPAddress.Parse(serverIp);

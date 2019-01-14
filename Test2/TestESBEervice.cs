@@ -12,7 +12,7 @@ namespace Test2
         {
         }
 
-        public override object DoResponse(int funcId, byte[] Param)
+        public override object DoResponse(int funcId, byte[] Param,string clientid)
         {
             var str = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<string>(Param);
             Console.WriteLine("收到消息:" + str);

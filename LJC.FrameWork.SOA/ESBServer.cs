@@ -171,7 +171,7 @@ namespace LJC.FrameWork.SOA
                 if (session != null)
                 {
                     ConatinerLock.EnterWriteLock();
-                    ClientSessionList.Remove(response.ClientId);
+                    ClientSessionList.Remove(response.ClientTransactionID);
                     ConatinerLock.ExitWriteLock();
 
                     SOAResponse resp = new SOAResponse();
@@ -339,7 +339,7 @@ namespace LJC.FrameWork.SOA
                         try
                         {
                             ConatinerLock.EnterWriteLock();
-                            ClientSessionList.Add(msg.MessageHeader.TransactionID, session);
+                            ClientSessionList.Add(msgTransactionID, session);
                         }
                         finally
                         {

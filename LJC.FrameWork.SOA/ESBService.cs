@@ -109,7 +109,7 @@ namespace LJC.FrameWork.SOA
 
                     try
                     {
-                        var result = DoResponse(request.FundId, request.Param);
+                        var result = DoResponse(request.FundId, request.Param,request.ClientId);
                         responseBody.Result = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(result);
                         responseBody.IsSuccess = true;
 
@@ -162,7 +162,7 @@ namespace LJC.FrameWork.SOA
             return base.DoMessage(message);
         }
 
-        public virtual object DoResponse(int funcId, byte[] Param)
+        public virtual object DoResponse(int funcId, byte[] Param,string clientid)
         {
             return null;
         }
