@@ -7,6 +7,7 @@ using System.IO;
 
 namespace LJC.FrameWork.Comm
 {
+    [Obsolete("使用AseEncryHelper代替")]
     /// <summary>   
     /// 对称加密算法类   
     /// </summary>   

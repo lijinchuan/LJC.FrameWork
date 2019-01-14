@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 
@@ -381,24 +382,61 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                                 ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                                 {
+                                    
                                     Message message = null;
-                                    try
-                                    {
-                                        message = EntityBufCore.DeSerialize<Message>((byte[])buf);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        messageError = ex;
-                                    }
-
+        
                                     Session connSession;
                                     if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
                                     {
+                                        if (!string.IsNullOrWhiteSpace(connSession.EncryKey))
+                                        {
+                                            bt = AesEncryHelper.AesDecrypt(bt, connSession.EncryKey);
+                                        }
+
+                                        try
+                                        {
+                                            message = EntityBufCore.DeSerialize<Message>(bt);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            messageError = ex;
+                                        }
+
                                         connSession.LastSessionTime = DateTime.Now;
-                                        connSession.BytesRev += ((byte[])buf).Length;
+                                        connSession.BytesRev += bt.Length;
                                         if (messageError == null)
                                         {
-                                            FormApp(message, connSession);
+                                            //如果是协商加密的
+                                            if (message.IsMessage(MessageType.NEGOTIATIONENCRYR))
+                                            {
+                                                var nmsg = message.GetMessageBody<NegotiationEncryMessage>();
+                                                if (string.IsNullOrWhiteSpace(nmsg.PublicKey))
+                                                {
+                                                    throw new Exception("公钥错误");
+                                                }
+
+                                                var encrykey = connSession.EncryKey;
+                                                if (string.IsNullOrWhiteSpace(encrykey))
+                                                {
+                                                    encrykey = Guid.NewGuid().ToString("N");
+                                                    Console.WriteLine("发送加密串:"+encrykey);
+                                                    var rep = new Message(MessageType.NEGOTIATIONENCRYR);
+                                                    rep.SetMessageBody(nmsg);
+                                                    nmsg.EncryKey = Convert.ToBase64String(RsaEncryHelper.RsaEncrypt(Encoding.ASCII.GetBytes(encrykey), nmsg.PublicKey)); ;
+                                                    connSession.SendMessage(rep);
+
+                                                    connSession.EncryKey = encrykey;
+                                                }
+                                                else
+                                                {
+                                                    throw new Exception("不允许多次协商密钥");
+                                                }
+
+                                            }
+                                            else
+                                            {
+                                                FormApp(message, connSession);
+                                            }
                                         }
                                         else
                                         {

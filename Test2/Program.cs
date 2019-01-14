@@ -7,7 +7,6 @@ using LJC.FrameWork.Data.Mongo;
 using LJC.FrameWork.EntityBuf;
 using LJC.FrameWork.SOA;
 using LJC.FrameWork.SocketApplication;
-using LJC.FrameWork.SocketApplication.SocketEasyUDP.Client;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -195,7 +194,7 @@ namespace Test2
 
         static void TestUdpClient()
         {
-            SessionClient udpclient = new SessionClient("127.0.0.1", 19000);
+            var udpclient = new LJC.FrameWork.SocketApplication.SocketEasyUDP.Client.SessionClient("127.0.0.1", 19000);
             udpclient.StartClient();
             DateTime now = DateTime.Now;
             for (int i = 0; i < 100000; i++)
@@ -223,10 +222,10 @@ namespace Test2
 
         static void TestUdpClient2()
         {
-            SessionClient[] udpclients=new SessionClient[3];
+            LJC.FrameWork.SocketApplication.SocketEasyUDP.Client.SessionClient[] udpclients=new LJC.FrameWork.SocketApplication.SocketEasyUDP.Client.SessionClient[3];
             for (int i = 0; i < udpclients.Length; i++)
             {
-                udpclients[i] = new SessionClient("127.0.0.1", 19000);
+                udpclients[i] = new LJC.FrameWork.SocketApplication.SocketEasyUDP.Client.SessionClient("127.0.0.1", 19000);
                 udpclients[i].StartClient();
             }
 
@@ -350,8 +349,13 @@ namespace Test2
         }
 
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
+        static LJC.FrameWork.SocketEasy.Client.SessionClient sc = null;
         static void Main(string[] args)
         {
+            sc = new LJC.FrameWork.SocketEasy.Client.SessionClient("127.0.0.1", 5555, true, true);
+            sc.LoginSuccess += sc_LoginSuccess;
+            sc.Error += sc_Error;
+            sc.Login("test111", string.Empty);
 
             var cmd = PrintCmd();
             IFun funx = null;
@@ -397,8 +401,28 @@ namespace Test2
                 cmd = PrintCmd();
             }
 
-            
+
             return;
+        }
+
+        static void sc_Error(Exception obj)
+        {
+            Console.WriteLine(obj.Message);
+        }
+
+        static void sc_LoginSuccess()
+        {
+            Console.WriteLine("登录成功");
+
+            while (true)
+            {
+                Thread.Sleep(new Random().Next(1, 10) * 1000);
+                var msg = new Message(10240);
+                
+                msg.MessageHeader.TransactionID = Guid.NewGuid().ToString();
+                var re = sc.SendMessageAnsy<string>(msg);
+                Console.WriteLine("收到回复:" + re);
+            }
         }
 
         static void udpclient_Error(Exception obj)

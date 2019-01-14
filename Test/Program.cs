@@ -181,6 +181,11 @@ namespace Test
 
         static void Main(string[] args)
         {
+            MySession server = new MySession();
+            server.StartServer();
+
+            Console.Read();
+
             //foreach (var item in new HeapSortTool<int>(new[] { 100, 2, 4, 5, 1, 3, 6, 9, 7, 8, 0, 4 }).Sort())
             //{
             //    Console.Write(item + " ");
@@ -281,10 +286,7 @@ namespace Test
 
             ThreadPool.SetMinThreads(100, 100);
 
-            MySession server = new MySession();
-            server.StartServer();
-
-            Console.Read();
+            
 
             //TestGZIP();
             //TestMs();

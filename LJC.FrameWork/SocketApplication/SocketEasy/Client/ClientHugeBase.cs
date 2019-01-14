@@ -1,4 +1,5 @@
-﻿using LJC.FrameWork.EntityBuf;
+﻿using LJC.FrameWork.Comm;
+using LJC.FrameWork.EntityBuf;
 using LJC.FrameWork.SocketApplication;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,17 @@ namespace LJC.FrameWork.SocketEasy.Client
 
         protected bool isStartClient = false;
         protected bool errorResume = true;
+        /// <summary>
+        /// 是否采用安全连接
+        /// </summary>
+        protected bool isSecurity = false;
+        protected string rsaPubKey = string.Empty;
+        protected string rsaRrivateKey = string.Empty;
+        /// <summary>
+        /// 安全连接key
+        /// </summary>
+        private string encryKey = string.Empty;
+
         protected string serverIp;
         protected int ipPort;
         private DateTime lastReStartClientTime;
@@ -69,21 +81,12 @@ namespace LJC.FrameWork.SocketEasy.Client
         /// <param name="serverip"></param>
         /// <param name="serverport"></param>
         /// <param name="stop">如果为true,不会断开自动重连</param>
-        public ClientHugeBase(string serverip, int serverport, bool errorResume = true)
+        public ClientHugeBase(string serverip, int serverport, bool errorResume = true, bool security=false)
         {
             this.serverIp = serverip;
             this.ipPort = serverport;
             this.errorResume = errorResume;
-
-            IPAddress connectip;
-            if (!string.IsNullOrEmpty(serverIp))
-                connectip = IPAddress.Parse(serverIp);
-            else
-                connectip = IPAddress.Any;
-
-            socketAsyncEvent = new IOCPSocketAsyncEventArgs();
-            socketAsyncEvent.Completed += socketAsyncEvent_Completed;
-            socketAsyncEvent.RemoteEndPoint = new IPEndPoint(connectip, ipPort);
+            this.isSecurity = security;
         }
 
         public ClientHugeBase()
@@ -109,64 +112,99 @@ namespace LJC.FrameWork.SocketEasy.Client
 
         public bool StartClient()
         {
-            try
+            lock (this)
             {
-                if (socketClient != null && socketClient.Connected)
-                    return true;
-
-                if (DateTime.Now.Subtract(lastReStartClientTime).TotalMilliseconds <= reConnectClientTimeInterval)
-                    return false;
-
-                bool isResetClient = false;
-                if (socketClient != null)
-                {
-                    socketClient.Close();
-                    isResetClient = true;
-                }
-
-                socketClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                socketClient.ReceiveBufferSize = 32000;
-                socketClient.SendBufferSize = 32000;
-                socketClient.NoDelay = true;
-
                 try
                 {
-                    _startSign.Reset();
-                    socketClient.ConnectAsync(socketAsyncEvent);
-                    _startSign.WaitOne(30 * 1000);
+                    if (socketClient != null && socketClient.Connected)
+                        return true;
 
-                    if(!socketClient.Connected)
+                    if (DateTime.Now.Subtract(lastReStartClientTime).TotalMilliseconds <= reConnectClientTimeInterval)
+                        return false;
+
+                    bool isResetClient = false;
+                    if (socketClient != null)
                     {
-                        throw new Exception("连接超时");
+                        socketClient.Close();
+                        isResetClient = true;
                     }
-                    
-                }
-                catch (SocketException e)
-                {
-                    var ne = new Exception(string.Format("连接到远程服务器{0}失败，端口:{1}，原因:{2},网络错误号:{3}",
-                        serverIp, ipPort, e.Message, e.SocketErrorCode));
-                    throw ne;
 
+                    if (!string.IsNullOrWhiteSpace(encryKey))
+                    {
+                        encryKey = string.Empty;
+                    }
+
+                    socketClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                    socketClient.ReceiveBufferSize = 32000;
+                    socketClient.SendBufferSize = 32000;
+                    socketClient.NoDelay = true;
+
+                    try
+                    {
+                        IPAddress connectip;
+                        if (!string.IsNullOrEmpty(serverIp))
+                            connectip = IPAddress.Parse(serverIp);
+                        else
+                            connectip = IPAddress.Any;
+                        socketAsyncEvent = new IOCPSocketAsyncEventArgs();
+                        socketAsyncEvent.Completed += socketAsyncEvent_Completed;
+                        socketAsyncEvent.RemoteEndPoint = new IPEndPoint(connectip, ipPort);
+
+                        _startSign.Reset();
+                        socketClient.ConnectAsync(socketAsyncEvent);
+                        _startSign.WaitOne(30 * 1000);
+
+                        if (!socketClient.Connected)
+                        {
+                            throw new Exception("连接超时");
+                        }
+
+                        if (isSecurity)
+                        {
+                            RsaEncryHelper.GenPair(out rsaPubKey, out rsaRrivateKey);
+                            var msg = new Message(MessageType.NEGOTIATIONENCRYR);
+                            encryKey = null;
+                            _startSign.Reset();
+                            msg.SetMessageBody(new NegotiationEncryMessage
+                            {
+                                PublicKey = rsaPubKey
+                            });
+                            socketClient.SendMessage(msg, string.Empty);
+                            _startSign.WaitOne(30 * 1000);
+                            if (string.IsNullOrWhiteSpace(encryKey))
+                            {
+                                throw new Exception("协商加密失败");
+                            }
+                        }
+
+                    }
+                    catch (SocketException e)
+                    {
+                        var ne = new Exception(string.Format("连接到远程服务器{0}失败，端口:{1}，原因:{2},网络错误号:{3}",
+                            serverIp, ipPort, e.Message, e.SocketErrorCode));
+                        throw ne;
+
+                    }
+                    catch (Exception e)
+                    {
+                        lastReStartClientTime = DateTime.Now;
+                        throw e;
+                    }
+
+                    isStartClient = true;
+
+                    if (isResetClient && OnClientReset != null)
+                    {
+                        OnClientReset();
+                    }
+
+                    return true;
                 }
                 catch (Exception e)
                 {
-                    lastReStartClientTime = DateTime.Now;
-                    throw e;
+                    //OnError(e);
+                    return false;
                 }
-
-                isStartClient = true;
-
-                if(isResetClient &&OnClientReset!=null)
-                {
-                    OnClientReset();
-                }
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                //OnError(e);
-                return false;
             }
         }
 
@@ -297,8 +335,23 @@ namespace LJC.FrameWork.SocketEasy.Client
             try
             {
                 byte[] data = (byte[])buffer;
+                if (!string.IsNullOrWhiteSpace(this.encryKey))
+                {
+                    data = AesEncryHelper.AesDecrypt(data, this.encryKey);
+                }
                 Message message = EntityBufCore.DeSerialize<Message>(data);
-                OnMessage(message);
+
+                if (message.IsMessage(MessageType.NEGOTIATIONENCRYR))
+                {
+                    var nmsg = message.GetMessageBody<NegotiationEncryMessage>();
+                    this.encryKey = Encoding.ASCII.GetString(RsaEncryHelper.RsaDecrypt(Convert.FromBase64String(nmsg.EncryKey), this.rsaRrivateKey));
+                    Console.WriteLine("收到加密串:" + encryKey);
+                    _startSign.Set();
+                }
+                else
+                {
+                    OnMessage(message);
+                }
             }
             catch (Exception e)
             {
@@ -322,12 +375,12 @@ namespace LJC.FrameWork.SocketEasy.Client
                 {
                     throw new Exception("发送失败，套接字连接失败。");
                 }
-                
+
                 //byte[] data = EntityBufCore.Serialize(message);
                 //byte[] len = BitConverter.GetBytes(data.Length);
                 //socketClient.Send(len);
                 //socketClient.Send(data);
-                return socketClient.SendMessage(message)>0;
+                return socketClient.SendMessage(message, this.encryKey) > 0;
             }
             catch (Exception e)
             {

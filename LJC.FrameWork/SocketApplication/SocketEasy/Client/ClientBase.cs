@@ -230,7 +230,7 @@ namespace LJC.FrameWork.SocketEasy.Client
                 //byte[] len = BitConverter.GetBytes(data.Length);
                 //socketClient.Send(len);
                 //socketClient.Send(data);
-                return socketClient.SendMessage(message)>0;
+                return socketClient.SendMessage(message,string.Empty)>0;
             }
             catch (Exception e)
             {

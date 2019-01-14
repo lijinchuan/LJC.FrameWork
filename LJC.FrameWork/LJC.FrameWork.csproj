@@ -121,6 +121,7 @@
     <Compile Include="Collections\SorteArray.cs" />
     <Compile Include="Collections\SortedList.cs" />
     <Compile Include="Collections\StackEx.cs" />
+    <Compile Include="Comm\AesEncryHelper.cs" />
     <Compile Include="Comm\AutoReSetEventResult.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -314,11 +315,13 @@
     <Compile Include="ResourcePool\PoolManager.cs" />
     <Compile Include="ResourcePool\PoolConfig.cs" />
     <Compile Include="ResourcePool\State.cs" />
+    <Compile Include="RsaEncryHelper.cs" />
     <Compile Include="SocketApplication\AutoReSetEventResult.cs" />
     <Compile Include="SocketApplication\FieldEnum.cs" />
     <Compile Include="SocketApplication\LoginRequestMessage.cs" />
     <Compile Include="SocketApplication\LoginResponseMessage.cs" />
     <Compile Include="SocketApplication\Message.cs" />
+    <Compile Include="SocketApplication\NegotiationEncryMessage.cs" />
     <Compile Include="SocketApplication\SendFileResultMessage.cs" />
     <Compile Include="SocketApplication\SocketEasyUDP\Client\ClientBase.cs" />
     <Compile Include="SocketApplication\SocketEasyUDP\PipelineManualResetEventSlim.cs" />

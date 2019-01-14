@@ -165,7 +165,7 @@ namespace LJC.FrameWork.SOA
                 Session session = null;
 
                 ConatinerLock.EnterReadLock();
-                ClientSessionList.TryGetValue(response.ClientId, out session);
+                ClientSessionList.TryGetValue(response.ClientTransactionID, out session);
                 ConatinerLock.ExitReadLock();
 
                 if (session != null)
@@ -325,7 +325,7 @@ namespace LJC.FrameWork.SOA
                             }
                         }
 
-                        string clientid = SocketApplicationComm.GetSeqNum();
+                        string clientid = session.SessionID;
                         SOATransferRequest transferrequest = new SOATransferRequest();
                         transferrequest.ClientId = clientid;
                         transferrequest.FundId = request.FuncId;
@@ -339,7 +339,7 @@ namespace LJC.FrameWork.SOA
                         try
                         {
                             ConatinerLock.EnterWriteLock();
-                            ClientSessionList.Add(clientid, session);
+                            ClientSessionList.Add(msg.MessageHeader.TransactionID, session);
                         }
                         finally
                         {

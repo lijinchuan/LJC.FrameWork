@@ -70,7 +70,7 @@ namespace LJC.FrameWork.SocketApplication
             }
         }
 
-        public static int SendMessage(this Socket s, Message message)
+        public static int SendMessage(this Socket s, Message message,string encrykey)
         {
             try
             {
@@ -80,11 +80,32 @@ namespace LJC.FrameWork.SocketApplication
                 }
 
                 byte[] data = null;
-                int bufferindex=-1;
+                int bufferindex = -1;
                 long size=0;
-                EntityBuf.EntityBufCore.Serialize(message, _sendBufferManger, ref bufferindex,ref size, ref data);
+                if (string.IsNullOrWhiteSpace(encrykey))
+                {
+                    EntityBuf.EntityBufCore.Serialize(message, _sendBufferManger, ref bufferindex, ref size, ref data);
+                }
+                else
+                {
+                    data = EntityBuf.EntityBufCore.Serialize(message);
+                }
                 if (bufferindex == -1)
                 {
+                    if (!string.IsNullOrWhiteSpace(encrykey))
+                    {
+                        using (var ms = new System.IO.MemoryStream())
+                        {
+                            for (int i = 0; i < 8; i++)
+                            {
+                                ms.WriteByte(0);
+                            }
+                            var enbytes=AesEncryHelper.AesEncrypt(data,encrykey);
+                            ms.Write(enbytes, 0, enbytes.Length);
+                            data = ms.ToArray();
+                        }
+                    }
+
                     byte[] dataLen = BitConverter.GetBytes(data.Length-4);
 
                     for (int i = 0; i < 4;i++ )

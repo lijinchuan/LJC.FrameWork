@@ -23,7 +23,7 @@ namespace LJC.FrameWork.SocketApplication.Tests
                 TransactionID="1"
             };
             msg.SetMessageBody("hello word");
-            s.SendMessage(msg);
+            s.SendMessage(msg, string.Empty);
         }
     }
 }

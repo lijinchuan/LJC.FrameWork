@@ -31,8 +31,8 @@ namespace LJC.FrameWork.SocketEasy.Client
         protected Exception BuzException = null;
         private Dictionary<string, AutoReSetEventResult> watingEvents=new Dictionary<string,AutoReSetEventResult>();
 
-        public SessionClient(string serverip, int serverport, bool startSession)
-            : base(serverip, serverport)
+        public SessionClient(string serverip, int serverport, bool startSession, bool security = false)
+            : base(serverip, serverport, security: security)
         {
             if (startSession)
             {

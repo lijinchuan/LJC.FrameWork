@@ -153,7 +153,7 @@ namespace LJC.FrameWork.SocketApplication
             if (this.Socket == null)
                 throw new Exception("无套接字");
 
-            var sendcount = this.Socket.SendMessage(msg);
+            var sendcount = this.Socket.SendMessage(msg, this.EncryKey);
 
             if (sendcount > 0)
             {
@@ -162,6 +162,15 @@ namespace LJC.FrameWork.SocketApplication
             }
 
             return sendcount > 0;
+        }
+
+        /// <summary>
+        /// 对称加密钥
+        /// </summary>
+        public string EncryKey
+        {
+            get;
+            set;
         }
     }
 }

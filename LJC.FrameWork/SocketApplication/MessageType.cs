@@ -8,7 +8,7 @@ namespace LJC.FrameWork.SocketApplication
     /// <summary>
     /// 系统内置的消息类型，占0-99编号
     /// </summary>
-    public enum MessageType:uint
+    public enum MessageType : uint
     {
         HEARTBEAT,
         TEST_REQUEST,
@@ -57,5 +57,9 @@ namespace LJC.FrameWork.SocketApplication
         /// 断点续传检查
         /// </summary>
         SENDFILRESENDCHECK,
+        /// <summary>
+        /// 协商加密请求
+        /// </summary>
+        NEGOTIATIONENCRYR = 99,
     }
 }
