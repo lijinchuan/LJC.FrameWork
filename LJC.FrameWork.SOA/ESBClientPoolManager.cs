@@ -7,6 +7,11 @@ namespace LJC.FrameWork.SOA
 {
     public class ESBClientPoolManager:IDisposable
     {
+        /// <summary>
+        /// 最大客户端数连接设置
+        /// </summary>
+        public static uint MAXCLIENTCOUNT = 0;
+
         private ESBClient[] Clients = null;
 
         public ESBClientPoolManager(uint clientcount=5,Func<int,ESBClient> getClient=null)
@@ -14,6 +19,11 @@ namespace LJC.FrameWork.SOA
             if(clientcount==0)
             {
                 clientcount = 5;
+            }
+
+            if (MAXCLIENTCOUNT > 0 && clientcount > MAXCLIENTCOUNT)
+            {
+                clientcount = MAXCLIENTCOUNT;
             }
 
             Clients = new ESBClient[clientcount];
