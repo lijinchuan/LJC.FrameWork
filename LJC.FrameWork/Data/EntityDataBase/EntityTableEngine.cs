@@ -253,7 +253,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             meta.Indexs = indexs ?? new string[] { };
                             meta.CTime = DateTime.Now;
                             meta.TType = ttype;
-                            var pp = ttype.GetProperty(keyname);
+                            var pp = ReflectionHelper.GetProperty(ttype, keyname);
                             if (pp == null)
                             {
                                 throw new Exception("找不到主键:" + keyname);
@@ -269,7 +269,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 indexs = indexs.Distinct().ToArray();
                                 foreach (var idx in indexs)
                                 {
-                                    var idxpp = ttype.GetProperty(idx);
+                                    var idxpp =ReflectionHelper.GetProperty(ttype,idx);
                                     if (idxpp == null)
                                     {
                                         throw new Exception("找不到索引:" + idx);
@@ -486,13 +486,13 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 meta.Indexs = new string[] { };
             }
-            meta.KeyProperty = new PropertyInfoEx(meta.TType.GetProperty(meta.KeyName));
+            meta.KeyProperty = new PropertyInfoEx(ReflectionHelper.GetProperty(meta.TType, meta.KeyName));
 
             if (meta.Indexs != null)
             {
                 foreach (var idx in meta.Indexs)
                 {
-                    var idxpp = meta.TType.GetProperty(idx);
+                    var idxpp = ReflectionHelper.GetProperty(meta.TType, idx);
                     if (idxpp == null)
                     {
                         throw new Exception("找不到索引:" + idx);

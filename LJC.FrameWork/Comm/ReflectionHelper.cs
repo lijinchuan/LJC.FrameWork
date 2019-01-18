@@ -172,7 +172,7 @@ namespace LJC.FrameWork.Comm
                     return null;
 
                 var tp = o.GetType();
-                var propertyInfo = tp.GetProperty(property);
+                var propertyInfo = GetProperty(tp,property);
 
                 if (propertyInfo == null)
                 {
@@ -346,6 +346,25 @@ namespace LJC.FrameWork.Comm
             }
 
             return prop.Name;
+        }
+
+        public static PropertyInfo GetProperty(Type type, string property)
+        {
+            var pps = type.GetProperties();
+            if (pps == null || pps.Length == 0)
+            {
+                return null;
+            }
+
+            foreach (var p in pps)
+            {
+                if (p.Name.Equals(property))
+                {
+                    return p;
+                }
+            }
+
+            return null;
         }
     }
 }

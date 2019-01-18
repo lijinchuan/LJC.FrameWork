@@ -90,7 +90,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                             meta.IndexInfos = indexs ?? new IndexInfo[] { };
                             meta.CTime = DateTime.Now;
                             meta.TType = ttype;
-                            var pp = ttype.GetProperty(keyname);
+                            var pp = ReflectionHelper.GetProperty(ttype, keyname);
                             if (pp == null)
                             {
                                 throw new Exception("找不到主键:" + keyname);
@@ -122,7 +122,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 {
                                     foreach (var id in idx.Indexs)
                                     {
-                                        var idxpp = ttype.GetProperty(id.Field);
+                                        var idxpp = ReflectionHelper.GetProperty(ttype, id.Field);
                                         if (idxpp == null)
                                         {
                                             throw new Exception("对象不存在字段:" + id.Field);
@@ -157,7 +157,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 throw new Exception("meta文件内容检查不一致");
                             }
 
-                            var pp = ttype.GetProperty(keyname);
+                            var pp = ReflectionHelper.GetProperty(ttype, keyname);
                             meta.KeyProperty = new PropertyInfoEx(pp);
                             meta.EntityTypeDic.Add(keyname, EntityBuf2.EntityBufCore2.GetTypeBufType(pp.PropertyType).Item1.EntityType);
                             metadic.Add(tablename, meta);
@@ -169,7 +169,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                 {
                                     foreach (var id in idx.Indexs)
                                     {
-                                        var idxpp = ttype.GetProperty(id.Field);
+                                        var idxpp = ReflectionHelper.GetProperty(ttype, id.Field);
 
                                         if (!meta.IndexProperties.ContainsKey(id.Field))
                                         {
@@ -317,8 +317,8 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     meta.IndexInfos = new IndexInfo[] { };
                 }
-                meta.KeyProperty = new PropertyInfoEx(meta.TType.GetProperty(meta.KeyName));
-                var pp = meta.TType.GetProperty(meta.KeyName);
+                meta.KeyProperty = new PropertyInfoEx(ReflectionHelper.GetProperty(meta.TType, meta.KeyName));
+                var pp = ReflectionHelper.GetProperty(meta.TType, meta.KeyName);
                 meta.EntityTypeDic.Add(meta.KeyName, EntityBuf2.EntityBufCore2.GetTypeBufType(pp.PropertyType).Item1.EntityType);
                 metadic.Add(tablename, meta);
 
@@ -328,7 +328,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                     {
                         foreach (var id in idx.Indexs)
                         {
-                            var idxpp = meta.TType.GetProperty(id.Field);
+                            var idxpp = ReflectionHelper.GetProperty(meta.TType, id.Field);
                             if (idxpp == null)
                             {
                                 throw new Exception("对象不存在字段:" + id.Field);
@@ -1716,6 +1716,10 @@ namespace LJC.FrameWork.Data.EntityDataBase
             //}
 
             BigEntityTableIndexItem[] indexarr = keyindexdisklist[keyname];
+            if (indexarr.Length == 0)
+            {
+                return null;
+            }
             int mid = -1;
             int pos = new Collections.SorteArray<BigEntityTableIndexItem>(indexarr).Find(findkey, ref mid);
 
