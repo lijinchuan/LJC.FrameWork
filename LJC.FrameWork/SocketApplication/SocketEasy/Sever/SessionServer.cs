@@ -163,7 +163,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
         /// </summary>
         /// <param name="s"></param>
         /// <param name="message"></param>
-        protected override void FormApp(Message message, Session session)
+        protected override void FromApp(Message message, Session session)
         {
             if (ServerModeNeedLogin && !session.IsLogin && !message.IsMessage(MessageType.LOGIN))
             {
@@ -185,7 +185,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 App_HeatBeat(message, session);
             }
 
-            base.FormApp(message, session);
+            base.FromApp(message, session);
         }
 
         #endregion

@@ -385,7 +385,7 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        protected override void FormApp(Message message, Session session)
+        protected override void FromApp(Message message, Session session)
         {
             if (message.IsMessage((int)SOAMessageType.RegisterService))
             {
@@ -470,7 +470,7 @@ namespace LJC.FrameWork.SOA
                 return;
             }
 
-            base.FormApp(message, session);
+            base.FromApp(message, session);
         }
     }
 }

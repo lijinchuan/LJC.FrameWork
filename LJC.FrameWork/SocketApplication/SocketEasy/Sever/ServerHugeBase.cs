@@ -382,70 +382,81 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                                 ThreadPool.QueueUserWorkItem(new WaitCallback((buf) =>
                                 {
-                                    
-                                    Message message = null;
-        
-                                    Session connSession;
-                                    if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
+                                    Session connSession=null;
+                                    try
                                     {
-                                        if (!string.IsNullOrWhiteSpace(connSession.EncryKey))
-                                        {
-                                            bt = AesEncryHelper.AesDecrypt(bt, connSession.EncryKey);
-                                        }
+                                        Message message = null;
 
-                                        try
+                                        if (_connectSocketDic.TryGetValue(args.UserToken.ToString(), out connSession))
                                         {
-                                            message = EntityBufCore.DeSerialize<Message>(bt);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            messageError = ex;
-                                        }
-
-                                        connSession.LastSessionTime = DateTime.Now;
-                                        connSession.BytesRev += bt.Length;
-                                        if (messageError == null)
-                                        {
-                                            //如果是协商加密的
-                                            if (message.IsMessage(MessageType.NEGOTIATIONENCRYR))
+                                            if (!string.IsNullOrWhiteSpace(connSession.EncryKey))
                                             {
-                                                var nmsg = message.GetMessageBody<NegotiationEncryMessage>();
-                                                if (string.IsNullOrWhiteSpace(nmsg.PublicKey))
-                                                {
-                                                    throw new Exception("公钥错误");
-                                                }
+                                                bt = AesEncryHelper.AesDecrypt(bt, connSession.EncryKey);
+                                            }
 
-                                                var encrykey = connSession.EncryKey;
-                                                if (string.IsNullOrWhiteSpace(encrykey))
-                                                {
-                                                    encrykey = Guid.NewGuid().ToString("N");
-                                                    Console.WriteLine("发送加密串:"+encrykey);
-                                                    var rep = new Message(MessageType.NEGOTIATIONENCRYR);
-                                                    rep.SetMessageBody(nmsg);
-                                                    nmsg.EncryKey = Convert.ToBase64String(RsaEncryHelper.RsaEncrypt(Encoding.ASCII.GetBytes(encrykey), nmsg.PublicKey)); ;
-                                                    connSession.SendMessage(rep);
+                                            try
+                                            {
+                                                message = EntityBufCore.DeSerialize<Message>(bt);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                messageError = ex;
+                                            }
 
-                                                    connSession.EncryKey = encrykey;
+                                            connSession.LastSessionTime = DateTime.Now;
+                                            connSession.BytesRev += bt.Length;
+                                            if (messageError == null)
+                                            {
+                                                //如果是协商加密的
+                                                if (message.IsMessage(MessageType.NEGOTIATIONENCRYR))
+                                                {
+                                                    var nmsg = message.GetMessageBody<NegotiationEncryMessage>();
+                                                    if (string.IsNullOrWhiteSpace(nmsg.PublicKey))
+                                                    {
+                                                        throw new SocketApplicationException("公钥错误");
+                                                    }
+
+                                                    var encrykey = connSession.EncryKey;
+                                                    if (string.IsNullOrWhiteSpace(encrykey))
+                                                    {
+                                                        encrykey = Guid.NewGuid().ToString("N");
+                                                        Console.WriteLine("发送加密串:" + encrykey);
+                                                        var rep = new Message(MessageType.NEGOTIATIONENCRYR);
+                                                        rep.SetMessageBody(nmsg);
+                                                        nmsg.EncryKey = Convert.ToBase64String(RsaEncryHelper.RsaEncrypt(Encoding.ASCII.GetBytes(encrykey), nmsg.PublicKey)); ;
+                                                        connSession.SendMessage(rep);
+
+                                                        connSession.EncryKey = encrykey;
+                                                    }
+                                                    else
+                                                    {
+                                                        throw new SocketApplicationException("不允许多次协商密钥");
+                                                    }
+
                                                 }
                                                 else
                                                 {
-                                                    throw new Exception("不允许多次协商密钥");
+                                                    FromApp(message, connSession);
                                                 }
-
                                             }
                                             else
                                             {
-                                                FormApp(message, connSession);
+                                                OnError(messageError);
                                             }
                                         }
                                         else
                                         {
-                                            OnError(messageError);
+                                            OnError(new Exception("取会话失败,args.UserToken=" + args.UserToken));
                                         }
                                     }
-                                    else
+                                    catch (SocketApplicationException ex)
                                     {
-                                        OnError(new Exception("取会话失败,args.UserToken=" + args.UserToken));
+                                        if (connSession != null)
+                                        {
+                                            connSession.Close();
+                                        }
+                                        ex.Data.Add("SessionID", connSession.SessionID);
+                                        OnError(ex);
                                     }
                                 }), bt);
                             }
@@ -508,7 +519,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             }
         }
 
-        protected virtual void FormApp(Message message, Session session)
+        protected virtual void FromApp(Message message, Session session)
         {
 
         }

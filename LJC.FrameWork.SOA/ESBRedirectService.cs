@@ -26,7 +26,7 @@ namespace LJC.FrameWork.SOA
             return this.ipPort;
         }
 
-        protected override void FormApp(SocketApplication.Message message, SocketApplication.Session session)
+        protected override void FromApp(SocketApplication.Message message, SocketApplication.Session session)
         {
             if (message.IsMessage((int)SOAMessageType.DoSOARedirectRequest))
             {
@@ -77,7 +77,7 @@ namespace LJC.FrameWork.SOA
             }
             else
             {
-                base.FormApp(message, session);
+                base.FromApp(message, session);
             }
         }
     }

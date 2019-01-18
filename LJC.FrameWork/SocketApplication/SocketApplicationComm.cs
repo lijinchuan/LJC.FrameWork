@@ -81,7 +81,7 @@ namespace LJC.FrameWork.SocketApplication
 
                 byte[] data = null;
                 int bufferindex = -1;
-                long size=0;
+                long size = 0;
                 if (string.IsNullOrWhiteSpace(encrykey))
                 {
                     EntityBuf.EntityBufCore.Serialize(message, _sendBufferManger, ref bufferindex, ref size, ref data);
@@ -100,15 +100,15 @@ namespace LJC.FrameWork.SocketApplication
                             {
                                 ms.WriteByte(0);
                             }
-                            var enbytes=AesEncryHelper.AesEncrypt(data,encrykey);
+                            var enbytes = AesEncryHelper.AesEncrypt(data, encrykey);
                             ms.Write(enbytes, 0, enbytes.Length);
                             data = ms.ToArray();
                         }
                     }
 
-                    byte[] dataLen = BitConverter.GetBytes(data.Length-4);
+                    byte[] dataLen = BitConverter.GetBytes(data.Length - 4);
 
-                    for (int i = 0; i < 4;i++ )
+                    for (int i = 0; i < 4; i++)
                     {
                         data[i] = dataLen[i];
                     }
@@ -140,7 +140,7 @@ namespace LJC.FrameWork.SocketApplication
                         //LogManager.LogHelper.Instance.Error("发送数据bufferindex:" + bufferindex + ",size:" + size);
 
                         byte[] dataLen = BitConverter.GetBytes((int)size - 4);
-                        int offset=_sendBufferManger.GetOffset(bufferindex);
+                        int offset = _sendBufferManger.GetOffset(bufferindex);
                         for (int i = 0; i < 4; i++)
                         {
                             _sendBufferManger.Buffer[i + offset] = dataLen[i];
@@ -157,7 +157,7 @@ namespace LJC.FrameWork.SocketApplication
                         int sendcount = 0;
                         lock (s)
                         {
-                            SocketError senderror=SocketError.Success;
+                            SocketError senderror = SocketError.Success;
 
                             sendcount = s.Send(_sendBufferManger.Buffer, offset, (int)size, SocketFlags.None, out senderror);
 
@@ -167,7 +167,7 @@ namespace LJC.FrameWork.SocketApplication
                                 LogManager.LogHelper.Instance.Debug(s.Handle + "发送数据:" + message.MessageHeader.TransactionID + "长度:" + size + ", " + Convert.ToBase64String(sendbytes));
                             }
 
-                            if(senderror!=SocketError.Success)
+                            if (senderror != SocketError.Success)
                             {
                                 throw new Exception(senderror.ToString());
                             }
@@ -183,7 +183,7 @@ namespace LJC.FrameWork.SocketApplication
             catch (Exception ex)
             {
                 ex.Data.Add("TransactionID", message.MessageHeader.TransactionID);
-                throw ex;
+                throw new SocketApplicationException("SendMessage fail", ex);
             }
         }
 

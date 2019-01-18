@@ -13,7 +13,7 @@ namespace Test
 
         }
 
-        protected override void FormApp(LJC.FrameWork.SocketApplication.Message message, LJC.FrameWork.SocketApplication.Session session)
+        protected override void FromApp(LJC.FrameWork.SocketApplication.Message message, LJC.FrameWork.SocketApplication.Session session)
         {
             if(message.MessageHeader.MessageType==10240)
             {
@@ -30,7 +30,7 @@ namespace Test
                 return;
             }
 
-            base.FormApp(message, session);
+            base.FromApp(message, session);
             
         }
 
