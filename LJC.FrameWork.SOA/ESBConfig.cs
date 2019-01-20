@@ -24,6 +24,12 @@ namespace LJC.FrameWork.SOA
             set;
         }
 
+        public bool IsSecurity
+        {
+            get;
+            set;
+        }
+
         public bool AutoStart
         {
             get;
