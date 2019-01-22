@@ -335,7 +335,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                         }
                     case EntityType.DATETIME:
                         {
-                            compare = ((DateTime)Key[j]).CompareTo((DateTime)other.Key[j]);
+                            compare = (((DateTime)Key[j]).Ticks / 10000).CompareTo(((DateTime)other.Key[j]).Ticks / 10000);
                             break;
                         }
                     case EntityType.DOUBLE:
