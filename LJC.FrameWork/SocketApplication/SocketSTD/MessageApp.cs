@@ -7,11 +7,13 @@ using System.Net.Sockets;
 using System.Threading;
 using System.IO;
 using LJC.FrameWork.EntityBuf;
+using LJC.FrameWork.Comm;
 
 namespace LJC.FrameWork.SocketApplication.SocketSTD
 {
     public class MessageApp : IDisposable
     {
+        private AutoResetEvent _startSign = new AutoResetEvent(false);
         protected volatile Socket socketClient;
         protected Socket socketServer;
         /// <summary>
@@ -30,6 +32,17 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         protected int ipPort;
         protected bool isStartServer = false;
         private Thread listeningThread = null;
+
+        /// <summary>
+        /// 是否采用安全连接
+        /// </summary>
+        protected bool isSecurity = false;
+        protected string rsaPubKey = string.Empty;
+        protected string rsaRrivateKey = string.Empty;
+        /// <summary>
+        /// 安全连接key
+        /// </summary>
+        private string encryKey = string.Empty;
 
         /// <summary>
         /// 是否正在启动客户端
@@ -128,11 +141,12 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         /// <param name="ip"></param>
         /// <param name="port"></param>
         /// <param name="stop">如果为true,不会断开自动重连</param>
-        public MessageApp(string ip, int port, bool errorResume = true)
+        public MessageApp(string ip, int port, bool errorResume = true,bool isSecurity=false)
         {
             this.ipString = ip;
             this.ipPort = port;
             this.errorResume = errorResume;
+            this.isSecurity = isSecurity;
         }
 
         public MessageApp()
@@ -217,6 +231,11 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     isResetClient = true;
                 }
 
+                if (!string.IsNullOrWhiteSpace(encryKey))
+                {
+                    encryKey = string.Empty;
+                }
+
                 socketClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 socketClient.ReceiveBufferSize = 32000;
                 socketClient.SendBufferSize = 32000;
@@ -228,6 +247,26 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                         socketClient.Connect(IPAddress.Parse(ipString), ipPort);
                     else
                         socketClient.Connect(IPAddress.Any, ipPort);
+
+                    if (isSecurity)
+                    {
+                        RsaEncryHelper.GenPair(out rsaPubKey, out rsaRrivateKey);
+                        var msg = new Message(MessageType.NEGOTIATIONENCRYR);
+                        encryKey = null;
+                        msg.SetMessageBody(new NegotiationEncryMessage
+                        {
+                            PublicKey = rsaPubKey
+                        });
+                        _startSign.Reset();
+                        socketClient.SendMessage(msg, string.Empty);
+                        var buffer = ReceivingNext(socketClient);
+                        ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), buffer);
+                        _startSign.WaitOne(30 * 1000);
+                        if (string.IsNullOrWhiteSpace(encryKey))
+                        {
+                            throw new Exception("协商加密失败");
+                        }
+                    }
                 }
                 catch (SocketException e)
                 {
@@ -414,8 +453,23 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             try
             {
                 byte[] data = (byte[])buffer;
+                if (!string.IsNullOrWhiteSpace(this.encryKey))
+                {
+                    data = AesEncryHelper.AesDecrypt(data, this.encryKey);
+                }
                 Message message = EntityBufCore.DeSerialize<Message>(data);
-                OnMessage(message);
+                if (message.IsMessage(MessageType.NEGOTIATIONENCRYR))
+                {
+                    var nmsg = message.GetMessageBody<NegotiationEncryMessage>();
+                    this.encryKey = Encoding.ASCII.GetString(RsaEncryHelper.RsaDecrypt(Convert.FromBase64String(nmsg.EncryKey), this.rsaRrivateKey));
+                    Console.WriteLine("收到加密串:" + encryKey);
+                    LogManager.LogHelper.Instance.Info("通信已经加密:"+encryKey);
+                    _startSign.Set();
+                }
+                else
+                {
+                    OnMessage(message);
+                }
             }
             catch (Exception e)
             {
@@ -464,7 +518,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         {
             try
             {
-                return socketClient.SendMessage(message, string.Empty) > 0;
+                return socketClient.SendMessage(message, this.encryKey) > 0;
             }
             catch (Exception e)
             {

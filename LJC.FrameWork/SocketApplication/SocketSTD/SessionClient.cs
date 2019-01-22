@@ -21,8 +21,8 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         {
         }
 
-        public SessionClient(string serverIP, int serverPort,bool startSession=true)
-            : base(serverIP, serverPort)
+        public SessionClient(string serverIP, int serverPort,bool isSecurity, bool startSession=true)
+            : base(serverIP, serverPort,isSecurity)
         {
             watingEvents = new ConcurrentDictionary<string, AutoReSetEventResult>();
             if (startSession)

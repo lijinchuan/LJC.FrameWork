@@ -15,13 +15,13 @@ namespace LJC.FrameWork.SOA
         private static Dictionary<int, List<ESBClientPoolManager>> _esbClientDicManager = new Dictionary<int, List<ESBClientPoolManager>>();
         private static Dictionary<int, List<ESBUdpClient>> _esbUdpClientDic = new Dictionary<int, List<ESBUdpClient>>();
 
-        public ESBClient(string serverIP, int serverPort,bool startSession=true)
-            : base(serverIP, serverPort,startSession)
+        public ESBClient(string serverIP, int serverPort, bool startSession=true, bool isSecurity=false)
+            : base(serverIP, serverPort,isSecurity,startSession)
         {
         }
 
         internal ESBClient()
-            :base(ESBConfig.ReadConfig().ESBServer,ESBConfig.ReadConfig().ESBPort,ESBConfig.ReadConfig().AutoStart)
+            :base(ESBConfig.ReadConfig().ESBServer,ESBConfig.ReadConfig().ESBPort,ESBConfig.ReadConfig().IsSecurity,ESBConfig.ReadConfig().AutoStart)
         {
             
         }

@@ -391,7 +391,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
                                         {
                                             if (!string.IsNullOrWhiteSpace(connSession.EncryKey))
                                             {
-                                                bt = AesEncryHelper.AesDecrypt(bt, connSession.EncryKey);
+                                                try
+                                                {
+                                                    bt = AesEncryHelper.AesDecrypt(bt, connSession.EncryKey);
+                                                }
+                                                catch(Exception ex)
+                                                {
+                                                    throw new SocketApplicationException("解密失败",ex);
+                                                }
                                             }
 
                                             try

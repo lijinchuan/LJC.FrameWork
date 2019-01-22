@@ -25,7 +25,7 @@ namespace LJC.FrameWork.SOA
        
 
         public ESBService(string serverIP, int serverPort,int sNo,bool supportTcpServiceRedirect=false,bool supportUdpServiceRedirect=false)
-            : base(serverIP, serverPort)
+            : base(serverIP, serverPort,false)
         {
             this.ServiceNo = sNo;
             this.BeferLogout += this.UnRegisterService;
@@ -36,7 +36,7 @@ namespace LJC.FrameWork.SOA
         }
 
         public ESBService(int sNo, bool supportTcpServiceRidrect = false, bool supportUdpServiceRedirect = false)
-           : base(ESBConfig.ReadConfig().ESBServer, ESBConfig.ReadConfig().ESBPort)
+           : base(ESBConfig.ReadConfig().ESBServer, ESBConfig.ReadConfig().ESBPort,false)
         {
             this.ServiceNo = sNo;
             this.BeferLogout += this.UnRegisterService;

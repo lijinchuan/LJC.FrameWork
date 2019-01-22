@@ -29,8 +29,8 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         private string uid;
         private string pwd;
 
-        public SessionMessageApp(string ip, int port)
-            : base(ip, port)
+        public SessionMessageApp(string ip, int port, bool isSecurity)
+            : base(ip, port, isSecurity: isSecurity)
         {
 
         }
