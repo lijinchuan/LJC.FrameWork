@@ -2085,7 +2085,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 {
                     if (findend == null)
                     {
-                        throw new Exception("查询结束参数错误");
+                        return new List<T>();
                     }
                     totallist.AddRange(indexarr.Where(p => !p.Del && p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
                     if (totallist.Count == 0 || totallist.First().KeyOffset > findfirst.KeyOffset)
