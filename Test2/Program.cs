@@ -352,11 +352,6 @@ namespace Test2
         static LJC.FrameWork.SocketEasy.Client.SessionClient sc = null;
         static void Main(string[] args)
         {
-            sc = new LJC.FrameWork.SocketEasy.Client.SessionClient("127.0.0.1", 5555, true, true);
-            sc.LoginSuccess += sc_LoginSuccess;
-            sc.Error += sc_Error;
-            sc.Login("test111", string.Empty);
-
             var cmd = PrintCmd();
             IFun funx = null;
             while (cmd != "0")

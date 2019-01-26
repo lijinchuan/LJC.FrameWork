@@ -1930,8 +1930,14 @@ namespace LJC.FrameWork.Data.EntityDataBase
             tablelocker.EnterReadLock();
             try
             {
-                #region 找第一个
                 var findkeystart = new BigEntityTableIndexItem { Index = index, Key = keystart };
+                var findkeyend = new BigEntityTableIndexItem { Index = index, Key = keyend };
+                if (findkeystart.CompareTo(findkeyend) > 1)
+                {
+                    return new List<T>();
+                }
+                #region 找第一个
+                
                 var indexarr = keyindexdisklist[keyname];
                 int mid = -1;
                 int pos = -1;
@@ -2001,7 +2007,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
                 #endregion
 
                 #region 找最后一个
-                var findkeyend = new BigEntityTableIndexItem { Index = index, Key = keyend };
+                
                 mid = -1;
                 pos = -1;
                 pos = new SorteArray<BigEntityTableIndexItem>(indexarr).Find(findkeyend, ref mid);
