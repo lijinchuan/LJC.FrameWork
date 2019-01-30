@@ -1932,9 +1932,9 @@ namespace LJC.FrameWork.Data.EntityDataBase
             {
                 var findkeystart = new BigEntityTableIndexItem { Index = index, Key = keystart };
                 var findkeyend = new BigEntityTableIndexItem { Index = index, Key = keyend };
-                if (findkeystart.CompareTo(findkeyend) > 1)
+                if (findkeystart.CompareTo(findkeyend) > 0)
                 {
-                    return new List<T>();
+                    throw new Exception("开始条件不能比结束大");
                 }
                 #region 找第一个
                 
@@ -2089,22 +2089,22 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
                 if (findfirst != null)
                 {
-                    if (findend == null)
+                    if (findend != null)
                     {
-                        return new List<T>();
-                    }
-                    totallist.AddRange(indexarr.Where(p => !p.Del && p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
-                    if (totallist.Count == 0 || totallist.First().KeyOffset > findfirst.KeyOffset)
-                    {
-                        totallist.Insert(0, findfirst);
-                    }
 
-                    if (totallist.Count == 0 || totallist.Last().KeyOffset < findend.KeyOffset)
-                    {
-                        totallist.Add(findend);
-                    }
+                        totallist.AddRange(indexarr.Where(p => !p.Del && p.KeyOffset >= findfirst.KeyOffset && p.KeyOffset <= findend.KeyOffset));
+                        if (totallist.Count == 0 || totallist.First().KeyOffset > findfirst.KeyOffset)
+                        {
+                            totallist.Insert(0, findfirst);
+                        }
 
-                    total = findend.RangeIndex - (findfirst.RangeIndex) + 1;
+                        if (totallist.Count == 0 || totallist.Last().KeyOffset < findend.KeyOffset)
+                        {
+                            totallist.Add(findend);
+                        }
+
+                        total = findend.RangeIndex - (findfirst.RangeIndex) + 1;
+                    }
                 }
 
                 total += templist1.Count() + templist2.Count();
