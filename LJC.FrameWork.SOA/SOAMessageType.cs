@@ -5,15 +5,18 @@ using System.Text;
 
 namespace LJC.FrameWork.SOA
 {
-    internal enum SOAMessageType:ushort
+    internal enum SOAMessageType : ushort
     {
-        DoSOARequest=100,
+        DoSOARequest = 100,
         DoSOAResponse,
         DoSOATransferRequest,
         DoSOATransferResponse,
         RegisterService,
         UnRegisterService,
         DoSOARedirectRequest,
-        DoSOARedirectResponse
+        DoSOARedirectResponse,
+        SOANoticeRequest,
+        SOANoticeResponse,
+        SOANoticeClientMessage
     }
 }

@@ -6,6 +6,7 @@ using LJC.FrameWork.SocketApplication;
 using System.Threading;
 using LJC.FrameWork.LogManager;
 using LJC.FrameWork.SocketApplication.SocketSTD;
+using LJC.FrameWork.SOA.Contract;
 
 namespace LJC.FrameWork.SOA
 {
@@ -194,6 +195,45 @@ namespace LJC.FrameWork.SOA
            bool boo= SendMessageAnsy<RegisterServiceResponse>(msg).IsSuccess;
 
            return boo;
+        }
+
+        /// <summary>
+        /// 发送soa通知
+        /// </summary>
+        /// <param name="recivers"></param>
+        /// <param name="type"></param>
+        /// <param name="body"></param>
+        /// <param name="needresult"></param>
+        /// <returns></returns>
+        public SOANoticeResponse SendNotice(string[] recivers, int type, byte[] body,bool needresult)
+        {
+            if (recivers == null || recivers.Length == 0)
+            {
+                return new SOANoticeResponse();
+            }
+
+            Message m = new Message((int)SOAMessageType.SOANoticeRequest);
+            
+            m.SetMessageBody(new Contract.SOANoticeRequest
+            {
+                NeedResult=needresult,
+                NoticeBody=body,
+                NoticeType=type,
+                ReciveClients=recivers
+            });
+
+            if (needresult)
+            {
+                m.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                return SendMessageAnsy<Contract.SOANoticeResponse>(m);
+            }
+            else
+            {
+                return new SOANoticeResponse
+                {
+                    IsDone = SendMessage(m)
+                };
+            }
         }
 
         public void UnRegisterService()

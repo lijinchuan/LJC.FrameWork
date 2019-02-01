@@ -45,7 +45,8 @@ namespace LJC.FrameWork.SOA
             height:22px;
         }
 
-    </style>                ");
+    </style>
+                ");
                 sb.AppendFormat("当前时间:{0}<br/><br/>",DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
                 var servicelist = _esb.ServiceContainer.Select(p => p).ToList();
                 sb.AppendFormat("当前注册了{0}个服务实例<br/>", servicelist.Count);
@@ -406,10 +407,10 @@ namespace LJC.FrameWork.SOA
                         {
                             ServiceNo = req.ServiceNo,
                             Session = session,
-                            RedirectTcpIps=req.RedirectTcpIps,
-                            RedirectTcpPort=req.RedirectTcpPort,
-                            RedirectUdpIps=req.RedirectUdpIps,
-                            RedirectUdpPort=req.RedirectUdpPort
+                            RedirectTcpIps = req.RedirectTcpIps,
+                            RedirectTcpPort = req.RedirectTcpPort,
+                            RedirectUdpIps = req.RedirectUdpIps,
+                            RedirectUdpPort = req.RedirectUdpPort
                         });
                     }
 
@@ -439,7 +440,7 @@ namespace LJC.FrameWork.SOA
                     var req = message.GetMessageBody<UnRegisterServiceRequest>();
                     lock (LockObj)
                     {
-                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress)&&p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo));
+                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo));
                     }
                     msg.SetMessageBody(new UnRegisterServiceResponse
                     {
@@ -467,6 +468,64 @@ namespace LJC.FrameWork.SOA
             {
                 var resp = message.GetMessageBody<SOATransferResponse>();
                 DoTransferResponse(resp);
+                return;
+            }
+            else if (message.IsMessage((int)SOAMessageType.SOANoticeRequest))
+            {
+                var req = message.GetMessageBody<Contract.SOANoticeRequest>();
+                if (req.ReciveClients != null && req.ReciveClients.Length > 0)
+                {
+                    Session s = null;
+                    Message notice = new Message((int)SOAMessageType.SOANoticeClientMessage);
+                    var service = this.ServiceContainer.FirstOrDefault(p => p.Session == session);
+
+                    notice.SetMessageBody(new Contract.SOANoticeClientMessage
+                    {
+                        NoticeBody=req.NoticeBody,
+                        NoticeType=req.NoticeType,
+                        ServiceNo=service==null?-1:service.ServiceNo
+                    });
+                    List<string> succlist = new List<string>();
+                    List<string> faillist = new List<string>();
+                    foreach (var cid in req.ReciveClients)
+                    {
+                        //Console.WriteLine("给用户发通知:"+cid);
+                        if (this.GetConnectedList().TryGetValue(cid, out s))
+                        {
+                            try
+                            {
+                                if (s.SendMessage(notice))
+                                {
+                                    succlist.Add(cid);
+                                }
+                                else
+                                {
+                                    faillist.Add(cid);
+                                }
+                            }
+                            catch
+                            {
+                                faillist.Add(cid);
+                            }
+                        }
+                        else
+                        {
+                            faillist.Add(cid);
+                        }
+                    }
+                    if (req.NeedResult)
+                    {
+                        var respmesg = new Message((int)SOAMessageType.SOANoticeResponse);
+                        respmesg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                        respmesg.SetMessageBody(new Contract.SOANoticeResponse
+                        {
+                            FailList=faillist.ToArray(),
+                            SuccList=succlist.ToArray(),
+                            IsDone=true
+                        });
+                        session.SendMessage(respmesg);
+                    }
+                }
                 return;
             }
 

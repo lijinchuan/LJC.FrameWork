@@ -15,6 +15,8 @@ namespace LJC.FrameWork.SOA
         private static Dictionary<int, List<ESBClientPoolManager>> _esbClientDicManager = new Dictionary<int, List<ESBClientPoolManager>>();
         private static Dictionary<int, List<ESBUdpClient>> _esbUdpClientDic = new Dictionary<int, List<ESBUdpClient>>();
 
+        public static event Action<Contract.SOANoticeClientMessage> OnNotice;
+
         public ESBClient(string serverIP, int serverPort, bool startSession=true, bool isSecurity=false)
             : base(serverIP, serverPort,isSecurity,startSession)
         {
@@ -40,6 +42,21 @@ namespace LJC.FrameWork.SOA
         {
             get;
             set;
+        }
+
+        protected override void ReciveMessage(Message message)
+        {
+            if (message.IsMessage((int)SOAMessageType.SOANoticeClientMessage))
+            {
+                var notice = message.GetMessageBody<Contract.SOANoticeClientMessage>();
+                if (OnNotice != null)
+                {
+                    OnNotice.BeginInvoke(notice,null,null);
+                }
+                return;
+            }
+
+            base.ReciveMessage(message);
         }
 
         internal T DoRequest<T>(int serviceno, int funcid, object param)

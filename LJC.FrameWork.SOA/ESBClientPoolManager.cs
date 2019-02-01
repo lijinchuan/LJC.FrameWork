@@ -56,6 +56,17 @@ namespace LJC.FrameWork.SOA
             return client;
         }
 
+        public IEnumerable<ESBClient> EnumClients()
+        {
+            if (Clients != null && Clients.Length > 0)
+            {
+                foreach (var item in Clients)
+                {
+                    yield return item;
+                }
+            }
+        }
+
         void client_Error(Exception obj)
         {
             Console.WriteLine("出错:" + obj.Message);
