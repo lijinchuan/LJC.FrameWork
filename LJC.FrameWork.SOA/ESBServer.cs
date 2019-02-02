@@ -358,7 +358,7 @@ namespace LJC.FrameWork.SOA
                             try
                             {
                                 ConatinerLock.EnterWriteLock();
-                                ClientSessionList.Remove(clientid);
+                                ClientSessionList.Remove(msgTransactionID);
                             }
                             finally
                             {
