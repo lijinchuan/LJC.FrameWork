@@ -2155,10 +2155,12 @@ namespace LJC.FrameWork.Data.EntityDataBase
                                         if (take > 0)
                                         {
                                             var lastidx = idx - 1;
-                                            while (take-- > 0)
-                                            {
-                                                result.Insert(0, totallist[lastidx--]);
-                                            }
+                                            //while (take-- > 0)
+                                            //{
+                                            //    result.Insert(0, totallist[lastidx--]);
+                                            //}
+
+                                            result.InsertRange(0, totallist.Skip(lastidx - (int)take).Take((int)take).Reverse());
                                         }
                                     }
                                     //如果是内存数据混合情况，第一次加载数据
@@ -2244,7 +2246,7 @@ namespace LJC.FrameWork.Data.EntityDataBase
 
 
                     //最后一条数据的处理
-                    if (result.Count < ps && lastIndexItem != null && !lastIndexItem.Del && !result.Any(p => p.Offset == lastIndexItem.Offset) && lastIndexItem.RangeIndex >= takerankskip && lastIndexItem.RangeIndex <= takerankskip + ps)
+                    if (result.Count < ps && lastIndexItem != null && !lastIndexItem.Del && lastIndexItem.CompareTo(findkeyend) < 0 && !result.Any(p => p.Offset == lastIndexItem.Offset) && lastIndexItem.RangeIndex >= takerankskip && lastIndexItem.RangeIndex <= takerankskip + ps)
                     {
                         result.Add(lastIndexItem);
                     }
