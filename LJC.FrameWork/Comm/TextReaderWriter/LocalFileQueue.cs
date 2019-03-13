@@ -288,6 +288,10 @@ namespace LJC.FrameWork.Comm.TextReaderWriter
             {
                 ProcessBadQueue(last);
             }
+            catch (EntityBuf.EntityBufException)
+            {
+                ProcessBadQueue(last);
+            }
             catch (Exception ex)
             {
                 if (!OnErrorResumeNext)

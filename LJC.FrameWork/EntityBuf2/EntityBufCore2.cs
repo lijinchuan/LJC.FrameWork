@@ -476,7 +476,7 @@ namespace LJC.FrameWork.EntityBuf2
                     }
                     break;
                 default:
-                    throw new Exception("序列化错误");
+                    throw new EntityBufException("序列化错误");
             }
         }
 
@@ -677,12 +677,12 @@ namespace LJC.FrameWork.EntityBuf2
         {
             if (buftype.EntityType == EntityType.COMPLEX)
             {
-                throw new Exception("无法反序列化复杂类型");
+                throw new EntityBufException("无法反序列化复杂类型");
             }
 
             if (buftype.EntityType == EntityType.UNKNOWN)
             {
-                throw new Exception("无法反序列化未知类型");
+                throw new EntityBufException("无法反序列化未知类型");
             }
 
             switch (buftype.EntityType)
@@ -898,7 +898,7 @@ namespace LJC.FrameWork.EntityBuf2
                         return arr;
                     }
                 default:
-                    throw new Exception("反序列化错误");
+                    throw new EntityBufException("反序列化错误");
             }
         }
 
@@ -930,7 +930,7 @@ namespace LJC.FrameWork.EntityBuf2
             }
             catch (Exception ex)
             {
-                var e = new Exception(string.Format("无法把二进制反序列化成{0}对象", DestType.FullName), ex);
+                var e = new EntityBufException(string.Format("无法把二进制反序列化成{0}对象", DestType.FullName), ex);
                 e.Data.Add("bytes", bytes == null ? "" : Convert.ToBase64String(bytes));
                 throw e;
             }

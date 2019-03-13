@@ -284,6 +284,7 @@
     <Compile Include="EntityBuf2\MemoryStreamReader2.cs" />
     <Compile Include="EntityBuf2\MemoryStreamWriter2.cs" />
     <Compile Include="EntityBuf\EntityBufCore.cs" />
+    <Compile Include="EntityBuf\EntityBufException.cs" />
     <Compile Include="EntityBuf\EntityBufType.cs" />
     <Compile Include="EntityBuf\EntityBufTypeFlag.cs" />
     <Compile Include="EntityBuf\EntityType.cs" />
