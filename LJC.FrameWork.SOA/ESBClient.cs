@@ -372,7 +372,14 @@ namespace LJC.FrameWork.SOA
             {
                 foreach (var m in man.Value)
                 {
-                    m.Dispose();
+                    try
+                    {
+                        m.Dispose();
+                    }
+                    catch
+                    {
+
+                    }
                 }
             }
 
@@ -380,7 +387,14 @@ namespace LJC.FrameWork.SOA
             {
                 foreach(var c in item.Value)
                 {
-                    c.Dispose();
+                    try
+                    {
+                        c.Dispose();
+                    }
+                    catch
+                    {
+
+                    }
                 }
             }
         }

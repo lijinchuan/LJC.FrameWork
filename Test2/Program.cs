@@ -348,10 +348,225 @@ namespace Test2
             return true;
         }
 
+
+        public static int ShortestSubarray(int[] a, int k)
+        {
+            var now = DateTime.Now;
+            long sum = 0, sum2 = 0;
+            int len = 0, minlen = int.MaxValue;
+            int p = 0;
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (a[i] == k)
+                {
+                    return 1;
+                }
+                if (sum < k)
+                {
+                    if (len == 0 && a[i] <= 0)
+                    {
+                        continue;
+                    }
+                    sum += a[i];
+                    
+                    len++;
+                    if (sum >= k)
+                    {
+                        p = i;
+                        var more = sum - k;
+                        var tempsum = sum - a[i];
+
+                        for (int j = i - 1; j > i - len; j--)
+                        {
+                            if (tempsum <= more)
+                            {
+                                len -= (j + 1 - (i + 1 - len));
+                                sum -= tempsum;
+                                break;
+                            }
+                            tempsum -= a[j];
+                        }
+
+                        more = sum - k;
+                        tempsum = 0;
+
+                        for (int j = p;j > p - len; j--)
+                        {
+                            tempsum += a[j];
+                            if (tempsum <= more)
+                            {
+                                sum -= a[j];
+                                sum2 += a[j];
+                                len--;
+                                p--;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+
+                        if (minlen > len)
+                        {
+                            minlen = len;
+                        }
+                    }
+                }
+                else
+                {
+                    if (i - p > len)
+                    {
+                        sum = 0;
+                        len = 0;
+                        sum2 = 0;
+                        i = p + 1;
+                    }
+                    else
+                    {
+                        sum2 += a[i];
+                        var tempsum = sum;
+                        var more = sum - k;
+                        bool flag = false;
+
+                        for (var j = p; j > p - len; j--)
+                        {
+                            tempsum -= a[j];
+                            if (sum2 >= tempsum - more && (i - j + 1) <= len)
+                            {
+                                len = i - j + 1;
+                                flag = true;
+                                sum += sum2 - tempsum;
+                                sum2 = 0;
+                                break;
+                            }
+
+                        }
+                        if (flag)
+                        {
+                            p = i;
+                            if (len < minlen)
+                            {
+                                minlen = len;
+                            }
+                        }
+
+                    }
+                }
+            }
+            if (minlen == int.MaxValue)
+            {
+                minlen = -1;
+            }
+            Console.WriteLine("结果:"+minlen+",用时:"+(DateTime.Now.Subtract(now).TotalMilliseconds+"ms"));
+            return minlen;
+        }
+
+
+ public class ListNode
+        {
+      public int val;
+      public ListNode next;
+      public ListNode(int x) { val = x; }
+  }
+
+            public static ListNode ReverseBetween(ListNode head, int m, int n)
+            {
+                ListNode ret = null;
+                ListNode h1 = null;
+                ListNode t1 = null;
+                var h = head;
+                int i = 1;
+                while (h != null)
+                {
+                    var node = new ListNode(h.val);
+                    if (i < m)
+                    {
+                        if (t1 == null)
+                        {
+                            t1 = node;
+                            ret = t1;
+                        }
+                        else
+                        {
+                            t1.next = node;
+                            t1 = node;
+                        }
+                    }
+                    else if (i >= m && i <= n)
+                    {
+                        if (h1 == null)
+                        {
+                            h1 = node;
+                        }
+                        else
+                        {
+                            node.next = h1;
+                            h1 = node;
+                        }
+                    }
+                    else if (i == n + 1)
+                    {
+                        if (t1 == null)
+                        {
+                            t1 = h1;
+                            ret = h1;
+                        }
+                        else
+                        {
+                            t1.next = h1;
+                        }
+                        while (t1.next != null)
+                        {
+                            t1 = t1.next;
+                        }
+                        t1.next = node;
+                        t1 = node;
+                    }
+                    else
+                    {
+                        t1.next = node;
+                        t1 = node;
+                    }
+
+
+                    h = h.next;
+                    i++;
+                }
+
+                if (h1 != null && t1 != null)
+                {
+                    t1.next = h1;
+                }
+
+
+                return ret;
+            }
+        
+
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static LJC.FrameWork.SocketEasy.Client.SessionClient sc = null;
         static void Main(string[] args)
         {
+            var head = new ListNode(3);
+            head.next = new ListNode(5);
+            var ret=ReverseBetween(head, 1, 1);
+
+            while (true)
+            {
+                Console.WriteLine("输入要计算的文件");
+                string file = null;
+                while (!string.IsNullOrWhiteSpace(file = Console.ReadLine()))
+                {
+                    break;
+                }
+                if (file == "exit")
+                {
+                    break;
+                }
+                var lines = System.IO.File.ReadAllLines(file);
+                ShortestSubarray(lines[0].Split(',').Select(p => int.Parse(p)).ToArray(), int.Parse(lines[1]));
+            }
+            return;
             var cmd = PrintCmd();
             IFun funx = null;
             while (cmd != "0")

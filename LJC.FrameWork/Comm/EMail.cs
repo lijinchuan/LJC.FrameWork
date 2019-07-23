@@ -31,8 +31,10 @@ namespace LJC.FrameWork.Comm.SMTPMail
                         _smtpServer = "smtp.sina.com.cn";
                     else if (MailAccount.ToLower().Contains("@qq."))
                         _smtpServer = "smtp.qq.com";
+                    else if (MailAccount.ToLower().Contains("@163."))
+                        _smtpServer = "smtp.163.com";
                     else
-                        throw new Exception("找不到电子邮件"+MailAccount+"的发件服务器地址。");
+                        throw new Exception("找不到电子邮件" + MailAccount + "的发件服务器地址。");
                 }
 
                 return _smtpServer;
@@ -67,6 +69,8 @@ namespace LJC.FrameWork.Comm.SMTPMail
                         _pop3Server = "pop3.sina.com.cn";
                     else if (this.MailAccount.ToLower().Contains("@qq."))
                         _pop3Server = "pop.qq.com";
+                    else if (this.MailAccount.ToLower().Contains("@163."))
+                        _pop3Server = "pop.163.com";
                     else
                         throw new Exception("找不到电子邮件" + MailAccount + "的收件服务器地址。");
                 }
@@ -131,7 +135,7 @@ namespace LJC.FrameWork.Comm.SMTPMail
             }
         }
 
-        public bool SendMail(string _to,string _subject,string _body)
+        public bool SendMail(string _to,string[] _cc,string _subject,string _body)
         {
             try
             {
@@ -141,6 +145,13 @@ namespace LJC.FrameWork.Comm.SMTPMail
                 //return client.IsAuthenticated;
 
                 MailMessage mm = new MailMessage(MailAccount, _to);
+                if (_cc != null && _cc.Length > 0)
+                {
+                    foreach(var c in _cc)
+                    {
+                        mm.CC.Add(c);
+                    }
+                }
                 mm.Subject = _subject;
                 mm.Body = _body;
                 mm.BodyEncoding = Encoding.UTF8;
@@ -163,11 +174,18 @@ namespace LJC.FrameWork.Comm.SMTPMail
             }
         }
 
-        public bool SendHtmlMail(string _to, string _subject, string _body, params Attachment[] attach)
+        public bool SendHtmlMail(string _to,string[] _cc, string _subject, string _body, params Attachment[] attach)
         {
             try
             {
                 MailMessage mm = new MailMessage(MailAccount, _to);
+                if (_cc != null && _cc.Length > 0)
+                {
+                    foreach (var c in _cc)
+                    {
+                        mm.CC.Add(c);
+                    }
+                }
                 mm.Subject = _subject;
                 mm.Body = _body;
                 mm.BodyEncoding = Encoding.UTF8;
@@ -195,11 +213,18 @@ namespace LJC.FrameWork.Comm.SMTPMail
             }
         }
 
-        public bool SendMail(string _to, string _subject, string _body,params Attachment[] attach)
+        public bool SendMail(string _to,string[] _cc, string _subject, string _body,params Attachment[] attach)
         {
             try
             {
                 MailMessage mm = new MailMessage(MailAccount, _to);
+                if (_cc != null && _cc.Length > 0)
+                {
+                    foreach (var c in _cc)
+                    {
+                        mm.CC.Add(c);
+                    }
+                }
                 mm.Subject = _subject;
                 mm.Body = _body;
                 mm.BodyEncoding = Encoding.UTF8;

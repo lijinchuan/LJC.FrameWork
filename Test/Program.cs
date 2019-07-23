@@ -181,6 +181,14 @@ namespace Test
 
         static void Main(string[] args)
         {
+
+            LJC.FrameWork.Comm.HttpRequestEx httpreq = new HttpRequestEx();
+            httpreq.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3";
+            httpreq.AcceptLanguage = "zh-CN,zh;q=0.9";
+         
+            httpreq.UserAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36";
+            var resp = httpreq.DoRequest("https://hippo.gf.com.cn/?source=STORE&needLoginTrade=true#StockTrade", string.Empty);
+
             MySession server = new MySession();
             server.StartServer();
 
