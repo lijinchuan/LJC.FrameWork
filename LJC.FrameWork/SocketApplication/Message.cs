@@ -27,6 +27,12 @@ namespace LJC.FrameWork.SocketApplication
             get;
             set;
         }
+
+        public Dictionary<string,string> CustomData
+        {
+            get;
+            set;
+        }
     }
     /// <summary>
     /// 消息
