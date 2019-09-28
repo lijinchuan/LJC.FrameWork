@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading;
 
@@ -11,12 +12,37 @@ namespace LJC.FrameWork.Comm
     public static class ErrorTraceUtil
     {
         private static ConcurrentDictionary<int, Stack> ErrorTraceDic = new ConcurrentDictionary<int, Stack>();
+        private static int _maxTraceId = 1;
+        private const string _traceIDKey = "__et_traceid";
+
+        private static int GetTraceID()
+        {
+            var obj = CallContext.LogicalGetData(_traceIDKey);
+            if (obj == null)
+            {
+                return 0;
+            }
+
+            return (int)obj;
+        }
+
+        private static int CreateTraceID()
+        {
+            var traceid = Interlocked.Increment(ref _maxTraceId);
+            if (traceid > int.MaxValue - 10000)
+            {
+                _maxTraceId = 0;
+            }
+            CallContext.LogicalSetData(_traceIDKey, traceid);
+            //ExecutionContext.RestoreFlow();
+            return traceid;
+        }
 
         public static void StartTrace()
         {
             try
             {
-                var traceid = Thread.CurrentThread.ManagedThreadId;
+                var traceid = CreateTraceID();
                 Stack stack = null;
                 if (!ErrorTraceDic.TryGetValue(traceid,out stack))
                 {
@@ -37,7 +63,7 @@ namespace LJC.FrameWork.Comm
             try
             {
                 Stack stack;
-                var traceid = Thread.CurrentThread.ManagedThreadId;
+                var traceid = GetTraceID();
                 ErrorTraceDic.TryRemove(traceid, out stack);
             }
             catch { }
@@ -47,7 +73,7 @@ namespace LJC.FrameWork.Comm
         {
             try
             {
-                var traceid = Thread.CurrentThread.ManagedThreadId;
+                var traceid = GetTraceID();
                 Stack stack = null;
                 if (ErrorTraceDic.TryGetValue(traceid, out stack))
                 {
@@ -63,7 +89,7 @@ namespace LJC.FrameWork.Comm
         {
             try
             {
-                var traceid = Thread.CurrentThread.ManagedThreadId;
+                var traceid = GetTraceID();
                 Stack stack = null;
                 if (ErrorTraceDic.TryGetValue(traceid, out stack))
                 {
@@ -81,7 +107,7 @@ namespace LJC.FrameWork.Comm
         {
             try
             {
-                var traceid = Thread.CurrentThread.ManagedThreadId;
+                var traceid = GetTraceID();
                 Stack stack = null;
                 if (ErrorTraceDic.TryGetValue(traceid, out stack))
                 {
