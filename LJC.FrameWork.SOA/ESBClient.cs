@@ -370,15 +370,18 @@ namespace LJC.FrameWork.SOA
 
             foreach (var man in _esbClientDicManager)
             {
-                foreach (var m in man.Value)
+                if (man.Value != null)
                 {
-                    try
+                    foreach (var m in man.Value)
                     {
-                        m.Dispose();
-                    }
-                    catch
-                    {
+                        try
+                        {
+                            m.Dispose();
+                        }
+                        catch
+                        {
 
+                        }
                     }
                 }
             }

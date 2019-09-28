@@ -108,6 +108,8 @@ namespace LJC.FrameWork.Comm
                     else
                     {
                         timer.LastError = ex;
+                        timer.Kill();
+                        return;
                     }
                 }
 
@@ -180,6 +182,8 @@ namespace LJC.FrameWork.Comm
                     else
                     {
                         timer.LastError = ex;
+                        timer.Kill();
+                        return;
                     }
                 }
 
