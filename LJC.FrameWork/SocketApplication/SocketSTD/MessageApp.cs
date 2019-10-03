@@ -25,12 +25,12 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         /// </summary>
         private UdpClient udpMCClient;
         private Socket udpMCSocket;
-        protected bool isStartClient = false;
-        protected bool stop = false;
-        protected bool errorResume = true;
+        protected volatile bool isStartClient = false;
+        protected volatile bool stop = false;
+        protected volatile bool errorResume = true;
         protected string ipString;
         protected int ipPort;
-        protected bool isStartServer = false;
+        protected volatile bool isStartServer = false;
         private Thread listeningThread = null;
 
         /// <summary>
@@ -427,7 +427,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
         private void Receiving()
         {
-            while (!stop/* && socketClient.Connected*/)
+            while (!this.stop/* && socketClient.Connected*/)
             {
                 try
                 {
@@ -444,8 +444,15 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     OnError(e);
                 }
             }
-            socketClient.Shutdown(SocketShutdown.Both);
-            socketClient.Close();
+            try
+            {
+                socketClient.Shutdown(SocketShutdown.Both);
+                socketClient.Close();
+            }
+            catch
+            {
+
+            }
         }
 
         private void ProcessMessage(object buffer)
@@ -639,35 +646,60 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             {
                 if (BeforRelease != null)
                 {
-                    BeforRelease();
+                    try
+                    {
+                        BeforRelease();
+                    }
+                    catch { }
                 }
+
 
                 if (socketServer != null)
                 {
-                    socketServer.Shutdown(SocketShutdown.Both);
-                    socketServer.Close();
+                    try
+                    {
+                        socketServer.Shutdown(SocketShutdown.Both);
+                        socketServer.Close();
+                    }
+                    catch { }
                 }
 
                 if (socketClient != null)
                 {
-                    socketClient.Shutdown(SocketShutdown.Both);
-                    socketClient.Close();
+                    try
+                    {
+                        socketClient.Shutdown(SocketShutdown.Both);
+                        socketClient.Close();
+                    }
+                    catch { }
                 }
 
                 if (udpBCSocket != null)
                 {
-                    udpBCSocket.Close();
+                    try
+                    {
+                        udpBCSocket.Close();
+                    }
+                    catch { }
                 }
 
                 if (udpMCClient != null)
                 {
-                    udpMCClient.DropMulticastGroup(SocketApplicationComm.MCAST_ADDR);
-                    udpMCClient.Close();
+                    try
+                    {
+                        udpMCClient.DropMulticastGroup(SocketApplicationComm.MCAST_ADDR);
+                        udpMCClient.Close();
+                    }
+                    catch { }
                 }
 
                 if (listeningThread != null)
                 {
-                    listeningThread.Abort();
+                    try
+                    {
+                        listeningThread.Abort();
+                    }
+                    catch { }
                 }
 
                 stop = true;

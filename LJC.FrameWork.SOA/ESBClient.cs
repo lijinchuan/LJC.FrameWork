@@ -218,9 +218,10 @@ namespace LJC.FrameWork.SOA
                                             var client = new ESBUdpClient(ip, info.RedirectUdpPort);
                                             client.Error += (ex) =>
                                             {
-                                                if (ex is System.Net.WebException)
+                                                if (ex is System.Net.WebException
+                                                ||ex is System.Net.Sockets.SocketException)
                                                 {
-                                                    client.Dispose();
+                                                    //client.Dispose();
                                                     lock (_esbUdpClientDic)
                                                     {
                                                         _esbUdpClientDic.Remove(serviceId);
@@ -265,7 +266,9 @@ namespace LJC.FrameWork.SOA
                                             var client = new ESBClient(ip, info.RedirectTcpPort, false);
                                             client.Error += (ex) =>
                                              {
-                                                 if (ex is System.Net.WebException)
+                                                 if (ex is System.Net.WebException
+                                                 || ex is System.Net.Sockets.SocketException
+                                                 || !client.socketClient.Connected)
                                                  {
                                                      client.CloseClient();
                                                      client.Dispose();
@@ -287,10 +290,19 @@ namespace LJC.FrameWork.SOA
                                                     newclient.StartSession();
                                                     newclient.Error += (ex) =>
                                                     {
-                                                        if (ex is System.Net.WebException)
+                                                        if (ex is System.Net.WebException
+                                                        || ex is System.Net.Sockets.SocketException
+                                                        || !newclient.socketClient.Connected)
                                                         {
-                                                            client.CloseClient();
-                                                            client.Dispose();
+                                                            try
+                                                            {
+                                                                newclient.CloseClient();
+                                                                newclient.Dispose();
+                                                            }
+                                                            catch
+                                                            {
+
+                                                            }
                                                             lock (_esbClientDicManager)
                                                             {
                                                                 _esbClientDicManager.Remove(serviceId);
