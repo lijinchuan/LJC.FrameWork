@@ -447,12 +447,12 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             try
             {
                 socketClient.Shutdown(SocketShutdown.Both);
-                socketClient.Close();
             }
             catch
             {
 
             }
+            socketClient.Close();
         }
 
         private void ProcessMessage(object buffer)
@@ -628,7 +628,16 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     OnError(exp);
                 }
             }
-            socket.Shutdown(SocketShutdown.Both);
+
+            try
+            {
+                socket.Shutdown(SocketShutdown.Both);
+                
+            }
+            catch
+            {
+
+            }
             socket.Close();
             SocketApplicationComm.Debug(string.Format("服务器关闭套接字：{0}", appSocket.SessionID));
         }
