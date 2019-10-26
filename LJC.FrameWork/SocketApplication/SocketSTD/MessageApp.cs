@@ -373,10 +373,16 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         {
             int readLen = 0, timeout = 0, count = 0;
             byte[] buff4 = new byte[4];
-            s.Receive(buff4, 0, 4, SocketFlags.None);
+            if(s.Receive(buff4, 0, 4, SocketFlags.None) != 4)
+            {
+                throw new SocketApplicationException("读取长度错误");
+            }
 
             int dataLen = BitConverter.ToInt32(buff4, 0);
-            s.Receive(buff4, 0, 4, SocketFlags.None);
+            if(s.Receive(buff4, 0, 4, SocketFlags.None) != 4)
+            {
+                throw new SocketApplicationException("读取长度错误");
+            }
             var crc32 = BitConverter.ToInt32(buff4, 0);
 
 
@@ -410,11 +416,11 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             var calcrc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(buffer, 0);
             if (calcrc32 != crc32)
             {
-                  Exception ex=new Exception("检查校验码出错");
-                  ex.Data.Add("crc32", crc32);
-                  ex.Data.Add("calcrc32", calcrc32);
-                  ex.Data.Add("data", Convert.ToBase64String(buffer));
-                  LogManager.LogHelper.Instance.Error("接收数据错误", ex);
+                var ex = new SocketApplicationException("检查校验码出错");
+                ex.Data.Add("crc32", crc32);
+                ex.Data.Add("calcrc32", calcrc32);
+                ex.Data.Add("data", Convert.ToBase64String(buffer));
+                throw ex;
             }
 
             if (SocketApplicationEnvironment.TraceSocketDataBag)
@@ -597,6 +603,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             appSocket.IsValid = true;
             appSocket.SessionID = SocketApplicationComm.GetSeqNum();
             appSocket.Socket = socket;
+            
 
             while (appSocket.IsValid&&appSocket.Socket.Connected)
             {
@@ -626,6 +633,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 {
                     SocketApplicationComm.Debug(exp.Message);
                     OnError(exp);
+                    break;
                 }
             }
 
