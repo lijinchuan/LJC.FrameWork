@@ -68,6 +68,7 @@ namespace LJC.FrameWork.SOA
                                 lock (this._esb.ServiceContainer)
                                 {
                                     _esb.ServiceContainer.Remove(item);
+                                    item.Session.Close();
                                 }
                             }
 
@@ -401,7 +402,12 @@ namespace LJC.FrameWork.SOA
 
                     lock (LockObj)
                     {
-                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo));
+                        var remlist=ServiceContainer.Where(p => p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo)).ToList();
+                        foreach(var item in remlist)
+                        {
+                            item.Session.Close();
+                            ServiceContainer.Remove(item);
+                        }
 
                         ServiceContainer.Add(new ESBServiceInfo
                         {
