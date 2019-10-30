@@ -13,6 +13,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 {
     public class MessageApp : IDisposable
     {
+        private const int MAXBUFFERLEN = 1024 * 1000 * 10;
         private AutoResetEvent _startSign = new AutoResetEvent(false);
         protected volatile Socket socketClient;
         protected Socket socketServer;
@@ -392,6 +393,10 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
             dataLen -= 4;
             byte[] buffer = new byte[dataLen];
+            if (dataLen <= 0 || dataLen > MAXBUFFERLEN)
+            {
+                throw new SocketApplicationException("数据超过了最大允许的长度");
+            }
 
             if (SocketApplicationEnvironment.TraceSocketDataBag)
             {
