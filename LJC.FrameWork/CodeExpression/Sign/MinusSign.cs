@@ -49,10 +49,10 @@ namespace LJC.FrameWork.CodeExpression
         {
             try
             {
-            if (lVal==null||object.Equals(lVal,string.Empty))
-                return -(double)rVal;
+                if (lVal == null || object.Equals(lVal, string.Empty))
+                    return -rVal.ToDouble();
             
-                return (double)lVal - (double)rVal;
+                return lVal.ToDouble() - rVal.ToDouble();
             }
             catch (Exception ex)
             {

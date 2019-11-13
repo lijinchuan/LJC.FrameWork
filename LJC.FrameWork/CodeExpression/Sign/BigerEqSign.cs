@@ -33,7 +33,7 @@ namespace LJC.FrameWork.CodeExpression
 
         protected override object DoSingleOperate(object lVal, object rVal)
         {
-            return (double)lVal>=(double)rVal;
+            return lVal.ToDouble() >= rVal.ToDouble();
         }
 
     }

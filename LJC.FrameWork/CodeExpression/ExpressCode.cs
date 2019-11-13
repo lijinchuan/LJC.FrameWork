@@ -41,6 +41,10 @@ namespace LJC.FrameWork.CodeExpression
 
             for (int i = 0; i < subExpress.Length; i++)
             {
+#if DEBUG
+                string exp = subExpress[i].Trim();
+                ExpressTreesBack.Add(ResolveExpress(exp, i).Pepare());
+#else
                 try
                 {
                     string exp = subExpress[i].Trim();
@@ -55,6 +59,8 @@ namespace LJC.FrameWork.CodeExpression
                 {
                     throw new Exception("第" + (i + 1) + "行：" + e.Message);
                 }
+#endif
+
             }
         }
 
@@ -70,6 +76,9 @@ namespace LJC.FrameWork.CodeExpression
             CalCurrent.Clear();
             for (int i = 0; i < expressTrees.Count; i++)
             {
+#if DEBUG
+                CallResult1(expressTrees[i]);
+#else
                 try
                 {
                     CallResult1(expressTrees[i]);
@@ -83,6 +92,8 @@ namespace LJC.FrameWork.CodeExpression
                 {
                     throw new Exception("第" + (i + 1) + "行：" + e.Message);
                 }
+#endif
+
             }
 
             return null;
@@ -285,7 +296,7 @@ namespace LJC.FrameWork.CodeExpression
             return result;
         }
 
-        #region
+#region
         private BinTree<IExpressPart> ResolveExpress(string express,int line)
         {
             return ResolveExpress2(ResolveCalStep(express,line),line);
@@ -653,7 +664,7 @@ namespace LJC.FrameWork.CodeExpression
             return false;
         }
 
-        #endregion
+#endregion
 
     }
 }

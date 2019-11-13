@@ -37,7 +37,7 @@ namespace LJC.FrameWork.CodeExpression
         {
             try
             {
-                return (double)lVal + (double)rVal;
+                return lVal.ToDouble() + rVal.ToDouble();
             }
             catch (Exception ex)
             {
