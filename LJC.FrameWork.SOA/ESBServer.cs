@@ -60,7 +60,7 @@ namespace LJC.FrameWork.SOA
                         sb.AppendFormat("<td>{0}</td>", gp.Key);
                         sb.Append("<td>");
                         sb.Append("<table>");
-                        sb.Append("<tr><th>ID</th><th>服务器地址</th><th>TCP直连</th><th>UDP直连</th></tr>");
+                        sb.Append("<tr><th>服务名称</th><th>端点名称</th><th>ID</th><th>服务器地址</th><th>TCP直连</th><th>UDP直连</th></tr>");
                         foreach (var item in gp)
                         {
                             if (DateTime.Now.Subtract(item.Session.LastSessionTime).TotalMinutes > 1)
@@ -72,7 +72,8 @@ namespace LJC.FrameWork.SOA
                                 }
                             }
 
-                            sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td></tr>", item.Session.SessionID, item.Session.IPAddress, item.Session.Port,
+                            sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}:{4}</td><td>{5}</td><td>{6}</td></tr>",
+                                item.ServiceName,item.EndPointName,item.Session.SessionID, item.Session.IPAddress, item.Session.Port,
                                 item.RedirectTcpIps == null ? "" : (string.Join(",", item.RedirectTcpIps) + ":" + item.RedirectTcpPort),
                                 item.RedirectUdpIps == null ? "" : (string.Join(",", item.RedirectUdpIps) + ":" + item.RedirectUdpPort));
                         }
@@ -413,6 +414,8 @@ namespace LJC.FrameWork.SOA
                         {
                             ServiceNo = req.ServiceNo,
                             Session = session,
+                            EndPointName=message.GetCustomData("EndPointName")??string.Empty,
+                            ServiceName=message.GetCustomData("ServiceName") ??string.Empty,
                             RedirectTcpIps = req.RedirectTcpIps,
                             RedirectTcpPort = req.RedirectTcpPort,
                             RedirectUdpIps = req.RedirectUdpIps,

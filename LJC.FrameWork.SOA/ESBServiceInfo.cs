@@ -21,6 +21,24 @@ namespace LJC.FrameWork.SOA
         }
 
         /// <summary>
+        /// 端点名称
+        /// </summary>
+        public string EndPointName
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// 服务名称
+        /// </summary>
+        public string ServiceName
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
         /// 会话信息
         /// </summary>
         public Session Session

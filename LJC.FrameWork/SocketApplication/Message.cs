@@ -126,5 +126,21 @@ namespace LJC.FrameWork.SocketApplication
         {
             return MessageHeader.MessageType.Equals(msgType);
         }
+
+        public string GetCustomData(string key)
+        {
+            if (this.MessageHeader.CustomData == null)
+            {
+                return null;
+            }
+
+            if (!this.MessageHeader.CustomData.ContainsKey(key))
+            {
+                return null;
+            }
+
+            return this.MessageHeader.CustomData[key];
+
+        }
     }
 }
