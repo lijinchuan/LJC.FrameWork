@@ -23,9 +23,22 @@ namespace LJC.FrameWork.SOA
             get;
             set;
         }
+
+        private string ServiceName
+        {
+            get;
+            set;
+        }
+
+        private string EndPointName
+        {
+            get;
+            set;
+        }
        
 
-        public ESBService(string serverIP, int serverPort,int sNo,bool supportTcpServiceRedirect=false,bool supportUdpServiceRedirect=false)
+        public ESBService(string serverIP, int serverPort,int sNo,bool supportTcpServiceRedirect=false,bool supportUdpServiceRedirect=false,
+            string serviceName=null,string endPointName=null)
             : base(serverIP, serverPort,false)
         {
             this.ServiceNo = sNo;
@@ -34,9 +47,13 @@ namespace LJC.FrameWork.SOA
 
             this.SupportTcpServiceRidrect = supportTcpServiceRedirect;
             this.SupportUDPServiceRedirect = supportUdpServiceRedirect;
+
+            this.ServiceName = serviceName;
+            this.EndPointName = endPointName;
         }
 
-        public ESBService(int sNo, bool supportTcpServiceRidrect = false, bool supportUdpServiceRedirect = false)
+        public ESBService(int sNo, bool supportTcpServiceRidrect = false, bool supportUdpServiceRedirect = false,
+            string serviceName = null, string endPointName = null)
            : base(ESBConfig.ReadConfig().ESBServer, ESBConfig.ReadConfig().ESBPort,false)
         {
             this.ServiceNo = sNo;
@@ -45,6 +62,9 @@ namespace LJC.FrameWork.SOA
 
             this.SupportTcpServiceRidrect = supportTcpServiceRidrect;
             this.SupportUDPServiceRedirect = supportUdpServiceRedirect;
+
+            this.ServiceName = serviceName;
+            this.EndPointName = endPointName;
         }
 
         void ESBService_OnClientReset()
@@ -188,6 +208,12 @@ namespace LJC.FrameWork.SOA
             {
                 req.RedirectUdpIps = RedirectUpdServiceServer.GetBindIps();
                 req.RedirectUdpPort = RedirectUpdServiceServer.GetBindUdpPort();
+            }
+
+            if (!string.IsNullOrWhiteSpace(this.ServiceName) && !string.IsNullOrWhiteSpace(this.EndPointName))
+            {
+                msg.AddCustomData(nameof(this.ServiceName), this.ServiceName);
+                msg.AddCustomData(nameof(this.EndPointName), this.EndPointName);
             }
 
             msg.SetMessageBody(req);

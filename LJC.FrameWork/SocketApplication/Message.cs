@@ -127,6 +127,25 @@ namespace LJC.FrameWork.SocketApplication
             return MessageHeader.MessageType.Equals(msgType);
         }
 
+        public void AddCustomData(string key,string val)
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(val))
+            {
+                return;
+            }
+
+            if (this.MessageHeader.CustomData == null)
+            {
+                this.MessageHeader.CustomData = new Dictionary<string, string>();
+                this.MessageHeader.CustomData.Add(key, val);
+            }
+            else
+            {
+                this.MessageHeader.CustomData.Remove(key);
+                this.MessageHeader.CustomData.Add(key, val);
+            }
+        }
+
         public string GetCustomData(string key)
         {
             if (this.MessageHeader.CustomData == null)
