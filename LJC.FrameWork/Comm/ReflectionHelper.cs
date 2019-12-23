@@ -290,26 +290,58 @@ namespace LJC.FrameWork.Comm
             setMethed(o, val);
         }
 
-        public static string GetObjectDescription(PropertyInfo prop)
+        public static string GetObjectDescription(PropertyInfoEx prop)
         {
-            var descs = prop.GetCustomAttributes(typeof(PropertyDescriptionAttr), true);
+            if (prop == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(prop.GetDesc()))
+            {
+                return prop.GetDesc();
+            }
+            var descs = prop.PropertyInfo.GetCustomAttributes(typeof(PropertyDescriptionAttribute), true);
             if (descs == null || descs.Length == 0)
                 return string.Empty;
 
             string tname = string.Empty;
             try
             {
-                if (prop.ReflectedType.IsGenericType)
+                if (prop.PropertyInfo.ReflectedType.IsGenericType)
                 {
                     //tname = prop.ReflectedType.GetGenericArguments().First().ReflectedType.Name;
-                    tname = ((Type[])prop.ReflectedType.Eval("GenericTypeArguments")).First().Name;
+                    tname = ((Type[])prop.PropertyInfo.ReflectedType.Eval("GenericTypeArguments")).First().Name;
                 }
-                return (descs[0] as PropertyDescriptionAttr).Desc.Replace("<T>", tname);
+                return (descs[0] as PropertyDescriptionAttribute).Desc.Replace("<T>", tname);
 
             }
             catch
             {
-                return (descs[0] as PropertyDescriptionAttr).Desc.Replace("<T>", "对象");
+                return (descs[0] as PropertyDescriptionAttribute).Desc.Replace("<T>", "对象");
+            }
+        }
+
+        public static string GetObjectDescription(FieldInfo field)
+        {
+            var descs = field.GetCustomAttributes(typeof(PropertyDescriptionAttribute), true);
+            if (descs == null || descs.Length == 0)
+                return string.Empty;
+
+            string tname = string.Empty;
+            try
+            {
+                if (field.ReflectedType.IsGenericType)
+                {
+                    //tname = prop.ReflectedType.GetGenericArguments().First().ReflectedType.Name;
+                    tname = ((Type[])field.ReflectedType.Eval("GenericTypeArguments")).First().Name;
+                }
+                return (descs[0] as PropertyDescriptionAttribute).Desc.Replace("<T>", tname);
+
+            }
+            catch
+            {
+                return (descs[0] as PropertyDescriptionAttribute).Desc.Replace("<T>", "对象");
             }
         }
 
@@ -348,6 +380,23 @@ namespace LJC.FrameWork.Comm
             return prop.Name;
         }
 
+        public static string GetEnumDesc(Type enumtype)
+        {
+            if (!enumtype.IsEnum)
+            {
+                return string.Empty;
+            }
+            StringBuilder sb = new StringBuilder();
+            var tp = Enum.GetUnderlyingType(enumtype);
+            foreach (var item in Enum.GetValues(enumtype))
+            {
+                var val = Convert.ChangeType(item, tp);
+                sb.AppendFormat("{0}({1}):{2}<br>", item.ToString(), val, ReflectionHelper.GetEnumAnnotation(enumtype, item.ToString()) ?? GetObjectDescription(enumtype.GetField(item.ToString())));
+            }
+
+            return sb.ToString();
+        }
+
         public static PropertyInfo GetProperty(Type type, string property)
         {
             var pps = type.GetProperties();
@@ -365,6 +414,97 @@ namespace LJC.FrameWork.Comm
             }
 
             return null;
+        }
+
+        public static DocXml GetAssemblyXml(string modelname)
+        {
+            if (string.IsNullOrWhiteSpace(modelname))
+            {
+                return null;
+            }
+            var key = $"GetAssemblyXml_{modelname}";
+            return LocalCacheManager<DocXml>.Find(key, () =>
+            {
+                string xmlfile = string.Empty;
+                if (modelname.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+                    || modelname.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    xmlfile = $"{AppDomain.CurrentDomain.BaseDirectory}\\{modelname.Substring(0, modelname.IndexOf('.'))}.xml";
+                }
+                else
+                {
+                    xmlfile = $"{AppDomain.CurrentDomain.BaseDirectory}\\{modelname}";
+                }
+
+                var doc = SerializerHelper.DeSerializerFile<DocXml>(xmlfile);
+                if (doc != null)
+                {
+                    return doc;
+                }
+                return null;
+            });
+        }
+
+        public static string GetMethodAnnotation(MethodInfo method)
+        {
+            if (method == null)
+            {
+                return string.Empty;
+            }
+            string _desc = null;
+            var doc = ReflectionHelper.GetAssemblyXml(method.Module.Name);
+            if (doc != null)
+            {
+                var key = $"M:{method.DeclaringType.FullName.Replace('+', '.')}.{method.Name}";
+                if (method.GetParameters().Length > 0)
+                {
+                    key += $"({string.Join(",", method.GetParameters().Select(p => p.ParameterType.FullName.Replace('+', '.')))})";
+                }
+                var m = doc.MemberList.Member.FirstOrDefault(p => p.Name == key);
+                _desc = m?.Summary;
+            }
+
+            _desc = (_desc ?? string.Empty).Trim('\r', '\n', ' ');
+
+            return _desc;
+        }
+
+        public static string GetMethodParamAnnotation(MethodInfo method, string paramname)
+        {
+            if (method == null)
+            {
+                return string.Empty;
+            }
+            string _desc = null;
+            var doc = ReflectionHelper.GetAssemblyXml(method.Module.Name);
+            if (doc != null)
+            {
+                var key = $"M:{method.DeclaringType.FullName.Replace('+', '.')}.{method.Name}";
+                if (method.GetParameters().Length > 0)
+                {
+                    key += $"({string.Join(",", method.GetParameters().Select(p => p.ParameterType.FullName.Replace('+', '.')))})";
+                }
+                var m = doc.MemberList.Member.FirstOrDefault(p => p.Name == key);
+                _desc = m?.Params?.FirstOrDefault(p => paramname.Equals(p.Name, StringComparison.OrdinalIgnoreCase))?.Txt;
+            }
+
+            _desc = (_desc ?? string.Empty).Trim('\r', '\n', ' ');
+
+            return _desc;
+        }
+
+        public static string GetEnumAnnotation(Type enumtype, string @enum)
+        {
+            string _desc = null;
+            var doc = ReflectionHelper.GetAssemblyXml(enumtype.Module.Name);
+            if (doc != null)
+            {
+                var key = $"F:{enumtype.FullName.Replace('+', '.')}.{@enum.ToString()}";
+                var m = doc.MemberList.Member.FirstOrDefault(p => p.Name == key);
+                _desc = m?.Summary?.Trim('\r', '\n', ' ');
+            }
+
+            return _desc;
         }
     }
 }

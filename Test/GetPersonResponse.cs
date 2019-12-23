@@ -7,12 +7,18 @@ namespace Test
 {
     public class GetPersonResponse
     {
+        /// <summary>
+        /// 人类ID
+        /// </summary>
         public int Id
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 人类信息
+        /// </summary>
         public NewPersonInfo Info
         {
             get;

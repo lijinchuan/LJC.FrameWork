@@ -154,6 +154,7 @@
     </Compile>
     <Compile Include="Comm\DayTimePoint.cs" />
     <Compile Include="Comm\DayTimeSpan.cs" />
+    <Compile Include="Comm\DocXml.cs" />
     <Compile Include="Comm\EMail.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -284,6 +285,7 @@
     <Compile Include="EntityBuf2\MemoryStreamReader2.cs" />
     <Compile Include="EntityBuf2\MemoryStreamWriter2.cs" />
     <Compile Include="EntityBuf\EntityBufCore.cs" />
+    <Compile Include="EntityBuf\EntityBufCoreEx.cs" />
     <Compile Include="EntityBuf\EntityBufException.cs" />
     <Compile Include="EntityBuf\EntityBufType.cs" />
     <Compile Include="EntityBuf\EntityBufTypeFlag.cs" />

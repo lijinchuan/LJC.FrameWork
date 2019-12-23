@@ -156,7 +156,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 //case ClientState.Header: data.read += len - data.headerskip; return;
                 default: data.read += len; return;
             }
-            data.req.Content += Encoding.Default.GetString(bytes, ofs, len - ofs);
+            data.req.Content += Encoding.UTF8.GetString(bytes, ofs, len - ofs);
             data.req.BytesRead += len - ofs;
             data.headerskip += len - ofs;
 #if DEBUG
@@ -275,7 +275,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
         void SendResponse(ClientInfo ci, HttpRequest req, HttpResponse resp, bool close)
         {
-            var en = Encoding.Default;
+            var en = Encoding.UTF8;
 #if DEBUG
             Console.WriteLine("Response: " + resp.ReturnCode + Responses[resp.ReturnCode]);
 #endif

@@ -7,6 +7,9 @@ namespace Test
 {
     public class NewPersonInfo
     {
+        /// <summary>
+        /// 姓名
+        /// </summary>
         public String Name
         {
             get;
@@ -25,18 +28,24 @@ namespace Test
             set;
         }
 
+        /// <summary>
+        /// 朋友列表
+        /// </summary>
         public String[] Friends
         {
             get;
             set;
         }
 
-        public Dictionary<String, NewPersonInfo> FriendsInfo
+        public Dictionary<String, string> FriendsInfo
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 学校信息
+        /// </summary>
         public List<String> Schools
         {
             get;

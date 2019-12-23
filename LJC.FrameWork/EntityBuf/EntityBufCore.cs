@@ -102,6 +102,7 @@ namespace LJC.FrameWork.EntityBuf
                     break;
                 case "Dictionary`2":
                     ebtype.EntityType = EntityType.DICTIONARY;
+                    ebtype.GenerTypes = GetDirctionaryKeyValueType(ebtype.ValueType);
                     break;
                 case "List`1":
                     ebtype.EntityType = EntityType.LIST;
@@ -639,7 +640,7 @@ namespace LJC.FrameWork.EntityBuf
         }
 
         private static int listTypeIndex = typeof(List<int>).AssemblyQualifiedName.IndexOf("[[");
-        private static Type GetListValueType(Type listType)
+        protected static Type GetListValueType(Type listType)
         {
             Type ret = null;
             //System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089

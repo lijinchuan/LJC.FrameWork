@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29503.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork", "LJC.FrameWork\LJC.FrameWork.csproj", "{77C9B3F8-7EC5-4AB4-AD65-3B0CC9E1A914}"
 EndProject
@@ -24,6 +24,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.Data.Mongo", "LJC.FrameWork.Data.MongoDBHelper\LJC.FrameWork.Data.Mongo.csproj", "{56868031-8D7B-4E47-9EDF-05192D3E1C46}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestHttpServer", "TestHttpServer\TestHttpServer.csproj", "{7CEA372D-5686-4E4C-92FA-8D06C0AB6A21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.HttpApi", "LJC.FrameWork.HttpApi\LJC.FrameWork.HttpApi.csproj", "{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -145,6 +147,18 @@ Global
 		{7CEA372D-5686-4E4C-92FA-8D06C0AB6A21}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{7CEA372D-5686-4E4C-92FA-8D06C0AB6A21}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{7CEA372D-5686-4E4C-92FA-8D06C0AB6A21}.Release|x86.ActiveCfg = Release|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Debug|x86.Build.0 = Debug|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Release|x86.ActiveCfg = Release|Any CPU
+		{3B780C09-AE27-4D06-9EF7-EE07E7498D8D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

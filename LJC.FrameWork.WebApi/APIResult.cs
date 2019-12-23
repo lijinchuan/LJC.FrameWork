@@ -25,7 +25,7 @@ namespace LJC.FrameWork.WebApi
 
         [ProtoMember(1)]
         [JsonProperty(PropertyName = "re")]
-        [PropertyDescriptionAttr("接口返回的结果json实体，<T>类型")]
+        [PropertyDescription("接口返回的结果json实体，<T>类型")]
         public T ResponseBody
         {
             get;
@@ -35,7 +35,7 @@ namespace LJC.FrameWork.WebApi
         private int _resultCode = 1;
         [ProtoMember(2)]
         [JsonProperty(PropertyName = "rc")]
-        [PropertyDescriptionAttr("接口返回的状态，0-失败，1-成功")]
+        [PropertyDescription("接口返回的状态，0-失败，1-成功")]
         public int ResultCode
         {
             get
@@ -50,7 +50,7 @@ namespace LJC.FrameWork.WebApi
 
         [ProtoMember(3)]
         [JsonProperty(PropertyName = "me")]
-        [PropertyDescriptionAttr("接口返回的文字信息，如果是失败的，返回失败的信息描述")]
+        [PropertyDescription("接口返回的文字信息，如果是失败的，返回失败的信息描述")]
         public string ResultMessage
         {
             get;

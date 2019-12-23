@@ -84,7 +84,7 @@ namespace LJC.FrameWork.WebApi
                             tp.Item1.Property == null ? string.Empty : ReflectionHelper.GetJsonPropertyName(tp.Item1.Property.PropertyInfo),
                             tp.Item1.ValueType.Name,
                             insb.ToString(),
-                            tp.Item1.Property == null ? string.Empty : ReflectionHelper.GetObjectDescription(tp.Item1.Property.PropertyInfo));
+                            tp.Item1.Property == null ? string.Empty : ReflectionHelper.GetObjectDescription(tp.Item1.Property));
                     }
                     else
                     {
@@ -125,7 +125,7 @@ namespace LJC.FrameWork.WebApi
                     string jsonpropname = bufType.Property != null ? ReflectionHelper.GetJsonPropertyName(bufType.Property.PropertyInfo) : string.Empty;
                     if (!string.IsNullOrWhiteSpace(jsonpropname))
                     {
-                        sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>", ReflectionHelper.GetJsonPropertyName(bufType.Property.PropertyInfo), bufType.EntityType.ToString().ToLower() + (isArray ? "[]" : ""), ReflectionHelper.GetObjectDescription(bufType.Property.PropertyInfo));
+                        sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>", ReflectionHelper.GetJsonPropertyName(bufType.Property.PropertyInfo), bufType.EntityType.ToString().ToLower() + (isArray ? "[]" : ""), ReflectionHelper.GetObjectDescription(bufType.Property));
                     }
                     else
                     {
@@ -160,7 +160,7 @@ namespace LJC.FrameWork.WebApi
                     else
                     {
                         var listvaluetype = GetListValueType(bufType.ValueType);
-                        sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>", bufType.Property == null ? string.Empty : ReflectionHelper.GetJsonPropertyName(bufType.Property.PropertyInfo), string.Format("List&lt;{0}&gt;", listvaluetype.Name), bufType.Property == null ? string.Empty : ReflectionHelper.GetObjectDescription(bufType.Property.PropertyInfo));
+                        sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>", bufType.Property == null ? string.Empty : ReflectionHelper.GetJsonPropertyName(bufType.Property.PropertyInfo), string.Format("List&lt;{0}&gt;", listvaluetype.Name), bufType.Property == null ? string.Empty : ReflectionHelper.GetObjectDescription(bufType.Property));
 
                         bool isarray = false;
                         if (MapBufType(listvaluetype, out isarray).EntityType == LJC.FrameWork.EntityBuf.EntityType.COMPLEX)

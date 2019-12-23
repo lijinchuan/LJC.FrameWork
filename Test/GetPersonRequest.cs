@@ -7,6 +7,9 @@ namespace Test
 {
     public class GetPersonRequest
     {
+        /// <summary>
+        /// personid
+        /// </summary>
         public int Id
         {
             get;

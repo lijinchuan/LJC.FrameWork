@@ -64,5 +64,28 @@ namespace LJC.FrameWork
                 IsSetGetValueMethed = true;
             }
         }
+
+        private string _desc = null;
+        public string GetDesc()
+        {
+            if (_desc != null)
+            {
+                return _desc;
+            }
+
+
+            var doc = ReflectionHelper.GetAssemblyXml(_propertyInfo.Module.Name);
+            if (doc != null)
+            {
+                var key = $"P:{_propertyInfo.DeclaringType.FullName.Replace('+', '.')}.{_propertyInfo.Name}";
+
+                var m = doc.MemberList.Member.FirstOrDefault(p => p.Name == key);
+                _desc = m?.Summary;
+            }
+
+            _desc = (_desc ?? string.Empty).Trim('\r', '\n', ' ');
+
+            return _desc;
+        }
     }
 }
