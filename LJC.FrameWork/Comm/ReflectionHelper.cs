@@ -429,7 +429,7 @@ namespace LJC.FrameWork.Comm
                 if (modelname.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
                     || modelname.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 {
-                    xmlfile = $"{AppDomain.CurrentDomain.BaseDirectory}\\{modelname.Substring(0, modelname.IndexOf('.'))}.xml";
+                    xmlfile = $"{AppDomain.CurrentDomain.BaseDirectory}\\{modelname.Substring(0, modelname.LastIndexOf('.'))}.xml";
                 }
                 else
                 {
