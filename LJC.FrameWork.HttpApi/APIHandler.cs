@@ -93,7 +93,7 @@ namespace LJC.FrameWork.HttpApi
                     }
                 default:
                     {
-                        string str = (data is byte[]) ? Encoding.Default.GetString((byte[])data) : (string)data;
+                        string str = (data is byte[]) ? Encoding.UTF8.GetString((byte[])data) : (string)data;
                         return JsonConvert.DeserializeObject(str, _requestType);
                     }
             }
@@ -128,7 +128,7 @@ namespace LJC.FrameWork.HttpApi
                                 new Newtonsoft.Json.JsonSerializer().Serialize(writer, result);
                                 //var str = JsonConvert.SerializeObject(result);
                                 var str = sw.ToString();
-                                return Encoding.Default.GetBytes(str);
+                                return Encoding.UTF8.GetBytes(str);
                             }
                         }
                     }
