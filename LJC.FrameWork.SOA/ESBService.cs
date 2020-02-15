@@ -69,6 +69,7 @@ namespace LJC.FrameWork.SOA
 
         void ESBService_OnClientReset()
         {
+            int trytime = 0, maxtrytimes = 10;
             while (true)
             {
                 try
@@ -87,7 +88,11 @@ namespace LJC.FrameWork.SOA
                 {
                     LogHelper.Instance.Error("连接重置后注册服务失败", ex);
                 }
-                Thread.Sleep(3000);
+                if (trytime++ >= maxtrytimes)
+                {
+                    break;
+                }
+                Thread.Sleep(100 * trytime);
             }
         }
 
