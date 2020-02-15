@@ -48,7 +48,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         /// <summary>
         /// 是否正在启动客户端
         /// </summary>
-        private bool _isStartingClient = false;
+        private volatile bool _isStartingClient = false;
 
         public event Action OnClientReset;
 
@@ -189,28 +189,32 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
         public void CloseClient()
         {
-            try
+
+            if (socketClient != null && socketClient.Connected)
             {
-                if (socketClient != null&&socketClient.Connected)
+                try
                 {
                     socketClient.Shutdown(SocketShutdown.Both);
-                    socketClient.Close();
                 }
-                isStartClient = false;
-            }
-            catch (Exception ex)
-            {
+                catch
+                {
 
+                }
+                socketClient.Close();
             }
+            isStartClient = false;
         }
 
         public bool StartClient()
         {
-            if (_isStartingClient)
+            lock (this)
             {
-                return false;
+                if (_isStartingClient)
+                {
+                    return false;
+                }
+                _isStartingClient = true;
             }
-            _isStartingClient = true;
 
             try
             {
@@ -445,6 +449,23 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                     var buffer = ReceivingNext(socketClient);
                     ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessMessage), buffer);
                 }
+                catch(SocketApplicationException e)
+                {
+                    if (!_isStartingClient)
+                    {
+                        try
+                        {
+                            socketClient.Shutdown(SocketShutdown.Both);
+                        }
+                        catch
+                        {
+
+                        }
+                        socketClient.Close();
+                        OnError(e);
+                    }
+                    Thread.Sleep(1000);
+                }
                 catch (SocketException e)
                 {
                     OnError(e);
@@ -562,9 +583,12 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             }
             else
             {
-                e.Data.Add("errorResume", errorResume);
-                e.Data.Add("socketClient.Connected", socketClient.Connected);
-                e.Data.Add("checksocket", "不需要发起重连");
+                if (!e.Data.Contains("errorResume"))
+                {
+                    e.Data.Add("errorResume", errorResume);
+                    e.Data.Add("socketClient.Connected", socketClient.Connected);
+                    e.Data.Add("checksocket", "不需要发起重连");
+                }
             }
 
             if (Error != null)

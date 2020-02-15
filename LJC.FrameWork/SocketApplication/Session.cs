@@ -131,10 +131,11 @@ namespace LJC.FrameWork.SocketApplication
             return ((int)DateTime.Now.Subtract(LastSessionTime).TotalMilliseconds) > SessionTimeOut * 2;
         }
 
-        public void Close()
+        public bool Close(string closeReason)
         {
             if (this.Socket != null)
             {
+                LogManager.LogHelper.Instance.Info($"{this.SessionID}关闭：{closeReason}");
                 try
                 {
                     this.Socket.Shutdown(SocketShutdown.Both);
@@ -144,8 +145,10 @@ namespace LJC.FrameWork.SocketApplication
 
                 }
                 this.Socket.Close();
+                return true;
             }
             this.IsValid = false;
+            return false;
         }
 
         public virtual bool SendMessage(Message msg)

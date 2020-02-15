@@ -137,7 +137,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 if(DateTime.Now.Subtract(s.LastSessionTime).TotalSeconds>180)
                 {
                     _connectSocketDic.TryRemove(s.SessionID, out remsession);
-                    s.Close();
+                    s.Close("CheckConnectedClient");
                 }
             }
         }
@@ -300,7 +300,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
             e.Completed -= SocketAsyncEventArgs_Completed;
 
             var args = e as IOCPSocketAsyncEventArgs;
-
             if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
             {
                 if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
@@ -460,7 +459,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                                     {
                                         if (connSession != null)
                                         {
-                                            connSession.Close();
+                                            connSession.Close(ex.Message);
                                         }
                                         ex.Data.Add("SessionID", connSession.SessionID);
                                         OnError(ex);
@@ -543,6 +542,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
             if (socketServer != null)
             {
+                try
+                {
+                    socketServer.Shutdown(SocketShutdown.Both);
+                }
+                catch
+                {
+
+                }
                 socketServer.Close();
             }
 

@@ -68,7 +68,7 @@ namespace LJC.FrameWork.SOA
                                 lock (this._esb.ServiceContainer)
                                 {
                                     _esb.ServiceContainer.Remove(item);
-                                    item.Session.Close();
+                                    item.Session.Close("on resp over 1 mins");
                                 }
                             }
 
@@ -319,7 +319,7 @@ namespace LJC.FrameWork.SOA
                             lock (LockObj)
                             {
                                 ServiceContainer.Remove(serviceInfo);
-                                serviceInfo.Session.Close();
+                                serviceInfo.Session.Close("no resp over 30s");
                             }
                             serviceInfo = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo)).LastOrDefault();
                             if(serviceInfo==null)
@@ -403,31 +403,33 @@ namespace LJC.FrameWork.SOA
 
                     lock (LockObj)
                     {
-                        var remlist=ServiceContainer.Where(p => p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo)).ToList();
-                        foreach(var item in remlist)
+                        var remlist = ServiceContainer.Where(p => p.Session.SessionID != session.SessionID && p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo)).ToList();
+                        foreach (var item in remlist)
                         {
-                            item.Session.Close();
+                            item.Session.Close($"remove same service instance,new sessionid:{session.SessionID}");
                             ServiceContainer.Remove(item);
                         }
 
-                        ServiceContainer.Add(new ESBServiceInfo
+                        if (!ServiceContainer.Any(p => p.Session.SessionID == session.SessionID && p.ServiceNo == req.ServiceNo))
                         {
-                            ServiceNo = req.ServiceNo,
-                            Session = session,
-                            EndPointName=message.GetCustomData("EndPointName")??string.Empty,
-                            ServiceName=message.GetCustomData("ServiceName") ??string.Empty,
-                            RedirectTcpIps = req.RedirectTcpIps,
-                            RedirectTcpPort = req.RedirectTcpPort,
-                            RedirectUdpIps = req.RedirectUdpIps,
-                            RedirectUdpPort = req.RedirectUdpPort
-                        });
+                            ServiceContainer.Add(new ESBServiceInfo
+                            {
+                                ServiceNo = req.ServiceNo,
+                                Session = session,
+                                EndPointName = message.GetCustomData("EndPointName") ?? string.Empty,
+                                ServiceName = message.GetCustomData("ServiceName") ?? string.Empty,
+                                RedirectTcpIps = req.RedirectTcpIps,
+                                RedirectTcpPort = req.RedirectTcpPort,
+                                RedirectUdpIps = req.RedirectUdpIps,
+                                RedirectUdpPort = req.RedirectUdpPort
+                            });
+                        }
                     }
 
                     msg.SetMessageBody(new RegisterServiceResponse
                     {
                         IsSuccess = true
                     });
-
                 }
                 catch (Exception ex)
                 {

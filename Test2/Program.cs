@@ -10,6 +10,7 @@ using LJC.FrameWork.SocketApplication;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -547,6 +548,31 @@ namespace Test2
         static LJC.FrameWork.SocketEasy.Client.SessionClient sc = null;
         static void Main(string[] args)
         {
+
+            try
+            {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3
+                                           | SecurityProtocolType.Tls
+                                           | (SecurityProtocolType)0x300 //Tls11
+                                           | (SecurityProtocolType)0xC00; //Tls12
+
+                var resp = new LJC.FrameWork.Comm.HttpRequestEx().DoFormRequest("https://identityserver.onesmart.org/connect/token", new Dictionary<string, string>{
+                {"grant_type","client_credentials" },
+                { "scope","KSPAPI" },
+                { "client_id","kapapp" },
+                { "client_secret","ksp@1Smart.org" }
+            });
+
+                Console.WriteLine(resp.ResponseContent);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            Console.Read();
+            return;
+
             var head = new ListNode(3);
             head.next = new ListNode(5);
             var ret=ReverseBetween(head, 1, 1);

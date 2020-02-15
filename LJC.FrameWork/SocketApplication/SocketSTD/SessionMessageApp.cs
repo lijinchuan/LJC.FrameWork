@@ -252,9 +252,8 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
                 SendMessage(msg);
             }
-            catch (Exception exp)
+            catch
             {
-                OnError(exp);
             }
         }
 
@@ -350,7 +349,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
             if (!canLogin)
             {
-                session.Close();
+                session.Close("login fail");
                 Console.WriteLine("{0}登录失败", request.LoginID);
             }
 
