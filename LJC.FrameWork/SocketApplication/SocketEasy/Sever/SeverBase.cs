@@ -196,8 +196,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 }
             }
 
-            socket.Close();
-            SocketApplicationComm.Debug(string.Format("服务器关闭套接字：{0}", appSocket.SessionID));
+            appSocket.Close("OnSocket error");
         }
 
         protected virtual void FormApp(Message message, Session session)

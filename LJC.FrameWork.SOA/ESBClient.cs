@@ -400,15 +400,18 @@ namespace LJC.FrameWork.SOA
 
             foreach(var item in _esbUdpClientDic)
             {
-                foreach(var c in item.Value)
+                if (item.Value != null)
                 {
-                    try
+                    foreach (var c in item.Value)
                     {
-                        c.Dispose();
-                    }
-                    catch
-                    {
+                        try
+                        {
+                            c.Dispose();
+                        }
+                        catch
+                        {
 
+                        }
                     }
                 }
             }

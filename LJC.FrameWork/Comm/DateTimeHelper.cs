@@ -49,7 +49,7 @@ namespace LJC.FrameWork.Comm
 
         public static DateTime FromTimeStamp(long timestamp)
         {
-            return new DateTime(1970, 1, 1, 0, 0, 0).AddMilliseconds(timestamp);
+            return new DateTime(1970, 1, 1, 0, 0, 0).AddMilliseconds(timestamp).ToLocalTime();
         }
 
         public static DateTime ParseDateTime(string yyyymmdd, string hhmmss)

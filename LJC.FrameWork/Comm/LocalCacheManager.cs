@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LJC.FrameWork.LogManager;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -104,8 +105,8 @@ namespace LJC.FrameWork.Comm
                 }
                 catch (Exception ex)
                 {
-                    throw ex;
-                    //LogHelper.Instance.Error("更新缓存" + x.Key + "出错", ex);
+                    //throw ex;
+                    LogHelper.Instance.Error("更新缓存" + x.Key + "出错", ex);
                 }
             }
         }

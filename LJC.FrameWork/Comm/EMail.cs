@@ -9,11 +9,27 @@ using LJC.FrameWork.Net.POP3.Client;
 using LJC.FrameWork.Net.Mail;
 using LJC.FrameWork.Net.SMTP;
 using LJC.FrameWork.Net.SMTP.Client;
+using System.Diagnostics;
 
 namespace LJC.FrameWork.Comm.SMTPMail
 {
     public class EMail
     {
+        static EventLog eventlogger;
+
+        static EMail()
+        {
+            var sourcename = "LJC.FrameWork.Comm.SMTPMail";
+            if (!EventLog.SourceExists(sourcename))
+            {
+                EventLog.CreateEventSource(sourcename, "Application");
+            }
+            eventlogger = new EventLog("Application")
+            {
+                Source= sourcename
+            };
+        }
+
         public string MailAccount
         {
             get;
@@ -169,7 +185,7 @@ namespace LJC.FrameWork.Comm.SMTPMail
             }
             catch(Exception e)
             {
-                LJC.FrameWork.LogManager.Logger.TextLog("发送邮件失败", e, FrameWork.LogManager.LogCategory.Other);
+                eventlogger.WriteEntry("发送邮件失败:" + e.ToString(), EventLogEntryType.Error);
                 return false;
             }
         }
@@ -208,7 +224,7 @@ namespace LJC.FrameWork.Comm.SMTPMail
             }
             catch (Exception e)
             {
-                LJC.FrameWork.LogManager.Logger.TextLog("发送邮件失败", e, FrameWork.LogManager.LogCategory.Other);
+                eventlogger.WriteEntry("发送邮件失败:" + e.ToString(), EventLogEntryType.Error);
                 return false;
             }
         }
@@ -245,7 +261,7 @@ namespace LJC.FrameWork.Comm.SMTPMail
             }
             catch (Exception e)
             {
-                LJC.FrameWork.LogManager.Logger.TextLog("发送邮件失败", e, FrameWork.LogManager.LogCategory.Other);
+                new System.Diagnostics.EventLog().WriteEntry(e.ToString(), System.Diagnostics.EventLogEntryType.Error);
                 return false;
             }
         }

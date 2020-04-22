@@ -234,7 +234,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 if (_connectSocketDic.TryRemove(item.Handle.ToInt64().ToString(), out removesession))
                 {
-                    item.Close();
+                    
+                    if(!removesession.Close("ReadSocketList error"))
+                    {
+                        item.Close();
+                    }
+                    //item.Close();
                 }
             }
         }
