@@ -76,9 +76,9 @@
     <Compile Include="SocketApplication\SocketApplicationCommTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LJC.FrameWork.Couchbase\LJC.FrameWork.Couchbase.csproj">
+    <ProjectReference Include="..\LJC.FrameWork.Couchbase\LJC.FrameWork.MemCached.csproj">
       <Project>{5A3D8DF8-AD9C-43D2-B5F7-D4D457EC4FDE}</Project>
-      <Name>LJC.FrameWork.Couchbase</Name>
+      <Name>LJC.FrameWork.MemCached</Name>
     </ProjectReference>
     <ProjectReference Include="..\LJC.FrameWork.Redis\LJC.FrameWork.Redis.csproj">
       <Project>{2B856845-66A6-4F1B-9853-200A494741A2}</Project>

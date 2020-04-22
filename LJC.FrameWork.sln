@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.RedisTests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.WebApi", "LJC.FrameWork.WebApi\LJC.FrameWork.WebApi.csproj", "{DA4B0252-1207-4D12-8C3D-EA07A5285B58}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.Couchbase", "LJC.FrameWork.Couchbase\LJC.FrameWork.Couchbase.csproj", "{5A3D8DF8-AD9C-43D2-B5F7-D4D457EC4FDE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.MemCached", "LJC.FrameWork.Couchbase\LJC.FrameWork.MemCached.csproj", "{5A3D8DF8-AD9C-43D2-B5F7-D4D457EC4FDE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LJC.FrameWork.Data.Mongo", "LJC.FrameWork.Data.MongoDBHelper\LJC.FrameWork.Data.Mongo.csproj", "{56868031-8D7B-4E47-9EDF-05192D3E1C46}"
 EndProject

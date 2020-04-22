@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace LJC.FrameWork.Couchbase
+namespace LJC.FrameWork.MemCached
 {
     public enum StoreMode
     {

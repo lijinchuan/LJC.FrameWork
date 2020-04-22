@@ -8,9 +8,9 @@ using System.Text;
 using Enyim.Caching.Memcached.Results.Extensions;
 using Couchbase.Configuration;
 
-namespace LJC.FrameWork.Couchbase
+namespace LJC.FrameWork.MemCached
 {
-    public class PreCouchBaseClient : CouchbaseClient
+    public class PreCouchBaseClient :Couchbase.CouchbaseClient
     {
         enum OperationState
         {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using CB = Couchbase;
 
-namespace LJC.FrameWork.Couchbase
+namespace LJC.FrameWork.MemCached
 {
     public static class CouchbaseHelper2
     {

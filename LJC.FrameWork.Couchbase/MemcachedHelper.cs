@@ -4,11 +4,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using CB = Couchbase;
 
 namespace LJC.FrameWork.MemCached
 {
-    public static class CouchbaseHelper
+    public static class MemcachedHelper
     {
         static ConcurrentDictionary<string, IMemcachedClient> ClientDic = new ConcurrentDictionary<string, IMemcachedClient>();
 
@@ -22,16 +21,16 @@ namespace LJC.FrameWork.MemCached
                     throw new ArgumentNullException("clientname");
                 }
 
-                client = new CB.CouchbaseClient(sectionname);
+                client = new Enyim.Caching.MemcachedClient(sectionname);
                 ClientDic.TryAdd(sectionname, client);
             }
             return client;
         }
 
-        public static IMemcachedClient GetClient(string serverip, string bucket)
+        public static IMemcachedClient GetClient(string serverip,string bucket)
         {
             IMemcachedClient client = null;
-            string key = serverip + bucket;
+            string key = serverip;
             if (!ClientDic.TryGetValue(key, out client))
             {
                 if (string.IsNullOrWhiteSpace(key))
@@ -39,22 +38,18 @@ namespace LJC.FrameWork.MemCached
                     throw new ArgumentNullException("serverip&bucket");
                 }
 
-                CB.Configuration.CouchbaseClientConfiguration config = new CB.Configuration.CouchbaseClientConfiguration();
-                if (!string.IsNullOrWhiteSpace(bucket))
-                {
-                    config.Bucket = bucket;
-                }
+                var config = new Enyim.Caching.Configuration.MemcachedClientConfiguration();
                 config.SocketPool.MaxPoolSize = 10;
                 config.SocketPool.MinPoolSize = 5;
-                config.Urls.Add(new Uri(string.Format("http://{0}:8091/pools", serverip)));
-                client = new CB.CouchbaseClient(config);
+                config.AddServer(serverip);
+                client = new Enyim.Caching.MemcachedClient(config);
 
                 ClientDic.TryAdd(key, client);
             }
             return client;
         }
 
-        public static IMemcachedClient GetClient(string serverip,int port, string bucket)
+        public static IMemcachedClient GetClient(string serverip, int port, string bucket)
         {
             IMemcachedClient client = null;
             string key = serverip + bucket;
@@ -65,16 +60,14 @@ namespace LJC.FrameWork.MemCached
                     throw new ArgumentNullException("serverip&bucket");
                 }
 
-                CB.Configuration.CouchbaseClientConfiguration config = new CB.Configuration.CouchbaseClientConfiguration();
-                if (!string.IsNullOrWhiteSpace(bucket))
-                {
-                    config.Bucket = bucket;
-                }
+                var config = new Enyim.Caching.Configuration.MemcachedClientConfiguration();
+
                 config.SocketPool.MaxPoolSize = 10;
                 config.SocketPool.MinPoolSize = 5;
-                config.Urls.Add(new Uri(string.Format("http://{0}:{1}/pools", serverip,port)));
-                client = new CB.CouchbaseClient(config);
-                
+                config.AddServer(serverip, port);
+
+                client = new Enyim.Caching.MemcachedClient(config);
+
                 ClientDic.TryAdd(key, client);
             }
 
@@ -96,12 +89,12 @@ namespace LJC.FrameWork.MemCached
             return client.Store((Enyim.Caching.Memcached.StoreMode)storemode, key, value, validFor);
         }
 
-        public static T Get<T>(this IMemcachedClient client,string key)
+        public static T Get<T>(this IMemcachedClient client, string key)
         {
             return client.Get<T>(key);
         }
 
-        public static bool Remove(this IMemcachedClient client,string key)
+        public static bool Remove(this IMemcachedClient client, string key)
         {
             return client.Remove(key);
         }
