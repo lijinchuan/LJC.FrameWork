@@ -55,6 +55,7 @@
     <Compile Include="PreCouchBaseClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StoreMode.cs" />
+    <Compile Include="ExportMemcachClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">

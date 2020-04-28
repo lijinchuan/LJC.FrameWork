@@ -6,7 +6,7 @@ using System.Text;
 
 namespace LJC.FrameWork.MemCached
 {
-    public class MemcachedClient:ICachClient
+    public sealed class MemcachedClient:ICachClient
     {
         private IMemcachedClient _client;
 
