@@ -75,5 +75,43 @@ namespace LJC.FrameWork.Comm
 
             throw new Exception(string.Format("无法把{0}转换成时间格式！", dateTimeString));
         }
+
+        /// <summary>
+        /// 取当周的第一天，周一为第一天
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <returns></returns>
+        public static DateTime GetWeekFirstDate(DateTime dateTime)
+        {
+            var dayofweek = (int)dateTime.DayOfWeek;
+            if (dayofweek == 0)
+                return dateTime.Date.AddDays(dayofweek - 6);
+            return dateTime.Date.AddDays(-dayofweek + 1);
+        }
+
+        /// <summary>
+        /// 获取周的最后一天，周日
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <returns></returns>
+        public static DateTime GetWeekLastDate(DateTime dateTime)
+        {
+            var dayofweek = (int)dateTime.DayOfWeek;
+            if (dayofweek == 0)
+                return dateTime.Date;
+            return dateTime.Date.AddDays(7 - dayofweek);
+        }
+
+        /// <summary>
+        /// 获取本日期是周几 1-7 代表周一到周日
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <returns></returns>
+        public static int GetDayOfWeek(this DateTime dateTime)
+        {
+            int day = (int)dateTime.DayOfWeek;
+            if (day == 0) return 7;
+            return day;
+        }
     }
 }
