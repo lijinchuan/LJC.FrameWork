@@ -156,21 +156,30 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 //case ClientState.Header: data.read += len - data.headerskip; return;
                 default: data.read += len; return;
             }
-            data.req.Content += Encoding.UTF8.GetString(bytes, ofs, len - ofs);
-            data.req.BytesRead += len - ofs;
-            data.headerskip += len - ofs;
-#if DEBUG
-            Console.WriteLine("Reading " + (len - ofs) + " bytes of content. Got " + data.req.BytesRead + " of " + data.req.ContentLength);
-#endif
-            if (data.req.BytesRead >= data.req.ContentLength)
+            try
             {
-                if (data.req.Method == "POST")
+                data.req.Content += Encoding.UTF8.GetString(bytes, ofs, len - ofs);
+                data.req.BytesRead += len - ofs;
+                data.headerskip += len - ofs;
+#if DEBUG
+                Console.WriteLine("Reading " + (len - ofs) + " bytes of content. Got " + data.req.BytesRead + " of " + data.req.ContentLength);
+#endif
+                if (data.req.BytesRead >= data.req.ContentLength)
                 {
-                    if (data.req.QueryString == "") data.req.QueryString = data.req.Content;
-                    else data.req.QueryString += "&" + data.req.Content;
+                    if (data.req.Method == "POST")
+                    {
+                        if (data.req.QueryString == "") data.req.QueryString = data.req.Content;
+                        else data.req.QueryString += "&" + data.req.Content;
+                    }
+                    ParseQuery(data.req);
+                    DoProcess(ci);
                 }
-                ParseQuery(data.req);
-                DoProcess(ci);
+            }
+            catch (Exception ex)
+            {
+                HttpResponse resp = new HttpResponse();
+                new ServerErrorHandler(ex).Process(this, data.req, resp);
+                SendResponse(ci, data.req, resp, true);
             }
         }
 
@@ -204,6 +213,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
         {
             HttpResponse resp = new HttpResponse();
             resp.Url = req.Url;
+            resp.ContentType = "Content-Type: text/html; charset=utf-8";
             //注意，此处从最后添加的Handler开始遍历，如果找到合适的则退出循环
             for (int i = handlers.Count - 1; i >= 0; i--)
             {
@@ -346,6 +356,44 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 foreach (KeyValuePair<string, string> ide in req.Query) sb.Append(" " + ide.Key + ": " + ide.Value + "<br>");
                 sb.Append("<h3>Content</h3>");
                 sb.Append(req.Content);
+                resp.Content = sb.ToString();
+                return true;
+            }
+        }
+
+        class ServerErrorHandler : IHttpHandler
+        {
+            private Exception ex
+            {
+                get;
+                set;
+            }
+
+            public ServerErrorHandler(Exception e)
+            {
+                this.ex = e;
+            }
+
+            public bool Process(HttpServer server, HttpRequest req, HttpResponse resp)
+            {
+                server.RequestSession(req);
+                resp.Url = req.Url;
+                resp.ReturnCode = (int)HttpStatusCode.InternalServerError;
+                resp.ContentType = "Content-Type: text/html; charset=utf-8";
+                StringBuilder sb = new StringBuilder();
+                sb.Append("<h3>Session</h3>");
+                sb.Append("<p>ID: " + req.Session.ID + "<br>User: " + req.Session.User);
+                sb.Append("<h3>Header</h3>");
+                sb.Append("Method: " + req.Method + "; URL: '" + req.Url + "'; HTTP version " + req.HttpVersion + "<p>");
+                foreach (KeyValuePair<string, string> ide in req.Header) sb.Append(" " + ide.Key + ": " + ide.Value + "<br>");
+                sb.Append("<h3>Cookies</h3>");
+                foreach (KeyValuePair<string, string> ide in req.Cookies) sb.Append(" " + ide.Key + ": " + ide.Value + "<br>");
+                sb.Append("<h3>Query</h3>");
+                foreach (KeyValuePair<string, string> ide in req.Query) sb.Append(" " + ide.Key + ": " + ide.Value + "<br>");
+                sb.Append("<h3>Content</h3>");
+                sb.Append(req.Content);
+                sb.Append("<h3>Error:</h3>");
+                sb.Append(ex.ToString());
                 resp.Content = sb.ToString();
                 return true;
             }
