@@ -185,6 +185,19 @@ namespace LJC.FrameWork.Comm
         }
 
         /// <summary>
+        /// 手动过期
+        /// </summary>
+        /// <param name="key"></param>
+        public static void Expire(string key)
+        {
+            lock (_cacheLock)
+            {
+                _lockDiction.Remove(key);
+                _cacheDiction.Remove(key);
+            }
+        }
+
+        /// <summary>
         /// 从缓存里面刷新数据，但不检查过期，会把刷新方法加入到后台定时检查更新缓存数据
         /// </summary>
         /// <param name="key">缓存Key</param>
