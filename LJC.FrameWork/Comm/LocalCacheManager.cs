@@ -173,6 +173,7 @@ namespace LJC.FrameWork.Comm
 
                     if (!object.Equals(val.Item, default(T)))
                     {
+                        val.CachMinis = cachedMins;
                         lock (_cacheLock)
                         {
                             _cacheDiction.Remove(key);
