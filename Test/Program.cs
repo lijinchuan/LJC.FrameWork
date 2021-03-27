@@ -179,8 +179,25 @@ namespace Test
             Console.Read();
         }
 
+        private static void TestCach()
+        {
+            var key = "sss";
+            LocalCacheManager<string[]>.Find(key, () => new []{ "a", "b" });
+            Console.WriteLine(string.Join(",", LocalCacheManager<string[]>.Find(key, () => new string[0])));
+            LocalCacheManager<string[]>.Expire(key);
+            Console.WriteLine(string.Join(",", LocalCacheManager<string[]>.Find(key, () => new string[0])));
+            LocalCacheManager<string[]>.Expire(key);
+            Console.WriteLine(string.Join(",", LocalCacheManager<string[]>.Find(key, () => new string[] { "1", "2", "1200" })));
+            LocalCacheManager<string[]>.Expire(key);
+            Console.WriteLine(string.Join(",", LocalCacheManager<string[]>.Find(key, () => new string[0])));
+        }
+
         static void Main(string[] args)
         {
+            TestCach();
+            Console.Read();
+            return;
+
             LJC.FrameWork.HttpApi.APIFactory.Init("Test");
             Console.Read();
             LJC.FrameWork.Comm.HttpRequestEx httpreq = new HttpRequestEx();

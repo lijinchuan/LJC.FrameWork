@@ -173,6 +173,7 @@ namespace LJC.FrameWork.Comm
 
                     if (!object.Equals(val.Item, default(T)))
                     {
+                        val.CachMinis = cachedMins;
                         lock (_cacheLock)
                         {
                             _cacheDiction.Remove(key);
@@ -182,6 +183,19 @@ namespace LJC.FrameWork.Comm
                 }
             }
             return val.Item;
+        }
+
+        /// <summary>
+        /// 手动过期
+        /// </summary>
+        /// <param name="key"></param>
+        public static void Expire(string key)
+        {
+            lock (_cacheLock)
+            {
+                _lockDiction.Remove(key);
+                _cacheDiction.Remove(key);
+            }
         }
 
         /// <summary>
