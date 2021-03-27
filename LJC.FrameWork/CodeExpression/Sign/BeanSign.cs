@@ -41,6 +41,7 @@ namespace LJC.FrameWork.CodeExpression
 
         protected override CalResult SingOperate()
         {
+
             List<object> li = new List<object>();
             if (LeftSigelVal is object[])
             {
@@ -67,6 +68,7 @@ namespace LJC.FrameWork.CodeExpression
                 li.Add(RightVal);
             }
 
+            //Console.WriteLine("执行时长:"+this.ExeTicks+",执行次数:"+this.ExeTimes);
             return new CalResult
             {
                 Result = li.ToArray(),

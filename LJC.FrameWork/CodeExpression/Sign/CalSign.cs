@@ -168,47 +168,55 @@ namespace LJC.FrameWork.CodeExpression
         public virtual CalResult Operate()
         {
             ExeTimes++;
-            if (this.OnBeginOperator != null)
+            var now = DateTime.Now;
+            try
             {
-                OnBeginOperator();
-            }
-            if (Params > 0 && !(this is FunSign) && RightVal == null)
-            {
-                throw new ExpressErrorException(this.SignName + "缺少右值！");
-            }
-
-            if (Params > 1 && LeftVal == null)
-            {
-                throw new ExpressErrorException(this.SignName + "缺少左值！");
-            }
-
-            if ((this is FunSign))
-            {
-                FunSign fs = (FunSign)this;
-
-                if (fs.HasArrayParam())
+                if (this.OnBeginOperator != null)
                 {
-                    return CollectOperate();
+                    OnBeginOperator();
                 }
+                if (Params > 0 && !(this is FunSign) && RightVal == null)
+                {
+                    throw new ExpressErrorException(this.SignName + "缺少右值！");
+                }
+
+                if (Params > 1 && LeftVal == null)
+                {
+                    throw new ExpressErrorException(this.SignName + "缺少左值！");
+                }
+
+                if ((this is FunSign))
+                {
+                    FunSign fs = (FunSign)this;
+
+                    if (fs.HasArrayParam())
+                    {
+                        return CollectOperate();
+                    }
+                }
+
+                //CommFun.Assert(Check());
+
+                if ((LeftVal == null || LeftVal.Results == null)
+                    && (RightVal == null || RightVal.Results == null))
+                {
+                    return SingOperate();
+                }
+
+                if (LeftVal != null && LeftVal.Results != null
+                    && RightVal != null && RightVal.Results != null
+                    && LeftVal.Results.Length != RightVal.Results.Length
+                    )
+                {
+                    throw new ExpressErrorException("无法操作，左右集合维数不相同。");
+                }
+
+                return CollectOperate();
             }
-
-            //CommFun.Assert(Check());
-
-            if ((LeftVal == null || LeftVal.Results == null)
-                && (RightVal == null || RightVal.Results == null))
+            finally
             {
-                return SingOperate();
+                ExeTicks += (DateTime.Now.Subtract(now).TotalMilliseconds);
             }
-
-            if (LeftVal != null && LeftVal.Results != null
-                && RightVal != null && RightVal.Results != null
-                && LeftVal.Results.Length != RightVal.Results.Length
-                )
-            {
-                throw new ExpressErrorException("无法操作，左右集合维数不相同。");
-            }
-
-            return CollectOperate();
         }
 
 

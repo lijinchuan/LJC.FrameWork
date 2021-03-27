@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -27,40 +28,40 @@ namespace LJC.FrameWork.CodeExpression
         /// </summary>
         static string ProtectWord = "|fun|";
 
-        private static CalSign CreateCalSign(string signExp, CalCurrent pool)
+        private static Func<CalCurrent,CalSign> CreateCalSign(string signExp)
         {
             if (string.Equals(signExp, "and", StringComparison.OrdinalIgnoreCase))
-                return new AndSign();
+                return new Func<CalCurrent, CalSign>(p => new AndSign());
             else if (string.Equals(signExp, "not", StringComparison.OrdinalIgnoreCase))
-                return new NotSign();
+                return new Func<CalCurrent, CalSign>(p => new NotSign());
             else if (string.Equals(signExp, "or", StringComparison.OrdinalIgnoreCase))
-                return new OrSign();
+                return new Func<CalCurrent, CalSign>(p => new OrSign());
             else if (string.Equals(signExp, ":", StringComparison.OrdinalIgnoreCase))
-                return new SetValueSign(pool);
+                return new Func<CalCurrent, CalSign>(p => new SetValueSign(p));
             else if (string.Equals(signExp, ":=", StringComparison.OrdinalIgnoreCase))
-                return new OutputValueSign();
+                return new Func<CalCurrent, CalSign>(p => new OutputValueSign());
             else if (string.Equals(signExp, "=", StringComparison.OrdinalIgnoreCase))
-                return new EqSign();
+                return new Func<CalCurrent, CalSign>(p => new EqSign());
             else if (string.Equals(signExp, ">", StringComparison.OrdinalIgnoreCase))
-                return new Bigersign();
+                return new Func<CalCurrent, CalSign>(p => new Bigersign());
             else if (string.Equals(signExp, ">=", StringComparison.OrdinalIgnoreCase))
-                return new BigerEqSign();
+                return new Func<CalCurrent, CalSign>(p => new BigerEqSign());
             else if (string.Equals(signExp, "<", StringComparison.OrdinalIgnoreCase))
-                return new SmallerSign();
+                return new Func<CalCurrent, CalSign>(p => new SmallerSign());
             else if (string.Equals(signExp, "<=", StringComparison.OrdinalIgnoreCase))
-                return new SmallerEqSign();
+                return new Func<CalCurrent, CalSign>(p => new SmallerEqSign());
             else if (string.Equals(signExp, "+", StringComparison.OrdinalIgnoreCase))
-                return new PlusSign();
+                return new Func<CalCurrent, CalSign>(p => new PlusSign());
             else if (string.Equals(signExp, "-", StringComparison.OrdinalIgnoreCase))
-                return new MinusSign();
+                return new Func<CalCurrent, CalSign>(p => new MinusSign());
             else if (string.Equals(signExp, "*", StringComparison.OrdinalIgnoreCase))
-                return new MultiplieSign();
+                return new Func<CalCurrent, CalSign>(p => new MultiplieSign());
             else if (string.Equals(signExp, "/", StringComparison.OrdinalIgnoreCase))
-                return new DividedSign();
+                return new Func<CalCurrent, CalSign>(p => new DividedSign());
             else if (string.Equals(signExp, "mod", StringComparison.OrdinalIgnoreCase))
-                return new ModSign();
+                return new Func<CalCurrent, CalSign>(p => new ModSign());
             else if (string.Equals(signExp, ",", StringComparison.OrdinalIgnoreCase))
-                return new BeanSign();
+                return new Func<CalCurrent, CalSign>(p => new BeanSign());
             else
             {
                 Match mc = Comm.MatchFunctionExpress(signExp);
@@ -69,12 +70,10 @@ namespace LJC.FrameWork.CodeExpression
                 {
                     if (Comm.BrackIsMatched(mc.Groups[2].Value, 0, mc.Groups[2].Length))
                     {
-                        FunSign fs = CreateFunSign(mc.Groups[1].Value, pool);
+                        var fs = CreateFunSign(mc.Groups[1].Value, mc.Groups[2].Value);
                         if (fs == null)
                             throw new ExpressErrorException("不存在的函数" + mc.Groups[1].Value + "！");
-
-                        fs.ParamString = mc.Groups[2].Value;
-
+                        
                         return fs;
                     }
                 }
@@ -82,11 +81,11 @@ namespace LJC.FrameWork.CodeExpression
                 //mc = Comm.MatchValNameExpress(signExp);
                 if (Comm.IsValName(signExp) && !IsProtectWord(signExp))
                 {
-                    FunSign fs = CreateFunSign(signExp, pool);
+                    var fs = CreateFunSign(signExp,null);
                     if (fs != null)
                         return fs;
 
-                    VarSign vs = new VarSign(signExp, pool);
+                    var vs = new Func<CalCurrent, CalSign>(p => new VarSign(signExp,p));
                     return vs;
                 }
 
@@ -95,31 +94,50 @@ namespace LJC.FrameWork.CodeExpression
 
         }
 
-        internal static FunSign CreateFunSign(string funName, CalCurrent pool)
+        internal static Func<CalCurrent,FunSign> CreateFunSign(string funName,string paramString)
         {
             if (string.Equals("t", funName, StringComparison.OrdinalIgnoreCase)
                 || string.Equals("true", funName, StringComparison.OrdinalIgnoreCase))
             {
-                return new T();
+                return new Func<CalCurrent, FunSign>(p => new T());
             }
 
             if (string.Equals("f", funName, StringComparison.OrdinalIgnoreCase)
                 || string.Equals("false", funName, StringComparison.OrdinalIgnoreCase))
             {
-                return new F();
+                return new Func<CalCurrent, FunSign>(p => new F());
             }
 
             Type fs;
             if (RegisterFunSign.TryGetValue(funName.ToLower(), out fs))
             {
-                return (FunSign)Activator.CreateInstance(fs,pool);
+                return new Func<CalCurrent, FunSign>(p =>
+                {
+                    var r = (FunSign)Activator.CreateInstance(fs, p);
+                    r.ParamString = paramString;
+                    return r;
+                });
             }
             return null;
         }
 
+        private static int count = 0;
+        private static ConcurrentDictionary<string, Func<CalCurrent, CalSign>> singdic = new ConcurrentDictionary<string, Func<CalCurrent, CalSign>>();
         internal static bool TryCreateSign(string sign, CalCurrent pool, out CalSign calSign)
         {
-            calSign = CreateCalSign(sign, pool);
+            Console.WriteLine((++count) + ":" + sign + ":" + singdic.Count);
+            calSign = null;
+            Func<CalCurrent, CalSign> f = null;
+            if(!singdic.TryGetValue(sign,out f))
+            {
+                f = CreateCalSign(sign);
+                singdic.TryAdd(sign, f);
+            }
+            
+            if (f != null)
+            {
+                calSign = f(pool);
+            }
 
             return calSign != null;
         }
