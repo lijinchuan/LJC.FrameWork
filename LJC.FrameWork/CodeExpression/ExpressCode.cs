@@ -112,71 +112,27 @@ namespace LJC.FrameWork.CodeExpression
         /// <returns></returns>
         private CalResult CallResult1(BinTree<IExpressPart> expressBinTree)
         {
-            CalResult result = null;
+            CalResult result = new CalResult();
 
-            bool flag1 = false, flag2 = false;
-
-            foreach (var node in expressBinTree.BackForeach())
+            if (expressBinTree.TreeNode is SetValueSign)
             {
-                //if (node is CustomFun) //也可能是变量
-                if(node is ICollectionResultFun)
+                var partResult = CallResult(expressBinTree.RightTree);
+                result.ResultType = partResult.ResultType;
+                if (partResult.Results != null)
                 {
-                    flag1 = true;
+                    result.Results = partResult.Results;
                 }
-                else if (node is VarSign)
+                else
                 {
-                    if (!CalCurrent.VarDataPool.ContainsKey((node as VarSign).SignName))
-                        continue;
-                    var varvar = CalCurrent.VarDataPool[(node as VarSign).SignName];
-                    if (varvar.Results != null)
-                    {
-                        flag1 = true;
-                    }
-                }
-                else if (node is ConditionSign)
-                {
-                    flag2 = true;
+                    result.Result = partResult.Result;
                 }
 
-                if (flag1 && flag2)
-                    break;
-            }
-
-            if (flag1 && flag2)
-            {
-                if (CalCurrent.CurrentBound <= 0)
-                    throw new Exception("未知的数组边界");
-                result = new CalResult();
-
-                //需要处理
-                result.Results = new object[CalCurrent.CurrentBound];
-                for (int i = CalCurrent.CurrentBound - 1; i >= 0; i--)
-                {
-                    this.CalCurrent.CurrentIndex = i;
-
-                    if (expressBinTree.TreeNode is SetValueSign)
-                    {
-                        var partResult = CallResult(expressBinTree.RightTree);
-                        result.Results[i] = partResult.Result;
-                        result.ResultType = partResult.ResultType;
-                    }
-                    else
-                    {
-                        CallResult(expressBinTree);
-                    }
-                }
-
-                if (expressBinTree.TreeNode is SetValueSign)
-                {
-                    var key = (expressBinTree.LeftTree.TreeNode as VarSign).VarName;
-                    this.CalCurrent.VarDataPool.Add(key, result);
-                }
-
-                this.CalCurrent.CurrentIndex = -1;
+                var key = (expressBinTree.LeftTree.TreeNode as VarSign).VarName;
+                this.CalCurrent.VarDataPool.Add(key, result);
             }
             else
             {
-                result = CallResult(expressBinTree);
+                CallResult(expressBinTree);
             }
 
             return result;
@@ -243,7 +199,46 @@ namespace LJC.FrameWork.CodeExpression
                 {
                     if (leftResult.Results != null)
                     {
-                        throw new Exception("条件表达式左值太多");
+                        rightResult = new CalResult();
+                        rightResult.Results = new object[leftResult.Results.Length];
+                        for(var i = 0; i < leftResult.Results.Length; i++)
+                        {
+                            this.CalCurrent.CurrentIndex = i;
+                            var lr = leftResult.Results[i];
+                            if(!(lr is bool))
+                            {
+                                throw new ExpressErrorException("if then的条件表达式条件必须为bool值！");
+                            }
+                            CalResult rr = null;
+                            if (lr.ToBool())
+                            {
+                                if (calBinTree.RightTree.TreeNode is ElseSign)
+                                {
+                                    rr = CallResult(calBinTree.RightTree.LeftTree);
+                                }
+                                else
+                                {
+                                    rr = CallResult(calBinTree.RightTree);
+                                }
+                            }
+                            else
+                            {
+                                if (calBinTree.RightTree.TreeNode is ElseSign)
+                                {
+                                    rr = CallResult(calBinTree.RightTree.RightTree);
+                                }
+                                else
+                                {
+                                    rr = null;
+                                }
+                            }
+                            if (rr != null && rr.Results != null)
+                            {
+                                throw new Exception("条件表达式右值不能是集合");
+                            }
+                            rightResult.Results[i] = rr==null?null:rr.Result;
+                        }
+                        this.CalCurrent.CurrentIndex = -1;
                     }
                     else
                     {
