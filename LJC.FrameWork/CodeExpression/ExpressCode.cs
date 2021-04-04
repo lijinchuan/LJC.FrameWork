@@ -413,11 +413,12 @@ namespace LJC.FrameWork.CodeExpression
 
             int expressLen = express.Length;
             var expressCharArray = express.ToArray();
+            var isinstring = false;
             for (int i = 0; i <= expressLen; i++)
             {
 
                 if (i == expressLen
-                    || (bracket == 0 && i > 0 && !IsCanGroup(expressCharArray[i - 1], expressCharArray[i]))
+                    || (bracket == 0 && i > 0 && !IsCanGroup(expressCharArray[i - 1], expressCharArray[i],ref isinstring))
                     )
                 {
                     string es = express.Substring(pointStart, i - pointStart);
@@ -588,11 +589,13 @@ namespace LJC.FrameWork.CodeExpression
 
                 if (i < expressLen)
                 {
-
-                    if (expressCharArray[i] == '(')
-                        bracket++;
-                    else if (expressCharArray[i] == ')')
-                        bracket--;
+                    if (!isinstring)
+                    {
+                        if (expressCharArray[i] == '(')
+                            bracket++;
+                        else if (expressCharArray[i] == ')')
+                            bracket--;
+                    }
                 }
 
                 if (i == expressLen && bracket > 0)
@@ -611,20 +614,40 @@ namespace LJC.FrameWork.CodeExpression
         }
 
         //要考虑负数的
-        private static bool IsCanGroup(char first, char second)
+        private static bool IsCanGroup(char first, char second,ref bool isinstring)
         {
+            if (first == '\'')
+            {
+                if (!isinstring)
+                {
+                    isinstring = true;
+                }
+                return true;
+            }
+
+            if (second == '\'')
+            {
+                if (first == '\\')
+                {
+                    return true;
+                }
+                isinstring = false;
+                return false;
+            }
+
+
+            if (isinstring)
+            {
+                return true;
+            }
+
             if (second == ' ')
                 return false;
 
             if (second == ';' || second == ',')
                 return false;
 
-            if (first == '\'')
-                return true;
-
-            if (second == '\'')
-                return false;
-
+            
             //string s = (first + second).ToString().Trim();
 
             //if (s.Length == 0)
