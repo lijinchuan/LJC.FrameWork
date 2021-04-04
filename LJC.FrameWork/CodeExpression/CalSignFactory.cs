@@ -101,11 +101,19 @@ namespace LJC.FrameWork.CodeExpression
             {
                 return new Func<CalCurrent, FunSign>(p => new T());
             }
-
-            if (string.Equals("f", funName, StringComparison.OrdinalIgnoreCase)
-                || string.Equals("false", funName, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals("f", funName, StringComparison.OrdinalIgnoreCase)
+               || string.Equals("false", funName, StringComparison.OrdinalIgnoreCase))
             {
                 return new Func<CalCurrent, FunSign>(p => new F());
+            }
+            else if (string.Equals("print", funName, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Func<CalCurrent, FunSign>(p =>
+                {
+                    var pf = new Print();
+                    pf.ParamString = paramString;
+                    return pf;
+                });
             }
 
             Type fs;

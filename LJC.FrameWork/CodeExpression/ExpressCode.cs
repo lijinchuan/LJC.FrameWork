@@ -200,10 +200,21 @@ namespace LJC.FrameWork.CodeExpression
                     if (leftResult.Results != null)
                     {
                         rightResult = new CalResult();
-                        rightResult.Results = new object[leftResult.Results.Length];
-                        for(var i = 0; i < leftResult.Results.Length; i++)
+                        if (rightResult.Results == null)
                         {
-                            this.CalCurrent.CurrentIndex = i;
+                            rightResult.Results = new object[leftResult.Results.Length];
+                        }
+                        var lastCurrentIndex = this.CalCurrent.CurrentIndex;
+                        for (var i = 0; i < leftResult.Results.Length; i++)
+                        {
+                            if (lastCurrentIndex == -1)
+                            {
+                                this.CalCurrent.CurrentIndex = i;
+                            }
+                            else
+                            {
+                                i = lastCurrentIndex;
+                            }
                             var lr = leftResult.Results[i];
                             if(!(lr is bool))
                             {
@@ -237,8 +248,13 @@ namespace LJC.FrameWork.CodeExpression
                                 throw new Exception("条件表达式右值不能是集合");
                             }
                             rightResult.Results[i] = rr==null?null:rr.Result;
+                            if (lastCurrentIndex > -1)
+                            {
+                                break;
+                            }
                         }
-                        this.CalCurrent.CurrentIndex = -1;
+                        if (lastCurrentIndex == -1)
+                            this.CalCurrent.CurrentIndex = lastCurrentIndex;
                     }
                     else
                     {
@@ -375,6 +391,11 @@ namespace LJC.FrameWork.CodeExpression
         {
             if (string.IsNullOrWhiteSpace(express))
                 return null;
+
+            if (express.StartsWith("--"))
+            {
+                return null;
+            }
 
             //express = new Regex(@";;{1,}").Replace(express, ";");
             //这里有问题，比如((5+3)/2)

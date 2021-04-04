@@ -74,6 +74,7 @@
     <Compile Include="CodeExpression\CalSignFactory.cs" />
     <Compile Include="CodeExpression\Comm.cs" />
     <Compile Include="CodeExpression\CustomFun\CustomFun.cs" />
+    <Compile Include="CodeExpression\SystemFunction\Print.cs" />
     <Compile Include="CodeExpression\Exception\ExpressErrorException.cs" />
     <Compile Include="CodeExpression\ExpressCode.cs" />
     <Compile Include="CodeExpression\IIteratorCollectionFun.cs" />
