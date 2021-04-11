@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LJC.FrameWork.CodeExpression.SystemFunction;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -113,6 +114,15 @@ namespace LJC.FrameWork.CodeExpression
                     var pf = new Print();
                     pf.ParamString = paramString;
                     return pf;
+                });
+            } else if (string.Equals("dat", funName, StringComparison.OrdinalIgnoreCase)
+                 || string.Equals("date", funName, StringComparison.OrdinalIgnoreCase))
+             {
+                return new Func<CalCurrent, FunSign>(p =>
+                {
+                    var dat = new Dat();
+                    dat.ParamString = paramString;
+                    return dat;
                 });
             }
 

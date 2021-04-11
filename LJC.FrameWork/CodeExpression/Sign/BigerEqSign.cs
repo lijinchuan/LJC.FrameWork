@@ -33,7 +33,8 @@ namespace LJC.FrameWork.CodeExpression
 
         protected override object DoSingleOperate(object lVal, object rVal)
         {
-            return lVal.ToDouble() >= rVal.ToDouble();
+            //return lVal.ToDouble() >= rVal.ToDouble();
+            return CompareHelper.BigerEq(lVal, rVal);
         }
 
     }

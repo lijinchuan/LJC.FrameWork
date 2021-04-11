@@ -549,28 +549,8 @@ namespace Test2
         static void Main(string[] args)
         {
 
-            try
-            {
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3
-                                           | SecurityProtocolType.Tls
-                                           | (SecurityProtocolType)0x300 //Tls11
-                                           | (SecurityProtocolType)0xC00; //Tls12
-
-                var resp = new LJC.FrameWork.Comm.HttpRequestEx().DoFormRequest("https://identityserver.onesmart.org/connect/token", new Dictionary<string, string>{
-                {"grant_type","client_credentials" },
-                { "scope","KSPAPI" },
-                { "client_id","kapapp" },
-                { "client_secret","ksp@1Smart.org" }
-            });
-
-                Console.WriteLine(resp.ResponseContent);
-
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
-            Console.Read();
+            //var dt = Convert.ToDateTime("2021-04-10");
+            var r = "abc".CompareTo("aaa");
             return;
 
             var head = new ListNode(3);

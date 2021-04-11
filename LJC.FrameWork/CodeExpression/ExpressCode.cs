@@ -73,7 +73,6 @@ namespace LJC.FrameWork.CodeExpression
 
             this.expressTrees = this.ExpressTreesBack.Select(p => p).ToList();
 
-            CalCurrent.Clear();
             for (int i = 0; i < expressTrees.Count; i++)
             {
 #if DEBUG
@@ -429,7 +428,7 @@ namespace LJC.FrameWork.CodeExpression
                     //{
                     //    throw new ExpressErrorException(es + "是保留字！");
                     //}
-                    if (i < expressLen && es[0] == '\'' && expressCharArray[i] == '\'' &&ifcount==0)
+                    if (i < expressLen && es[0] == '\'' && expressCharArray[i] == '\'' && ifcount == 0)
                     {
                         i++;
                         StringSign cexp = new StringSign(es.Trim('\''), ++modelID);
@@ -438,7 +437,7 @@ namespace LJC.FrameWork.CodeExpression
                         cexp.CodeLine = line;
                         arry.Add(cexp);
                     }
-                    else if (es[0] == '\'' && expressCharArray[i] != '\''&&ifcount==0)
+                    else if (es[0] == '\'' && expressCharArray[i] != '\'' && ifcount == 0)
                     {
                         throw new ExpressErrorException("字符串分析错误");
                     }
@@ -547,6 +546,18 @@ namespace LJC.FrameWork.CodeExpression
                                 arry.Add(cexp);
                             }
                         }
+                    }
+                    else if (es.Equals("while", StringComparison.OrdinalIgnoreCase))
+                    {
+
+                    }
+                    else if (es.Equals("do", StringComparison.OrdinalIgnoreCase))
+                    {
+
+                    }
+                    else if (es.Equals("endwhile", StringComparison.OrdinalIgnoreCase))
+                    {
+
                     }
                     else if (!string.IsNullOrWhiteSpace(es) && es != ";" && ifcount == 0)
                     {

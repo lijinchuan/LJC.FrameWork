@@ -35,7 +35,7 @@ namespace LJC.FrameWork.CodeExpression
         protected override object DoSingleOperate(object lVal, object rVal)
         {
             //return lVal.ToDecimal() == rVal.ToDecimal();
-            return object.Equals(lVal, rVal);
+            return CompareHelper.Eq(lVal, rVal);
         }
     }
 }

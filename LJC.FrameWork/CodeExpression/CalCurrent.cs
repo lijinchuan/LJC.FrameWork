@@ -46,6 +46,26 @@ namespace LJC.FrameWork.CodeExpression
             }
         }
 
+        /// <summary>
+        /// 注入变量
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="calResult"></param>
+        public void InjectVar(string key,CalResult calResult)
+        {
+            VarDataPool.Add(key, calResult);
+        }
+
+        public CalResult GetVar(string key)
+        {
+            if (VarDataPool.ContainsKey(key))
+            {
+                return VarDataPool[key];
+            }
+
+            return null;
+        }
+
         public void Clear()
         {
             _varDataPool.Clear();
