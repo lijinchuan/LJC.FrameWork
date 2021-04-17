@@ -125,6 +125,24 @@ namespace LJC.FrameWork.CodeExpression
                     return dat;
                 });
             }
+            else if (string.Equals("arrayof", funName, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Func<CalCurrent, FunSign>(p =>
+                {
+                    var dat = new ArrayOf();
+                    dat.ParamString = paramString;
+                    return dat;
+                });
+            }
+            else if (string.Equals("len", funName, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Func<CalCurrent, FunSign>(p =>
+                {
+                    var dat = new Len();
+                    dat.ParamString = paramString;
+                    return dat;
+                });
+            }
 
             Type fs;
             if (RegisterFunSign.TryGetValue(funName.ToLower(), out fs))
