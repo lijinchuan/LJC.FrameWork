@@ -9,7 +9,7 @@ namespace LJC.FrameWork.CodeExpression
     {
         setValue = 1,
         bean,
-
+        forloop,
         condition,
 
         select,//eles

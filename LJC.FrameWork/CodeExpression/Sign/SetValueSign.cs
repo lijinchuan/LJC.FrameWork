@@ -14,7 +14,7 @@ namespace LJC.FrameWork.CodeExpression
         {
             get
             {
-                return (int)SignPriorityEnum.setValue; ;
+                return (int)SignPriorityEnum.setValue;
             }
         }
 

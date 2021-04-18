@@ -115,9 +115,10 @@ namespace LJC.FrameWork.CodeExpression
                     pf.ParamString = paramString;
                     return pf;
                 });
-            } else if (string.Equals("dat", funName, StringComparison.OrdinalIgnoreCase)
-                 || string.Equals("date", funName, StringComparison.OrdinalIgnoreCase))
-             {
+            }
+            else if (string.Equals("dat", funName, StringComparison.OrdinalIgnoreCase)
+               || string.Equals("date", funName, StringComparison.OrdinalIgnoreCase))
+            {
                 return new Func<CalCurrent, FunSign>(p =>
                 {
                     var dat = new Dat();

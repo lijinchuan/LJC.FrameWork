@@ -181,7 +181,7 @@ namespace LJC.FrameWork.CodeExpression
 
             CalResult leftResult = null;
             CalResult rightResult = null;
-
+            
             if (calBinTree.LeftTree != null)
             {
                 //如果左边是赋值的则不调取值方法
@@ -403,6 +403,7 @@ namespace LJC.FrameWork.CodeExpression
             List<IExpressPart> arry = new List<IExpressPart>();
 
             int ifcount = 0;
+            int forcount = 0;
             int bracket = 0;
             int pointStart = 0;
             int elsePosit = 0;
@@ -494,57 +495,66 @@ namespace LJC.FrameWork.CodeExpression
                     //else if (es.ToLower() == "end")
                     else if (es.Equals("end", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (ifcount == 1 && thenPosit == 0)
-                            throw new ExpressErrorException("if 表达式错误，缺少then！", line, i, i + 3, ep);
-
-                        ifcount--;
-
-                        if (ifcount == 0)
+                        if (ifcount > 0)
                         {
+                            if (ifcount == 1 && thenPosit == 0)
+                                throw new ExpressErrorException("if 表达式错误，缺少then！", line, i, i + 3, ep);
 
+                            ifcount--;
 
-                            if (elsePosit > 0)
+                            if (ifcount == 0)
                             {
-                                modelID += 2;
-                                ElseSign elseSign = new ElseSign();
-                                elseSign.StartIndex = elsePosit;
-                                elseSign.EndIndex = elsePosit + 4;
-                                elseSign.ModeID = modelID;
-                                elseSign.CodeLine = line;
-                                arry.Add(elseSign);
+                                if (elsePosit > 0)
+                                {
+                                    modelID += 2;
+                                    ElseSign elseSign = new ElseSign();
+                                    elseSign.StartIndex = elsePosit;
+                                    elseSign.EndIndex = elsePosit + 4;
+                                    elseSign.ModeID = modelID;
+                                    elseSign.CodeLine = line;
+                                    arry.Add(elseSign);
 
-                                //左边为真条件
-                                if (elsePosit - thenPosit - 6 <= 0)
-                                    throw new ExpressErrorException("if else 表达式中缺少条件为真的表达式！", line, thenPosit - 1, thenPosit, ep);
+                                    //左边为真条件
+                                    if (elsePosit - thenPosit - 6 <= 0)
+                                        throw new ExpressErrorException("if else 表达式中缺少条件为真的表达式！", line, thenPosit - 1, thenPosit, ep);
 
-                                CalExpress cexp0 = new CalExpress(express.Substring(thenPosit + 5, elsePosit - thenPosit - 6).Trim().TrimBrackets(), modelID - 1);
-                                cexp0.StartIndex = thenPosit + 5;
-                                cexp0.EndIndex = elsePosit - thenPosit - 6;
-                                cexp0.CodeLine = line;
-                                arry.Add(cexp0);
+                                    CalExpress cexp0 = new CalExpress(express.Substring(thenPosit + 5, elsePosit - thenPosit - 6).Trim().TrimBrackets(), modelID - 1);
+                                    cexp0.StartIndex = thenPosit + 5;
+                                    cexp0.EndIndex = elsePosit - thenPosit - 6;
+                                    cexp0.CodeLine = line;
+                                    arry.Add(cexp0);
 
-                                if (i - elsePosit - 9 <= 0)
-                                    throw new ExpressErrorException("if else 表达式中缺少条件为假的表达式！", line, elsePosit + 4, elsePosit + 5, ep);
+                                    if (i - elsePosit - 9 <= 0)
+                                        throw new ExpressErrorException("if else 表达式中缺少条件为假的表达式！", line, elsePosit + 4, elsePosit + 5, ep);
 
-                                //右边为假条件
-                                CalExpress cexp = new CalExpress(express.Substring(elsePosit + 5, i - elsePosit - 9).Trim().TrimBrackets(), ++modelID);
-                                cexp.StartIndex = elsePosit + 5;
-                                cexp.EndIndex = i - 4;
-                                cexp.CodeLine = line;
-                                arry.Add(cexp);
+                                    //右边为假条件
+                                    CalExpress cexp = new CalExpress(express.Substring(elsePosit + 5, i - elsePosit - 9).Trim().TrimBrackets(), ++modelID);
+                                    cexp.StartIndex = elsePosit + 5;
+                                    cexp.EndIndex = i - 4;
+                                    cexp.CodeLine = line;
+                                    arry.Add(cexp);
+                                }
+                                else
+                                {
+                                    //加上右边的操作
+                                    if (i - thenPosit - 9 <= 0)
+                                        throw new ExpressErrorException("if表达式中缺少条件表达式！", line, thenPosit + 4, thenPosit + 5, ep);
+
+                                    //右边条件
+                                    CalExpress cexp = new CalExpress(express.Substring(thenPosit + 5, i - thenPosit - 9).TrimBrackets(), ++modelID);
+                                    cexp.StartIndex = thenPosit + 5;
+                                    cexp.EndIndex = i - 4;
+                                    arry.Add(cexp);
+                                }
                             }
-                            else
-                            {
-                                //加上右边的操作
-                                if (i - thenPosit - 9 <= 0)
-                                    throw new ExpressErrorException("if表达式中缺少条件表达式！", line, thenPosit + 4, thenPosit + 5, ep);
-
-                                //右边条件
-                                CalExpress cexp = new CalExpress(express.Substring(thenPosit + 5, i - thenPosit - 9).TrimBrackets(), ++modelID);
-                                cexp.StartIndex = thenPosit + 5;
-                                cexp.EndIndex = i - 4;
-                                arry.Add(cexp);
-                            }
+                        }
+                        else if (forcount > 0)
+                        {
+                            forcount--;
+                        }
+                        else
+                        {
+                            throw new ExpressErrorException("end 表达式错误，缺少if or for！", line, i, i + 3, ep);
                         }
                     }
                     else if (es.Equals("while", StringComparison.OrdinalIgnoreCase))
@@ -558,6 +568,42 @@ namespace LJC.FrameWork.CodeExpression
                     else if (es.Equals("endwhile", StringComparison.OrdinalIgnoreCase))
                     {
 
+                    }
+                    else if (es.Equals("for", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (forcount == 0)
+                        {
+                            ep = new ForSign();
+                            modelID += 2;
+                            ep.CodeLine = line;
+                            ep.ModeID = modelID;
+                            ep.StartIndex = pointStart;
+                            ep.EndIndex = i;
+                            arry.Add(ep);
+                        }
+
+                        forcount++;
+                    }
+                    else if (es.Equals("step", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (forcount == 0)
+                        {
+                            throw new ExpressErrorException("表达式错误，step缺少for条件！", line, elsePosit, i, ep);
+                        }
+                    }
+                    else if (es.Equals("to", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (forcount == 0)
+                        {
+                            throw new ExpressErrorException("表达式错误，to缺少for条件！", line, elsePosit, i, ep);
+                        }
+                    }
+                    else if (es.Equals("begin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (forcount == 0)
+                        {
+                            throw new ExpressErrorException("表达式错误，begin缺少for条件！", line, elsePosit, i, ep);
+                        }
                     }
                     else if (!string.IsNullOrWhiteSpace(es) && es != ";" && ifcount == 0)
                     {

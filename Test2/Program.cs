@@ -548,9 +548,10 @@ namespace Test2
         static LJC.FrameWork.SocketEasy.Client.SessionClient sc = null;
         static void Main(string[] args)
         {
-
+            var code = "for x:0 step 2 to 10 begin if 1=1 then true else false end end;";
+            LJC.FrameWork.CodeExpression.ExpressCode ec = new LJC.FrameWork.CodeExpression.ExpressCode(code);
             //var dt = Convert.ToDateTime("2021-04-10");
-            var r = "abc".CompareTo("aaa");
+            var rslt = ec.CallResult();
             return;
 
             var head = new ListNode(3);
