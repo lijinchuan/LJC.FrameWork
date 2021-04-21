@@ -401,7 +401,12 @@ namespace LJC.FrameWork.CodeExpression
 
                 if (ss.Length > 1)
                 {
-                    int Priority = ((CalSign)ss.Where(s => s is CalSign).OrderBy((o) => (o as CalSign).Priority).Take(1).First()).Priority;
+                    var first = ss.Where(s => s is CalSign).OrderBy((o) => (o as CalSign).Priority).FirstOrDefault();
+                    if (first == null)
+                    {
+                        throw new Exception("解析表达式树失败");
+                    }
+                    int Priority = ((CalSign)first).Priority;
                     CalSign cs = (CalSign)ss.Where(s => s is CalSign).Where(w => (w as CalSign).Priority == Priority).OrderByDescending(o => o.ModeID).Take(1).FirstOrDefault();
                     if (cs != default(CalSign))
                     {
@@ -565,9 +570,7 @@ namespace LJC.FrameWork.CodeExpression
                             if (ifcount == 1 && thenPosit == 0)
                                 throw new ExpressErrorException("if 表达式错误，缺少then！", line, i, i + 3, ep);
 
-                            ifcount--;
-
-                            if (ifcount == 0)
+                            if (ifcount == 1)
                             {
                                 if (elsePosit > 0)
                                 {
@@ -615,8 +618,7 @@ namespace LJC.FrameWork.CodeExpression
                         }
                         else if (endcount == 0 && forcount > 0)
                         {
-                            forcount--;
-                            if (forcount == 0)
+                            if (forcount == 1)
                             {
                                 if (beginPosit == 0)
                                 {
@@ -661,7 +663,7 @@ namespace LJC.FrameWork.CodeExpression
                                 modelID++;
                                 //CalExpress condition = new CalExpress($"if {tempvarname}<={limitexp} then {beginexp} else {tempvarname}:{tempvarname}+{stepexp} end", modelID++);
                                 var loopright = new CalExpress($"{tempvarname}:={tempvarname}+{stepexp}", modelID);
-                                
+
                                 arry.Clear();
                                 arry.Add(cexpset);
                                 arry.Add(forsign);
@@ -672,6 +674,8 @@ namespace LJC.FrameWork.CodeExpression
                                 arry.Add(loopright);
                             }
                         }
+                        if (word == "if" && ifcount > 0) ifcount--;
+                        if (word == "for" && forcount > 0) forcount--;
                     }
                     else if (es.Equals("while", StringComparison.OrdinalIgnoreCase))
                     {
@@ -696,6 +700,8 @@ namespace LJC.FrameWork.CodeExpression
 
                             forcount++;
                         }
+                        workstack.Push("for");
+                        endcount++;
                     }
                     else if (es.Equals("step", StringComparison.OrdinalIgnoreCase))
                     {
@@ -738,8 +744,7 @@ namespace LJC.FrameWork.CodeExpression
                         {
                             throw new ExpressErrorException("表达式错误，for begin缺少to条件！", line, elsePosit, i, ep);
                         }
-                        workstack.Push("begin");
-                        endcount++;
+
                         beginPosit = i - 5;
                     }
                     else if (!string.IsNullOrWhiteSpace(es) && es != ";" && ifcount == 0)
