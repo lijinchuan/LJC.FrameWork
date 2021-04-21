@@ -47,7 +47,7 @@ namespace LJC.FrameWork.CodeExpression
 
             if (RightVal != null)
             {
-                if (paras == null)
+                //if (paras == null)
                 {
                     if (RightSigelVal is object[])
                         paras = (object[])RightSigelVal;
