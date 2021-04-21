@@ -1,7 +1,9 @@
-﻿using System;
+﻿using LJC.FrameWork.CodeExpression.Sign;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace LJC.FrameWork.CodeExpression
 {
@@ -129,6 +131,19 @@ namespace LJC.FrameWork.CodeExpression
                 var key = (expressBinTree.LeftTree.TreeNode as VarSign).VarName;
                 this.CalCurrent.VarDataPool.Add(key, result);
             }
+            else if (expressBinTree.TreeNode is OutputValueSign)
+            {
+                var partResult = CallResult(expressBinTree.RightTree);
+                result.ResultType = partResult.ResultType;
+                if (partResult.Results != null)
+                {
+                    result.Results = partResult.Results;
+                }
+                else
+                {
+                    result.Result = partResult.Result;
+                }
+            }
             else
             {
                 CallResult(expressBinTree);
@@ -185,7 +200,8 @@ namespace LJC.FrameWork.CodeExpression
             if (calBinTree.LeftTree != null)
             {
                 //如果左边是赋值的则不调取值方法
-                if (calBinTree.TreeNode is SetValueSign)
+                if (calBinTree.TreeNode is SetValueSign
+                    || calBinTree.TreeNode is OutputValueSign)
                     ((VarSign)calBinTree.LeftTree.TreeNode).IsSetValue = true;
 
                 leftResult = CallResult(calBinTree.LeftTree);
@@ -215,7 +231,7 @@ namespace LJC.FrameWork.CodeExpression
                                 i = lastCurrentIndex;
                             }
                             var lr = leftResult.Results[i];
-                            if(!(lr is bool))
+                            if (!(lr is bool))
                             {
                                 throw new ExpressErrorException("if then的条件表达式条件必须为bool值！");
                             }
@@ -246,7 +262,7 @@ namespace LJC.FrameWork.CodeExpression
                             {
                                 throw new Exception("条件表达式右值不能是集合");
                             }
-                            rightResult.Results[i] = rr==null?null:rr.Result;
+                            rightResult.Results[i] = rr == null ? null : rr.Result;
                             if (lastCurrentIndex > -1)
                             {
                                 break;
@@ -289,6 +305,32 @@ namespace LJC.FrameWork.CodeExpression
 
                     }
 
+                }
+                else if (calBinTree.TreeNode is LoopSign)
+                {
+                    var sign = calBinTree.TreeNode as LoopSign;
+                    leftResult = CallResult(calBinTree.LeftTree);
+
+                    while ((bool)leftResult.Result)
+                    {
+                        rightResult = CallResult(calBinTree.RightTree);
+                        leftResult = CallResult(calBinTree.LeftTree);
+                    }
+                }
+                else if (calBinTree.TreeNode is LoopLeftSign)
+                {
+                    var sign = calBinTree.TreeNode as LoopLeftSign;
+                    leftResult = CallResult(calBinTree.LeftTree);
+                    if ((bool)leftResult.Result)
+                    {
+                        rightResult = CallResult(calBinTree.RightTree);
+                    }
+                }
+                else if (calBinTree.TreeNode is ForSign)
+                {
+                    //var forsign = calBinTree.TreeNode as ForSign;
+
+                    rightResult = CallResult(calBinTree.RightTree);
                 }
                 else
                 {
@@ -369,6 +411,7 @@ namespace LJC.FrameWork.CodeExpression
                         expressTree.LeftTree.FatherNode = expressTree;
                         expressTree.RightTree = ResolveExpress2(ss.Where(w => w.ModeID > cs.ModeID).ToArray(), line);
                         expressTree.RightTree.FatherNode = expressTree;
+
                     }
                 }
 
@@ -386,7 +429,7 @@ namespace LJC.FrameWork.CodeExpression
         /// </summary>
         /// <param name="express"></param>
         /// <returns></returns>
-        private IExpressPart[] ResolveCalStep(string express,int line)
+        private IExpressPart[] ResolveCalStep(string express, int line)
         {
             if (string.IsNullOrWhiteSpace(express))
                 return null;
@@ -401,15 +444,25 @@ namespace LJC.FrameWork.CodeExpression
             //express = TrimBrackets(express);
 
             List<IExpressPart> arry = new List<IExpressPart>();
+            Stack<string> workstack = new Stack<string>();
 
-            int ifcount = 0;
-            int forcount = 0;
+
             int bracket = 0;
             int pointStart = 0;
+            int modelID = 0;
+
+            int ifcount = 0;
             int elsePosit = 0;
             int thenPosit = 0;
-            int modelID = 0;
             IExpressPart ep = null;
+
+            int forcount = 0;
+            int forPosit = 0;
+            int stepPosit = 0;
+            int toPosit = 0;
+            int beginPosit = 0;
+
+            int endcount = 0;
 
             int expressLen = express.Length;
             var expressCharArray = express.ToArray();
@@ -418,7 +471,7 @@ namespace LJC.FrameWork.CodeExpression
             {
 
                 if (i == expressLen
-                    || (bracket == 0 && i > 0 && !IsCanGroup(expressCharArray[i - 1], expressCharArray[i],ref isinstring))
+                    || (bracket == 0 && i > 0 && !IsCanGroup(expressCharArray[i - 1], expressCharArray[i], ref isinstring))
                     )
                 {
                     string es = express.Substring(pointStart, i - pointStart);
@@ -444,18 +497,23 @@ namespace LJC.FrameWork.CodeExpression
                     }
                     else if (es.Equals("if", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (ifcount == 0)
+                        if (forcount == 0)
                         {
-                            ep = new ConditionSign();
-                            modelID += 2;
-                            ep.CodeLine = line;
-                            ep.ModeID = modelID;
-                            ep.StartIndex = pointStart;
-                            ep.EndIndex = i;
-                            arry.Add(ep);
-                        }
+                            if (ifcount == 0)
+                            {
+                                ep = new ConditionSign();
+                                modelID += 2;
+                                ep.CodeLine = line;
+                                ep.ModeID = modelID;
+                                ep.StartIndex = pointStart;
+                                ep.EndIndex = i;
+                                arry.Add(ep);
+                            }
 
-                        ifcount++;
+                            ifcount++;
+                        }
+                        workstack.Push("if");
+                        endcount++;
                     }
                     //else if (es.ToLower() == "then")
                     else if (es.Equals("then", StringComparison.OrdinalIgnoreCase))
@@ -477,12 +535,12 @@ namespace LJC.FrameWork.CodeExpression
                     //else if (es.ToLower() == "else")
                     else if (es.Equals("else", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (ifcount == 0)
+                        if (ifcount == 0 && forcount == 0)
                         {
                             throw new ExpressErrorException("表达式错误，else缺少if条件！", line, elsePosit, i, ep);
                         }
 
-                        if (thenPosit == 0)
+                        if (thenPosit == 0 && forcount == 0)
                         {
                             throw new ExpressErrorException("表达式错误，else前要有then！", line, thenPosit, i, ep);
                         }
@@ -495,7 +553,14 @@ namespace LJC.FrameWork.CodeExpression
                     //else if (es.ToLower() == "end")
                     else if (es.Equals("end", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (ifcount > 0)
+                        if (workstack.Count == 0)
+                        {
+                            throw new ExpressErrorException("end匹配失败！", line);
+                        }
+                        endcount--;
+                        var word = workstack.Pop();
+
+                        if (endcount == 0 && ifcount > 0)
                         {
                             if (ifcount == 1 && thenPosit == 0)
                                 throw new ExpressErrorException("if 表达式错误，缺少then！", line, i, i + 3, ep);
@@ -548,13 +613,64 @@ namespace LJC.FrameWork.CodeExpression
                                 }
                             }
                         }
-                        else if (forcount > 0)
+                        else if (endcount == 0 && forcount > 0)
                         {
                             forcount--;
-                        }
-                        else
-                        {
-                            throw new ExpressErrorException("end 表达式错误，缺少if or for！", line, i, i + 3, ep);
+                            if (forcount == 0)
+                            {
+                                if (beginPosit == 0)
+                                {
+                                    throw new ExpressErrorException("for表达式中缺少begin表达式！", line);
+                                }
+
+                                //改写成SET
+                                //提取变量
+                                var forparam = express.Substring(forPosit + 4, (stepPosit == 0 ? toPosit : stepPosit) - 5).Trim().TrimBrackets();
+                                if (forparam.IndexOf(':') == -1)
+                                {
+                                    throw new ExpressErrorException("for表达式开始必须是一个赋值表达式！", line);
+                                }
+                                var tempvarname = forparam.Split(':')[0];
+                                CalExpress cexpset = new CalExpress(forparam, modelID++);
+
+                                var forsign = new ForSign();
+                                forsign.StartIndex = forPosit;
+                                forsign.EndIndex = forPosit + 3;
+                                forsign.CodeLine = line;
+                                forsign.ModeID = modelID++;
+
+                                var limitexp = express.Substring(toPosit + 3, beginPosit - toPosit - 4).Trim().TrimBrackets();
+                                var stepexp = "1";
+                                if (stepPosit > 0)
+                                {
+                                    stepexp = express.Substring(stepPosit + 5, toPosit - stepPosit - 6).Trim().TrimBrackets();
+                                }
+                                var beginexp = express.Substring(beginPosit + 6, i - beginPosit - 10);
+
+                                modelID += 2;
+                                LoopLeftSign loopLeftSign = new LoopLeftSign();
+                                loopLeftSign.ModeID = modelID;
+
+                                var checkexpress = new CalExpress($"{tempvarname}<={limitexp}", loopLeftSign.ModeID - 1);
+                                var doexpress = new CalExpress($"{beginexp}", loopLeftSign.ModeID + 1);
+
+                                LoopSign loopSign = new LoopSign();
+                                modelID += 2;
+                                loopSign.ModeID = modelID;
+
+                                modelID++;
+                                //CalExpress condition = new CalExpress($"if {tempvarname}<={limitexp} then {beginexp} else {tempvarname}:{tempvarname}+{stepexp} end", modelID++);
+                                var loopright = new CalExpress($"{tempvarname}:={tempvarname}+{stepexp}", modelID);
+                                
+                                arry.Clear();
+                                arry.Add(cexpset);
+                                arry.Add(forsign);
+                                arry.Add(loopSign);
+                                arry.Add(loopLeftSign);
+                                arry.Add(checkexpress);
+                                arry.Add(doexpress);
+                                arry.Add(loopright);
+                            }
                         }
                     }
                     else if (es.Equals("while", StringComparison.OrdinalIgnoreCase))
@@ -571,39 +687,60 @@ namespace LJC.FrameWork.CodeExpression
                     }
                     else if (es.Equals("for", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (forcount == 0)
+                        if (ifcount == 0)
                         {
-                            ep = new ForSign();
-                            modelID += 2;
-                            ep.CodeLine = line;
-                            ep.ModeID = modelID;
-                            ep.StartIndex = pointStart;
-                            ep.EndIndex = i;
-                            arry.Add(ep);
-                        }
+                            if (forcount == 0)
+                            {
+                                forPosit = i - 3;
+                            }
 
-                        forcount++;
+                            forcount++;
+                        }
                     }
                     else if (es.Equals("step", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (forcount == 0)
+
+                        if (forcount == 0 && ifcount == 0)
                         {
-                            throw new ExpressErrorException("表达式错误，step缺少for条件！", line, elsePosit, i, ep);
+                            throw new ExpressErrorException("表达式错误，step缺少for条件！", line);
+                        }
+
+                        if (toPosit > 0 && ifcount == 0)
+                        {
+                            throw new ExpressErrorException("表达式错误，step要在to条件之前！", line);
+                        }
+
+                        if (forcount == 1)
+                        {
+                            stepPosit = i - 4;
                         }
                     }
                     else if (es.Equals("to", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (forcount == 0)
+                        if (forcount == 0 && ifcount == 0)
                         {
-                            throw new ExpressErrorException("表达式错误，to缺少for条件！", line, elsePosit, i, ep);
+                            throw new ExpressErrorException("表达式错误，to缺少for条件！", line);
+                        }
+
+                        if (forcount == 1)
+                        {
+                            toPosit = i - 2;
                         }
                     }
                     else if (es.Equals("begin", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (forcount == 0)
+                        if (forcount == 0 && ifcount == 0)
                         {
                             throw new ExpressErrorException("表达式错误，begin缺少for条件！", line, elsePosit, i, ep);
                         }
+
+                        if (toPosit == 0 && ifcount == 0)
+                        {
+                            throw new ExpressErrorException("表达式错误，for begin缺少to条件！", line, elsePosit, i, ep);
+                        }
+                        workstack.Push("begin");
+                        endcount++;
+                        beginPosit = i - 5;
                     }
                     else if (!string.IsNullOrWhiteSpace(es) && es != ";" && ifcount == 0)
                     {
@@ -663,6 +800,11 @@ namespace LJC.FrameWork.CodeExpression
                 if (i == expressLen && ifcount > 0)
                 {
                     throw new ExpressErrorException("if表达式错误！", line, expressLen, expressLen + 1, ep);
+                }
+
+                if (i == expressLen && endcount != 0)
+                {
+                    throw new ExpressErrorException("end表达式错误！", line, expressLen, expressLen + 1, ep);
                 }
 
             }

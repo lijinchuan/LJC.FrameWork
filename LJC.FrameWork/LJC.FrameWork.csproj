@@ -75,7 +75,10 @@
     <Compile Include="CodeExpression\Comm.cs" />
     <Compile Include="CodeExpression\CompareHelper.cs" />
     <Compile Include="CodeExpression\CustomFun\CustomFun.cs" />
+    <Compile Include="CodeExpression\Sign\LoopLeftSign.cs" />
     <Compile Include="CodeExpression\Sign\ForSign.cs" />
+    <Compile Include="CodeExpression\Sign\LoopSign.cs" />
+    <Compile Include="CodeExpression\Sign\ToSign.cs" />
     <Compile Include="CodeExpression\SystemFunction\Dat.cs" />
     <Compile Include="CodeExpression\SystemFunction\ArrayOf.cs" />
     <Compile Include="CodeExpression\SystemFunction\Len.cs" />

@@ -9,11 +9,11 @@ namespace LJC.FrameWork.CodeExpression
     {
         setValue = 1,
         bean,
+        condtionOrFor,
         forloop,
-        condition,
-
+        forleft,
         select,//eles
-
+        outputSetVal,
         andOr,
         not,
         compare,

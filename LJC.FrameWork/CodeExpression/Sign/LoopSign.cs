@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace LJC.FrameWork.CodeExpression
+namespace LJC.FrameWork.CodeExpression.Sign
 {
-    public class ForSign: CalSign
+    public class LoopSign:CalSign
     {
         public override int Priority
         {
             get
             {
-                return (int)SignPriorityEnum.condtionOrFor;
+                return (int)SignPriorityEnum.forloop;
             }
         }
 
@@ -19,7 +19,7 @@ namespace LJC.FrameWork.CodeExpression
         {
             get
             {
-                return "for";
+                return "loop";
             }
         }
 
@@ -28,7 +28,7 @@ namespace LJC.FrameWork.CodeExpression
         {
             get
             {
-                return 0;
+                return 2;
             }
         }
     }

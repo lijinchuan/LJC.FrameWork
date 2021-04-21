@@ -40,7 +40,7 @@ namespace LJC.FrameWork.CodeExpression
             else if (string.Equals(signExp, ":", StringComparison.OrdinalIgnoreCase))
                 return new Func<CalCurrent, CalSign>(p => new SetValueSign(p));
             else if (string.Equals(signExp, ":=", StringComparison.OrdinalIgnoreCase))
-                return new Func<CalCurrent, CalSign>(p => new OutputValueSign());
+                return new Func<CalCurrent, CalSign>(p => new OutputValueSign(p));
             else if (string.Equals(signExp, "=", StringComparison.OrdinalIgnoreCase))
                 return new Func<CalCurrent, CalSign>(p => new EqSign());
             else if (string.Equals(signExp, ">", StringComparison.OrdinalIgnoreCase))

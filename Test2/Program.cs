@@ -548,10 +548,15 @@ namespace Test2
         static LJC.FrameWork.SocketEasy.Client.SessionClient sc = null;
         static void Main(string[] args)
         {
-            var code = "for x:0 step 2 to 10 begin if 1=1 then true else false end end;";
+            var code =@"y:0;
+                for x:0 to 1000000 begin if x>3 then y:=y+10 end end;";
+            /*code = @"x:0;
+            if x<=10 then 3+2 else x:x+1 end";*/
             LJC.FrameWork.CodeExpression.ExpressCode ec = new LJC.FrameWork.CodeExpression.ExpressCode(code);
             //var dt = Convert.ToDateTime("2021-04-10");
+            var ts = DateTime.Now;
             var rslt = ec.CallResult();
+            Console.WriteLine(DateTime.Now.Subtract(ts).TotalMilliseconds);
             return;
 
             var head = new ListNode(3);

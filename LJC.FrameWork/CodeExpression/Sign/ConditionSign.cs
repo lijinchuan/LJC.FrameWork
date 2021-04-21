@@ -11,7 +11,7 @@ namespace LJC.FrameWork.CodeExpression
         {
             get
             {
-                return (int)SignPriorityEnum.condition;
+                return (int)SignPriorityEnum.condtionOrFor;
             }
         }
 
