@@ -81,6 +81,8 @@
     <Compile Include="CodeExpression\Sign\ToSign.cs" />
     <Compile Include="CodeExpression\SystemFunction\Dat.cs" />
     <Compile Include="CodeExpression\SystemFunction\ArrayOf.cs" />
+    <Compile Include="CodeExpression\SystemFunction\DateAdd.cs" />
+    <Compile Include="CodeExpression\SystemFunction\DatTime.cs" />
     <Compile Include="CodeExpression\SystemFunction\Len.cs" />
     <Compile Include="CodeExpression\SystemFunction\Print.cs" />
     <Compile Include="CodeExpression\Exception\ExpressErrorException.cs" />
@@ -120,6 +122,7 @@
     <Compile Include="CodeExpression\Sign\T.cs" />
     <Compile Include="CodeExpression\Sign\VarSign.cs" />
     <Compile Include="CodeExpression\SystemFunction\SysFun.cs" />
+    <Compile Include="CodeExpression\TestClass.cs" />
     <Compile Include="Collections\BubbleSort.cs" />
     <Compile Include="Collections\HeapSort.cs" />
     <Compile Include="Collections\ISortTool.cs" />

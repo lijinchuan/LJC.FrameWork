@@ -111,9 +111,9 @@ namespace LJC.FrameWork.CodeExpression
             {
                 return new Func<CalCurrent, FunSign>(p =>
                 {
-                    var pf = new Print();
-                    pf.ParamString = paramString;
-                    return pf;
+                    var fun = new Print();
+                    fun.ParamString = paramString;
+                    return fun;
                 });
             }
             else if (string.Equals("dat", funName, StringComparison.OrdinalIgnoreCase)
@@ -121,27 +121,46 @@ namespace LJC.FrameWork.CodeExpression
             {
                 return new Func<CalCurrent, FunSign>(p =>
                 {
-                    var dat = new Dat();
-                    dat.ParamString = paramString;
-                    return dat;
+                    var fun = new Dat();
+                    fun.ParamString = paramString;
+                    return fun;
+                });
+            }
+            else if (string.Equals("dattime", funName, StringComparison.OrdinalIgnoreCase)
+              || string.Equals("datetime", funName, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Func<CalCurrent, FunSign>(p =>
+                {
+                    var fun = new DatTime();
+                    fun.ParamString = paramString;
+                    return fun;
                 });
             }
             else if (string.Equals("arrayof", funName, StringComparison.OrdinalIgnoreCase))
             {
                 return new Func<CalCurrent, FunSign>(p =>
                 {
-                    var dat = new ArrayOf();
-                    dat.ParamString = paramString;
-                    return dat;
+                    var fun = new ArrayOf();
+                    fun.ParamString = paramString;
+                    return fun;
                 });
             }
             else if (string.Equals("len", funName, StringComparison.OrdinalIgnoreCase))
             {
                 return new Func<CalCurrent, FunSign>(p =>
                 {
-                    var dat = new Len();
-                    dat.ParamString = paramString;
-                    return dat;
+                    var fun = new Len();
+                    fun.ParamString = paramString;
+                    return fun;
+                });
+            }
+            else if (string.Equals("dateadd", funName, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Func<CalCurrent, FunSign>(p =>
+                {
+                    var fun = new DateAdd();
+                    fun.ParamString = paramString;
+                    return fun;
                 });
             }
 
