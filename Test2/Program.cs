@@ -552,6 +552,7 @@ namespace Test2
             var code = @"FOR x:0 TO len(B0)-1 begin IF Profit<-5 THEN print('sl') ELSE IF arrayof(B0,x) AND NOT arrayof(S0,x) THEN print('buy') ELSE IF NOT arrayof(B0,x) AND arrayof(S0,x) THEN print('sell') END END END end;";
             /*code = @"x:0;
             if x<=10 then 3+2 else x:x+1 end";*/
+            code = @"b:startwith('abc','1ab')";
             LJC.FrameWork.CodeExpression.ExpressCode ec = new LJC.FrameWork.CodeExpression.ExpressCode(code);
             //var dt = Convert.ToDateTime("2021-04-10");
             var ts = DateTime.Now;
