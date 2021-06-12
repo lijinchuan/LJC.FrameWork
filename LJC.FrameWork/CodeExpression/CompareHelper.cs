@@ -19,9 +19,10 @@ namespace LJC.FrameWork.CodeExpression
                 return false;
             }
 
-            if(obj1 is double)
+            if(obj1 is double
+                ||obj1 is int)
             {
-                return (double)obj1 == Convert.ToDouble(obj2);
+                return Convert.ToDouble(obj1) == Convert.ToDouble(obj2);
             }
 
             if(obj1 is DateTime)
@@ -54,9 +55,10 @@ namespace LJC.FrameWork.CodeExpression
                 return true;
             }
 
-            if (obj1 is double)
+            if (obj1 is double
+                || obj1 is int)
             {
-                return (double)obj1 >= Convert.ToDouble(obj2);
+                return Convert.ToDouble(obj1) >= Convert.ToDouble(obj2);
             }
 
             if (obj1 is DateTime)
@@ -89,9 +91,10 @@ namespace LJC.FrameWork.CodeExpression
                 return true;
             }
 
-            if (obj1 is double)
+            if (obj1 is double
+                || obj1 is int)
             {
-                return (double)obj1 > Convert.ToDouble(obj2);
+                return Convert.ToDouble(obj1) > Convert.ToDouble(obj2);
             }
 
             if (obj1 is DateTime)
@@ -124,9 +127,10 @@ namespace LJC.FrameWork.CodeExpression
                 return false;
             }
 
-            if (obj1 is double)
+            if (obj1 is double
+                || obj1 is int)
             {
-                return (double)obj1 <= Convert.ToDouble(obj2);
+                return Convert.ToDouble(obj1) <= Convert.ToDouble(obj2);
             }
 
             if (obj1 is DateTime)
@@ -159,9 +163,10 @@ namespace LJC.FrameWork.CodeExpression
                 return false;
             }
 
-            if (obj1 is double)
+            if (obj1 is double
+                || obj1 is int)
             {
-                return (double)obj1 < Convert.ToDouble(obj2);
+                return Convert.ToDouble(obj1) < Convert.ToDouble(obj2);
             }
 
             if (obj1 is DateTime)
