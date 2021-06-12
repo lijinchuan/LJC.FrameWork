@@ -121,6 +121,7 @@
     <Compile Include="CodeExpression\Sign\StringSign.cs" />
     <Compile Include="CodeExpression\Sign\T.cs" />
     <Compile Include="CodeExpression\Sign\VarSign.cs" />
+    <Compile Include="CodeExpression\SystemFunction\StartWith.cs" />
     <Compile Include="CodeExpression\SystemFunction\SysFun.cs" />
     <Compile Include="CodeExpression\TestClass.cs" />
     <Compile Include="Collections\BubbleSort.cs" />
