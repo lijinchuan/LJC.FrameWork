@@ -28,7 +28,14 @@ namespace LJC.FrameWork.CodeExpression
                 }
                 else
                 {
-                    _value = Comm.Parse(Express);
+                    if (this is StringSign)
+                    {
+                        _value = Express;
+                    }
+                    else
+                    {
+                        _value = Comm.Parse(Express);
+                    }
                     return _value;
                 }
             }

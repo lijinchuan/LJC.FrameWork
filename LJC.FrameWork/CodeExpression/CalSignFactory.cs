@@ -172,6 +172,15 @@ namespace LJC.FrameWork.CodeExpression
                     return fun;
                 });
             }
+            else if (string.Equals("indexof", funName, StringComparison.OrdinalIgnoreCase))
+            {
+                return new Func<CalCurrent, FunSign>(p =>
+                {
+                    var fun = new IndexOf();
+                    fun.ParamString = paramString;
+                    return fun;
+                });
+            }
 
             Type fs;
             if (RegisterFunSign.TryGetValue(funName.ToLower(), out fs))

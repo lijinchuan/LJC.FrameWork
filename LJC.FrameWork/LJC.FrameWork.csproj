@@ -83,6 +83,7 @@
     <Compile Include="CodeExpression\SystemFunction\ArrayOf.cs" />
     <Compile Include="CodeExpression\SystemFunction\DateAdd.cs" />
     <Compile Include="CodeExpression\SystemFunction\DatTime.cs" />
+    <Compile Include="CodeExpression\SystemFunction\IndexOf.cs" />
     <Compile Include="CodeExpression\SystemFunction\Len.cs" />
     <Compile Include="CodeExpression\SystemFunction\Print.cs" />
     <Compile Include="CodeExpression\Exception\ExpressErrorException.cs" />
