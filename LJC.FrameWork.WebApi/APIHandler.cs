@@ -199,7 +199,7 @@ namespace LJC.FrameWork.WebApi
                     }
                 default:
                     {
-                        context.Response.Charset = "utf8";
+                        context.Response.Charset = "utf-8";
                         context.Response.ContentType = "application/json";
                         using (StringWriter sw = new StringWriter())
                         {
