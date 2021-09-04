@@ -81,9 +81,20 @@ namespace LJC.FrameWork.SOA
             return result;
         }
 
-        internal T DoRequest<T>(int funcid,object param)
+        internal T DoRedirectRequest<T>(int messageType, object request)
+        {
+            Message msg = new Message(messageType);
+            msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+            msg.MessageBuffer = EntityBufCore.Serialize(request);
+
+            T result = SendMessageAnsy<T>(msg);
+            return result;
+        }
+
+        internal T DoRedirectRequest<T>(int serviceno, int funcid,object param)
         {
             SOARedirectRequest request = new SOARedirectRequest();
+            request.ServiceNo = serviceno;
             request.FuncId = funcid;
             if (param == null)
             {
@@ -232,18 +243,30 @@ namespace LJC.FrameWork.SOA
                                             client.StartClient();
                                             client.Login(null, null);
                                             int trytimes = 0;
-                                            while (trytimes < 3)
+                                            var maxTryTimes = 10;
+                                            var success = false;
+                                            while (trytimes < maxTryTimes)
                                             {
                                                 System.Threading.Thread.Sleep(10);
                                                 if (client.IsLogin)
                                                 {
-                                                    udppoollist.Add(client);
-                                                    LogHelper.Instance.Debug(string.Format("创建udp客户端成功:{0},端口{1}", ip, info.RedirectUdpPort));
+                                                    var resp = client.DoRedirectRequest<Contract.QueryServiceNoResponse>((int)SOAMessageType.QueryServiceNo, null);
+                                                    if (resp.ServiceNo == serviceId)
+                                                    {
+                                                        success = true;
+                                                        udppoollist.Add(client);
+
+                                                        LogHelper.Instance.Debug(string.Format("创建udp客户端成功:{0},端口{1}", ip, info.RedirectUdpPort));
+                                                    }
+                                                    else
+                                                    {
+
+                                                    }
                                                     break;
                                                 }
                                                 trytimes++;
                                             }
-                                            if (trytimes == 3)
+                                            if (!success)
                                             {
                                                 client.Dispose();
                                                 LogHelper.Instance.Debug(string.Format("创建udp客户端失败:{0},端口{1}", ip, info.RedirectUdpPort));
@@ -280,39 +303,48 @@ namespace LJC.FrameWork.SOA
                                              };
                                             if (client.StartSession())
                                             {
-                                                poollist.Add(new ESBClientPoolManager(5, (idx) =>
+                                                var resp = client.DoRedirectRequest<Contract.QueryServiceNoResponse>((int)SOAMessageType.QueryServiceNo, null);
+                                                if (resp.ServiceNo == serviceId)
                                                 {
-                                                    if (idx == 0)
+                                                    poollist.Add(new ESBClientPoolManager(5, (idx) =>
                                                     {
-                                                        return client;
-                                                    }
-                                                    var newclient= new ESBClient(ip, info.RedirectTcpPort, false);
-                                                    newclient.StartSession();
-                                                    newclient.Error += (ex) =>
-                                                    {
-                                                        if (ex is System.Net.WebException
-                                                        || ex is System.Net.Sockets.SocketException
-                                                        || !newclient.socketClient.Connected)
+                                                        if (idx == 0)
                                                         {
-                                                            try
-                                                            {
-                                                                newclient.CloseClient();
-                                                                newclient.Dispose();
-                                                            }
-                                                            catch
-                                                            {
-
-                                                            }
-                                                            lock (_esbClientDicManager)
-                                                            {
-                                                                _esbClientDicManager.Remove(serviceId);
-                                                            }
+                                                            return client;
                                                         }
-                                                    };
-                                                    return newclient;
-                                                }));
-                                                LogHelper.Instance.Debug(string.Format("创建tcp客户端成功:{0},端口{1}", ip, info.RedirectTcpPort));
-                                                break;
+                                                        var newclient = new ESBClient(ip, info.RedirectTcpPort, false);
+                                                        newclient.StartSession();
+                                                        newclient.Error += (ex) =>
+                                                        {
+                                                            if (ex is System.Net.WebException
+                                                            || ex is System.Net.Sockets.SocketException
+                                                            || !newclient.socketClient.Connected)
+                                                            {
+                                                                try
+                                                                {
+                                                                    newclient.CloseClient();
+                                                                    newclient.Dispose();
+                                                                }
+                                                                catch
+                                                                {
+
+                                                                }
+                                                                lock (_esbClientDicManager)
+                                                                {
+                                                                    _esbClientDicManager.Remove(serviceId);
+                                                                }
+                                                            }
+                                                        };
+                                                        return newclient;
+                                                    }));
+                                                    LogHelper.Instance.Debug(string.Format("创建tcp客户端成功:{0},端口{1}", ip, info.RedirectTcpPort));
+                                                    break;
+                                                }
+                                                else
+                                                {
+                                                    client.CloseClient();
+                                                    client.Dispose();
+                                                }
                                             }
                                         }
                                         catch
@@ -344,7 +376,7 @@ namespace LJC.FrameWork.SOA
 
             if (udpclientlist != null && udpclientlist.Count > 0)
             {
-                return udpclientlist.First().DoRequest<T>(functionId, param);
+                return udpclientlist.First().DoRequest<T>(serviceId,functionId, param);
             }
             else
             {
@@ -357,7 +389,7 @@ namespace LJC.FrameWork.SOA
 
                     var client=poolmanager.RandClient();
                     //LogHelper.Instance.Debug("功能"+serviceId+"直连" + client.ipString + ":" + client.ipPort);
-                    return client.DoRequest<T>(functionId, param);
+                    return client.DoRedirectRequest<T>(serviceId,functionId, param);
                 }
                 else
                 {

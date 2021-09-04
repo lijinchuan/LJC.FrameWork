@@ -8,7 +8,7 @@ namespace Test2
     public class TestESBEervice:LJC.FrameWork.SOA.ESBService
     {
         public TestESBEervice()
-            : base(100, true, false)
+            : base(101, true, false)
         {
         }
 

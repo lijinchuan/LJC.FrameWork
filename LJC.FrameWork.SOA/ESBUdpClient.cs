@@ -17,9 +17,20 @@ namespace LJC.FrameWork.SOA
 
         }
 
-        internal T DoRequest<T>(int funcid, object param)
+        internal T DoRedirectRequest<T>(int messageType, object request)
+        {
+            Message msg = new Message(messageType);
+            msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+            msg.MessageBuffer = EntityBufCore.Serialize(request);
+
+            T result = SendMessageAnsy<T>(msg,timeOut:3000);
+            return result;
+        }
+
+        internal T DoRequest<T>(int serviceno, int funcid, object param)
         {
             SOARedirectRequest request = new SOARedirectRequest();
+            request.ServiceNo = serviceno;
             request.FuncId = funcid;
             if (param == null)
             {

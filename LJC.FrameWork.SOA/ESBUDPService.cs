@@ -4,16 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using LJC.FrameWork.SocketApplication;
+using LJC.FrameWork.SOA.Contract;
 
 namespace LJC.FrameWork.SOA
 {
     public class ESBUDPService: SessionServer
     {
         public Func<int, byte[],string, object> DoResponseAction;
-
-        public ESBUDPService(string[] ips,int port) : base(ips, port)
+        private int _serviceNo;
+        public ESBUDPService(int serviceNo,string[] ips,int port) : base(ips, port)
         {
-
+            _serviceNo = serviceNo;
         }
 
 
@@ -29,13 +30,30 @@ namespace LJC.FrameWork.SOA
 
         protected override void FromSessionMessage(Message message, UDPSession session)
         {
-            if (message.IsMessage((int)SOAMessageType.DoSOARedirectRequest))
+            if (message.IsMessage((int)SOAMessageType.QueryServiceNo))
+            {
+                var responseMsg = new Message((int)SOAMessageType.QueryServiceNo);
+                responseMsg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                QueryServiceNoResponse responseBody = new QueryServiceNoResponse();
+                responseBody.ServiceNo = _serviceNo;
+
+                responseMsg.SetMessageBody(responseBody);
+                session.SendMessage(responseMsg);
+
+                return;
+            }
+            else if (message.IsMessage((int)SOAMessageType.DoSOARedirectRequest))
             {
                 try
                 {
+                    var reqbag = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<SOARedirectRequest>(message.MessageBuffer);
+
+                    if (reqbag.ServiceNo != _serviceNo)
+                    {
+                        throw new Exception(Consts.ERRORSERVICEMSG);
+                    }
                     if (DoResponseAction != null)
                     {
-                        var reqbag = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<SOARedirectRequest>(message.MessageBuffer);
                         var obj = DoResponseAction(reqbag.FuncId, reqbag.Param,session.SessionID);
 
                         if (!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
@@ -52,7 +70,7 @@ namespace LJC.FrameWork.SOA
                         }
                         else
                         {
-                            throw new Exception("服务未实现");
+                            throw new Exception(Consts.MISSINGFUNCTION);
                         }
                     }
                 }
@@ -67,6 +85,11 @@ namespace LJC.FrameWork.SOA
                     retmsg.SetMessageBody(resp);
 
                     session.SendMessage(retmsg);
+
+                    if (ex.Message.Contains(Consts.ERRORSERVICEMSG))
+                    {
+                        session.Close(Consts.ERRORSERVICEMSG);
+                    }
                 }
             }
             else

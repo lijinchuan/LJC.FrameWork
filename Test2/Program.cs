@@ -546,7 +546,7 @@ namespace Test2
 
         static LJC.FrameWork.SocketApplication.SocketSTD.SessionClient client = null;
         static LJC.FrameWork.SocketEasy.Client.SessionClient sc = null;
-        static void Main(string[] args)
+        static void Main4(string[] args)
         {
             
             var code = @"FOR x:0 TO len(B0)-1 begin IF Profit<-5 THEN print('sl') ELSE IF arrayof(B0,x) AND NOT arrayof(S0,x) THEN print('buy') ELSE IF NOT arrayof(B0,x) AND arrayof(S0,x) THEN print('sell') END END END end;";
@@ -779,6 +779,13 @@ namespace Test2
             appClient.EnableMultiCast = true;
             appClient.OnBroadCast += appClient_OnBroadCast;
             appClient.OnMultiCast += appClient_OnMultiCast;
+            Console.Read();
+        }
+
+        static void Main(string[] args)
+        {
+            var svc= new TestESBEervice();
+            svc.StartService();
             Console.Read();
         }
 

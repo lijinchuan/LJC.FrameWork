@@ -194,9 +194,25 @@ namespace Test
 
         static void Main(string[] args)
         {
-            TestCach();
+            while (true)
+            {
+                try
+                {
+                    var strstr = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<string>(100, 1, "sadfsd");
+                    Console.WriteLine(strstr);
+                    Thread.Sleep(1000);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
             Console.Read();
             return;
+
+            //TestCach();
+            //Console.Read();
+            //return;
 
             LJC.FrameWork.HttpApi.APIFactory.Init("Test");
             Console.Read();

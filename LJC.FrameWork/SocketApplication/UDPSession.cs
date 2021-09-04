@@ -22,7 +22,6 @@ namespace LJC.FrameWork.SocketApplication
 
         public override bool SendMessage(Message msg)
         {
-
             return SessionServer.SendMessage(msg, this.EndPoint);
         }
     }

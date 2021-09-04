@@ -116,7 +116,19 @@ namespace LJC.FrameWork.SOA
 
         protected sealed override void ReciveMessage(Message message)
         {
-            if (message.IsMessage((int)SOAMessageType.DoSOATransferRequest))
+            if (message.IsMessage((int)SOAMessageType.QueryServiceNo))
+            {
+                var responseMsg = new Message((int)SOAMessageType.QueryServiceNo);
+                responseMsg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                QueryServiceNoResponse responseBody = new QueryServiceNoResponse();
+                responseBody.ServiceNo = ServiceNo;
+
+                responseMsg.SetMessageBody(responseBody);
+                SendMessage(responseMsg);
+
+                return;
+            }
+            else if (message.IsMessage((int)SOAMessageType.DoSOATransferRequest))
             {
                 SOATransferRequest request = null;
                 try
@@ -158,7 +170,7 @@ namespace LJC.FrameWork.SOA
 
                     responseMsg.SetMessageBody(responseBody);
 
-                    this.SendMessage(responseMsg);
+                    SendMessage(responseMsg);
 
                     return;
                 }
@@ -372,8 +384,8 @@ namespace LJC.FrameWork.SOA
                         try
                         {
                             iport = SocketApplicationComm.GetIdelTcpPort();
-                            
-                            RedirectTcpServiceServer = new ESBRedirectService(bindips.Select(p => p.ToString()).ToArray(), iport);
+
+                            RedirectTcpServiceServer = new ESBRedirectService(ServiceNo, bindips.Select(p => p.ToString()).ToArray(), iport);
                             RedirectTcpServiceServer.DoResponseAction = DoResponse;
                             RedirectTcpServiceServer.StartServer();
                             break;
@@ -399,7 +411,7 @@ namespace LJC.FrameWork.SOA
                         {
                             iport = SocketApplicationComm.GetIdelUdpPort(iport);
 
-                            RedirectUpdServiceServer = new ESBUDPService(bindips.Select(p => p.ToString()).ToArray(), iport);
+                            RedirectUpdServiceServer = new ESBUDPService(ServiceNo, bindips.Select(p => p.ToString()).ToArray(), iport);
                             RedirectUpdServiceServer.DoResponseAction = DoResponse;
                             RedirectUpdServiceServer.StartServer();
                             break;
@@ -409,7 +421,7 @@ namespace LJC.FrameWork.SOA
                             trytimes++;
                             if (trytimes >= 10)
                             {
-                                OnError(new Exception("启动udp直连服务端口失败,已尝试" + trytimes + "次，端口:"+iport, ex));
+                                OnError(new Exception("启动udp直连服务端口失败,已尝试" + trytimes + "次，端口:" + iport, ex));
                                 break;
                             }
                         }

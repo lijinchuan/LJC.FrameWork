@@ -43,6 +43,7 @@
     <Compile Include="Consts.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoRequest.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoResponse.cs" />
+    <Compile Include="Contract\QueryServiceNoResponse.cs" />
     <Compile Include="Contract\RegisterServiceInfo.cs" />
     <Compile Include="Contract\RegisterServiceRequest.cs" />
     <Compile Include="Contract\RegisterServiceResponse.cs" />
