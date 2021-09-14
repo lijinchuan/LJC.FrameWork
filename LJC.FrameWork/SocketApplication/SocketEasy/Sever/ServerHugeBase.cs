@@ -515,10 +515,18 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     if (!hasdataerror)
                     {
                         e.Completed += SocketAsyncEventArgs_Completed;
-                        if (!e.AcceptSocket.ReceiveAsync(e))
+                        try
                         {
-                            LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "同步完成，手动处理", null);
-                            SocketAsyncEventArgs_Completed(null, e);
+                            if (!e.AcceptSocket.ReceiveAsync(e))
+                            {
+                                LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "同步完成，手动处理", null);
+                                SocketAsyncEventArgs_Completed(null, e);
+                            }
+                        }
+                        catch(Exception ex)
+                        {
+                            RemoveSession(args);
+                            OnError(ex);
                         }
                     }
                 }
