@@ -9,6 +9,7 @@ using LJC.FrameWork.SOA;
 using LJC.FrameWork.SocketApplication;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -782,10 +783,39 @@ namespace Test2
             Console.Read();
         }
 
+        public static T[] GetConfigArray<T>(string value, char split = ',')
+        {
+            if (value == null)
+            {
+                return default;
+            }
+
+            return value.Split(split).Select(p => (T)Convert.ChangeType(p, typeof(T))).ToArray();
+        }
+
+
+
+        public enum AvatarFor
+        {
+            BBS, Resume
+        }
         static void Main(string[] args)
         {
-            var svc= new TestESBEervice();
-            svc.StartService();
+            //修改系统的CultureInfo。指定日期的格式为“yyyy-MM-dd”。
+            System.Globalization.CultureInfo myCI = new System.Globalization.CultureInfo("zh-CN", true);
+            myCI.DateTimeFormat.ShortDatePattern = "yyyy-MM-dd";
+            myCI.DateTimeFormat.DateSeparator = "-";
+            System.Threading.Thread.CurrentThread.CurrentCulture = myCI;
+            var time = DateTime.Now.ToShortDateString();
+
+            var ss = DateTime.Now.ToString("MMMM.dd,yyyy", new CultureInfo("en-US", false).DateTimeFormat);
+
+            var arr = GetConfigArray<decimal>("333");
+
+            var g = Guid.NewGuid().ToString();
+            var s = ((object)g).ConvertTo<Guid>();
+            //var svc= new TestESBEervice();
+            //svc.StartService();
             Console.Read();
         }
 

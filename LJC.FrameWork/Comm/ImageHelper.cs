@@ -135,12 +135,17 @@ namespace LJC.FrameWork.Comm
         /// <param name="Mode">保留着，暂时未用</param>  
         /// <returns>处理以后的图片</returns>  
 
-        public static Bitmap ResizeImage(Bitmap bmp, int newW, int newH, int Mode)
+        public static Bitmap ResizeImage(Bitmap bmp, int newW, int newH, int mode)
         {
             Bitmap b = new Bitmap(newW, newH);
             Graphics g = Graphics.FromImage(b);
             // 插值算法的质量   
-            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            var quality = InterpolationMode.HighQualityBicubic;
+            if (mode >= -1 && mode < 7)
+            {
+                quality = (InterpolationMode)mode;
+            }
+            g.InterpolationMode = quality;
             g.DrawImage(bmp, new Rectangle(0, 0, newW, newH), new Rectangle(0, 0, bmp.Width, bmp.Height), GraphicsUnit.Pixel);
             g.Dispose();
             return b;
@@ -184,16 +189,16 @@ namespace LJC.FrameWork.Comm
 
         }
 
-        public static Bitmap ResizeImageX(Bitmap bmp, int newW)
+        public static Bitmap ResizeImageX(Bitmap bmp, int newW, int mode=2)
         {
             int newH = (int)(newW * 1.0 / bmp.Width * bmp.Height);
-            return ResizeImage(bmp, newW, newH, 0);
+            return ResizeImage(bmp, newW, newH, mode);
         }
 
-        public static Bitmap ResizeImageY(Bitmap bmp, int newH)
+        public static Bitmap ResizeImageY(Bitmap bmp, int newH, int mode=2)
         {
             int newW = (int)(newH * 1.0 / bmp.Height * bmp.Width);
-            return ResizeImage(bmp, newW, newH, 0);
+            return ResizeImage(bmp, newW, newH, mode);
         }
 
     }

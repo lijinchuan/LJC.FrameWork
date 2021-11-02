@@ -68,6 +68,7 @@
   <ItemGroup>
     <Compile Include="CallBackRequest.cs" />
     <Compile Include="EMStockService.cs" />
+    <Compile Include="Ext.cs" />
     <Compile Include="Fun1.cs" />
     <Compile Include="Fun2.cs" />
     <Compile Include="Fun3.cs" />
