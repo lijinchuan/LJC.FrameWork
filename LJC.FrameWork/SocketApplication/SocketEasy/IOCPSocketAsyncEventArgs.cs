@@ -6,8 +6,23 @@ using System.Text;
 
 namespace LJC.FrameWork.SocketEasy
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class IOCPSocketAsyncEventArgs : SocketAsyncEventArgs
     {
+        public static int InstanceCount
+        {
+            get;
+            private set;
+        }
+
+        public IOCPSocketAsyncEventArgs()
+        {
+            InstanceCount++;
+        }
+
+
         private bool _isReadPackLen = false;
         internal bool IsReadPackLen
         {

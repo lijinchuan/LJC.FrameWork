@@ -11,8 +11,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
 {
     public class SessionServer:/*ServerBase*/ServerHugeBase
     {
-        protected Dictionary<string, Session> appLoginSockets;
-
         private Dictionary<string, AutoReSetEventResult> watingEvents;
 
         private ReaderWriterLockSlim lockObj = new ReaderWriterLockSlim();
@@ -20,14 +18,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
         public SessionServer(string[] ips, int port)
             : base(ips, port)
         {
-            appLoginSockets = new Dictionary<string, Session>();
             watingEvents = new Dictionary<string, AutoReSetEventResult>();
         }
 
         public SessionServer(int port)
             : base(null, port)
         {
-            appLoginSockets = new Dictionary<string, Session>();
             watingEvents = new Dictionary<string, AutoReSetEventResult>();
         }
 
@@ -84,16 +80,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 session.IsLogin = true;
                 session.UserName = request.LoginID;
 
-                //session.Socket = s;
-                //session.IPAddress = ((System.Net.IPEndPoint)s.RemoteEndPoint).Address.ToString();
-                lock (appLoginSockets)
-                {
-                    if (appLoginSockets.ContainsKey(session.SessionID))
-                    {
-                        appLoginSockets.Remove(session.SessionID);
-                    }
-                    appLoginSockets.Add(session.SessionID, session);
-                }
                 Console.WriteLine("{0}成功登陆", request.LoginID);
             }
             else
@@ -134,10 +120,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
             Message msg = new Message(MessageType.LOGOUT);
 
             session.SendMessage(msg);
-            lock (appLoginSockets)
-            {
-                appLoginSockets.Remove(session.SessionID);
-            }
             session.IsValid = false;
 
             Console.WriteLine(string.Format("{0}已退出登陆", session.UserName));

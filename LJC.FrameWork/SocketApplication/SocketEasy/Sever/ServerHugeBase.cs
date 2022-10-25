@@ -23,7 +23,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
         protected int ipPort;
         protected bool isStartServer = false;
         protected ConcurrentDictionary<string, Session> _connectSocketDic = new ConcurrentDictionary<string, Session>();
-        private ConcurrentQueue<IOCPSocketAsyncEventArgs> _iocpQueue = new ConcurrentQueue<IOCPSocketAsyncEventArgs>();
+        private readonly ConcurrentQueue<IOCPSocketAsyncEventArgs> _iocpQueue = new ConcurrentQueue<IOCPSocketAsyncEventArgs>();
         private BufferPollManager _bufferpoll = null;
         private System.Timers.Timer _worktimer = null;
         
@@ -216,11 +216,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 args.Completed += Args_Completed;
                 //args.ClearBuffer()
                 args.IsReadPackLen = false;
+                LogManager.LogHelper.Instance.Debug("复用IOCPSocketAsyncEventArgs");
             }
             else
             {
                 args = new IOCPSocketAsyncEventArgs();
                 args.Completed += Args_Completed;
+
+                LogManager.LogHelper.Instance.Debug($"创建第{IOCPSocketAsyncEventArgs.InstanceCount}个IOCPSocketAsyncEventArgs");
             }
 
             return args;
