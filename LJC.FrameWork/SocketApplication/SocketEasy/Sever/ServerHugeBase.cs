@@ -140,7 +140,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     try
                     {
                         _connectSocketDic.TryRemove(s.SessionID, out remsession);
-                        s.AsyncEventArgs = null;
                         s.Close("CheckConnectedClient");
                     }
                     catch (Exception ex)
@@ -153,6 +152,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                         if (s.AsyncEventArgs != null)
                         {
                             RealseSocketAsyncEventArgs(s.AsyncEventArgs);
+                            s.AsyncEventArgs = null;
                         }
                     }
                 }
