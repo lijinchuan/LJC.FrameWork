@@ -32,6 +32,12 @@ namespace LJC.FrameWork.SOA
             public bool Process(LJC.FrameWork.Net.HTTP.Server.HttpServer server, LJC.FrameWork.Net.HTTP.Server.HttpRequest request, LJC.FrameWork.Net.HTTP.Server.HttpResponse response, Dictionary<string, string> param)
             {
                 StringBuilder sb = new StringBuilder();
+                sb.Append(@"<html>
+<head>
+    <meta http-equiv=""Content-Type"" content=""text/html; charset=UTF-8"">
+            <meta charset = ""UTF-8"" >
+                     <title>ESB实时数据</title >
+                   </head ><body>");
                 sb.Append(@"<style type=""text/css"">
         table{
             border:solid 1px lightblue; width:100%;
@@ -135,7 +141,7 @@ namespace LJC.FrameWork.SOA
                         item.Value[0].BytesSend, item.Value[0].BytesRev);
                 }
                 sb.Append("</table>");
-
+                sb.Append("</body></html>");
                 response.Content = sb.ToString();
                 return true;
             }

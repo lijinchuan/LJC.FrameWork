@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LJC.FrameWork.SocketEasy;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -139,12 +140,13 @@ namespace LJC.FrameWork.SocketApplication
                 try
                 {
                     this.Socket.Shutdown(SocketShutdown.Both);
+                    this.Socket.Close();
                 }
                 catch
                 {
 
                 }
-                this.Socket.Close();
+                
                 return true;
             }
             this.IsValid = false;
@@ -171,6 +173,12 @@ namespace LJC.FrameWork.SocketApplication
         /// 对称加密钥
         /// </summary>
         public string EncryKey
+        {
+            get;
+            set;
+        }
+
+        public IOCPSocketAsyncEventArgs AsyncEventArgs
         {
             get;
             set;

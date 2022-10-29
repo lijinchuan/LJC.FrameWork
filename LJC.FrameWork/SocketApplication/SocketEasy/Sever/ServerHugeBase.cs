@@ -1,6 +1,7 @@
 ﻿using LJC.FrameWork.Comm;
 using LJC.FrameWork.ConfigurationSectionHandler;
 using LJC.FrameWork.EntityBuf;
+using LJC.FrameWork.LogManager;
 using LJC.FrameWork.SocketApplication;
 using System;
 using System.Collections.Concurrent;
@@ -136,8 +137,24 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 if(DateTime.Now.Subtract(s.LastSessionTime).TotalSeconds>180)
                 {
-                    _connectSocketDic.TryRemove(s.SessionID, out remsession);
-                    s.Close("CheckConnectedClient");
+                    try
+                    {
+                        _connectSocketDic.TryRemove(s.SessionID, out remsession);
+                        s.AsyncEventArgs = null;
+                        s.Close("CheckConnectedClient");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogHelper.Instance.Error("CheckConnectedClient", ex);
+                        throw;
+                    }
+                    finally
+                    {
+                        if (s.AsyncEventArgs != null)
+                        {
+                            RealseSocketAsyncEventArgs(s.AsyncEventArgs);
+                        }
+                    }
                 }
             }
         }
@@ -146,21 +163,29 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         private void RealseSocketAsyncEventArgs(IOCPSocketAsyncEventArgs e)
         {
-            e.Completed -= SocketAsyncEventArgs_Completed;
-            _bufferpoll.RealseBuffer(e.BufferIndex);
-            e.ClearBuffer();
-            //e.AcceptSocket.Disconnect(true);
-            try
+            lock (e)
             {
-                e.AcceptSocket.Shutdown(SocketShutdown.Send);
-            }
-            catch
-            {
+                if (e.AcceptSocket == null)
+                {
+                    return;
+                }
+                e.Completed -= SocketAsyncEventArgs_Completed;
+                _bufferpoll.RealseBuffer(e.BufferIndex);
+                e.ClearBuffer();
+                //e.AcceptSocket.Disconnect(true);
+                try
+                {
+                    e.AcceptSocket.Shutdown(SocketShutdown.Send);
+                    e.AcceptSocket.Close();
+                }
+                catch
+                {
 
+                }
+                
+                e.AcceptSocket = null;
+                _iocpQueue.Enqueue(e);
             }
-            e.AcceptSocket.Close();
-            e.AcceptSocket = null;
-            _iocpQueue.Enqueue(e);
         }
 
         private void SetBuffer(IOCPSocketAsyncEventArgs e,int offset,int len)
@@ -251,6 +276,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             socketAsyncEventArgs.AcceptSocket = socket;
             socketAsyncEventArgs.Completed += SocketAsyncEventArgs_Completed;
             socketAsyncEventArgs.UserToken = appSocket.SessionID;
+            appSocket.AsyncEventArgs = socketAsyncEventArgs;
 
             //byte[] buffer = new byte[4];
             //socketAsyncEventArgs.SetBuffer(buffer, 0, 4);
