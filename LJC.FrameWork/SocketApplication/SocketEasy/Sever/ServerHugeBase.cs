@@ -25,9 +25,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
         protected bool isStartServer = false;
         protected ConcurrentDictionary<string, Session> _connectSocketDic = new ConcurrentDictionary<string, Session>();
         private readonly ConcurrentQueue<IOCPSocketAsyncEventArgs> _iocpQueue = new ConcurrentQueue<IOCPSocketAsyncEventArgs>();
+        private readonly ConcurrentQueue<IOCPSocketAsyncEventArgs> _deleteQueue = new ConcurrentQueue<IOCPSocketAsyncEventArgs>();
         private BufferPollManager _bufferpoll = null;
         private System.Timers.Timer _worktimer = null;
-        
+
+        private object _realseSocketAsyncEventArgsLocker = new object();
+
         /// <summary>
         /// 对象清理之前的事件
         /// </summary>
@@ -112,7 +115,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                 if (_worktimer == null)
                 {
-                    _worktimer = LJC.FrameWork.Comm.TaskHelper.SetInterval(5000, () =>
+                    _worktimer = TaskHelper.SetInterval(30000, () =>
                         {
                             CheckConnectedClient();
                             return false;
@@ -131,30 +134,43 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         private void CheckConnectedClient()
         {
+            IOCPSocketAsyncEventArgs delIocpSocketAsyncEventArgs = null;
+            var delCount = _deleteQueue.Count;
+            LogHelper.Instance.Debug($"CheckConnectedClient->_deleteQueue:{delCount}");
+            while (delCount-- > 0 && _deleteQueue.TryDequeue(out delIocpSocketAsyncEventArgs))
+            {
+                try
+                {
+                    RealseSocketAsyncEventArgs(delIocpSocketAsyncEventArgs);
+                }
+                catch
+                {
+                    _deleteQueue.Enqueue(delIocpSocketAsyncEventArgs);
+                }
+            }
+
             var sessions = _connectSocketDic.Values.ToArray();
-            Session remsession=null;
+            LogHelper.Instance.Debug($"CheckConnectedClient:{sessions.Length}");
             foreach (var s in sessions)
             {
-                if(DateTime.Now.Subtract(s.LastSessionTime).TotalSeconds>180)
+                if (DateTime.Now.Subtract(s.LastSessionTime).TotalSeconds > 180)
                 {
-                    try
+                    _connectSocketDic.TryRemove(s.SessionID, out _);
+
+                    if (s.AsyncEventArgs != null)
                     {
-                        _connectSocketDic.TryRemove(s.SessionID, out remsession);
-                        s.Close("CheckConnectedClient");
-                    }
-                    catch (Exception ex)
-                    {
-                        LogHelper.Instance.Error("CheckConnectedClient", ex);
-                        throw;
-                    }
-                    finally
-                    {
-                        if (s.AsyncEventArgs != null)
+                        try
                         {
                             RealseSocketAsyncEventArgs(s.AsyncEventArgs);
-                            s.AsyncEventArgs = null;
                         }
+                        catch
+                        {
+                            _deleteQueue.Enqueue(s.AsyncEventArgs);
+                        }
+
                     }
+
+                    s.Close("CheckConnectedClient");
                 }
             }
         }
@@ -163,15 +179,17 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
         private void RealseSocketAsyncEventArgs(IOCPSocketAsyncEventArgs e)
         {
-            lock (e)
+            lock (_realseSocketAsyncEventArgsLocker)
             {
                 if (e.AcceptSocket == null)
                 {
                     return;
                 }
+                e.ClearBuffer();
+
                 e.Completed -= SocketAsyncEventArgs_Completed;
                 _bufferpoll.RealseBuffer(e.BufferIndex);
-                e.ClearBuffer();
+                
                 //e.AcceptSocket.Disconnect(true);
                 try
                 {
@@ -311,17 +329,19 @@ namespace LJC.FrameWork.SocketEasy.Sever
         {
             if (args.UserToken != null)
             {
-                Session removesession;
                 //用户断开了
-                if (_connectSocketDic.TryRemove(args.UserToken.ToString(), out removesession))
-                {
-                    RealseSocketAsyncEventArgs(args);
-                }
+                _connectSocketDic.TryRemove(args.UserToken.ToString(), out _);
             }
-            else
+
+            try
             {
                 RealseSocketAsyncEventArgs(args);
             }
+            catch
+            {
+                _deleteQueue.Enqueue(args);
+            }
+
         }
 
         void SocketAsyncEventArgs_Completed(object sender, SocketAsyncEventArgs e)
@@ -331,9 +351,9 @@ namespace LJC.FrameWork.SocketEasy.Sever
             var args = e as IOCPSocketAsyncEventArgs;
             if (args.BytesTransferred == 0 || args.SocketError != SocketError.Success)
             {
-                if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                if (SocketApplicationEnvironment.TraceSocketDataBag)
                 {
-                    LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开:" + args.SocketError);
+                    LogHelper.Instance.Debug(e.AcceptSocket.Handle + "异常断开:" + args.SocketError);
                 }
 
                 RemoveSession(args);

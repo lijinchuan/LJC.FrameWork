@@ -107,6 +107,7 @@ namespace LJC.FrameWork.Comm
                     }
                     else
                     {
+                        LogManager.LogHelper.Instance.Error("timer中断", ex);
                         timer.LastError = ex;
                         timer.Kill();
                         return;

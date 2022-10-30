@@ -61,10 +61,14 @@ namespace LJC.FrameWork.SocketEasy
             }
         }
 
+        /// <summary>
+        /// 清理缓存，这个要放在前面
+        /// </summary>
         internal void ClearBuffer()
         {
-            _bufferIndex = -1;
+            //这个要放在前面，因为在用的话会报错
             this.SetBuffer(null, 0, 0);
+            _bufferIndex = -1;
             BufferLen = 0;
             BufferRev = 0;
         }
