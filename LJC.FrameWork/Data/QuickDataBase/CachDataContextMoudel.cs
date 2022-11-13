@@ -288,6 +288,23 @@ namespace LJC.FrameWork.Data
             }
         }
 
+        public T Last()
+        {
+            try
+            {
+                readWriteLock.EnterReadLock();
+                if (cachTable.Rows.Count == 0)
+                {
+                    return default;
+                }
+                return ConvertTo(cachTable.Rows[cachTable.Rows.Count - 1]);
+            }
+            finally
+            {
+                readWriteLock.ExitReadLock();
+            }
+        }
+
         public IEnumerable<T> Where(Predicate<T> express)
         {
             List<T> result = new List<T>();
