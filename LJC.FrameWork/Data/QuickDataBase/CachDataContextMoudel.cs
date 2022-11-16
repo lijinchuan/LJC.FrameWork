@@ -288,16 +288,24 @@ namespace LJC.FrameWork.Data
             }
         }
 
-        public T Last()
+        public IEnumerable<T> Last(int top)
         {
             try
             {
                 readWriteLock.EnterReadLock();
                 if (cachTable.Rows.Count == 0)
                 {
-                    return default;
+                    yield break;
                 }
-                return ConvertTo(cachTable.Rows[cachTable.Rows.Count - 1]);
+                var count = cachTable.Rows.Count;
+                while (top > 0)
+                {
+                    if (count - top >= 0)
+                    {
+                        yield return ConvertTo(cachTable.Rows[count - top]);
+                    }
+                    top--;
+                }
             }
             finally
             {
