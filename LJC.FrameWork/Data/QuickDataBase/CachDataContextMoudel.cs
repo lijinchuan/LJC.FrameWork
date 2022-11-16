@@ -288,7 +288,7 @@ namespace LJC.FrameWork.Data
             }
         }
 
-        public IEnumerable<T> Last(int top)
+        public IEnumerable<T> Last(Func<T,bool> func)
         {
             try
             {
@@ -297,14 +297,20 @@ namespace LJC.FrameWork.Data
                 {
                     yield break;
                 }
+                var top = 1;
                 var count = cachTable.Rows.Count;
-                while (top > 0)
+                while (top <= count)
                 {
-                    if (count - top >= 0)
+                    var item = ConvertTo(cachTable.Rows[count - top]);
+                    if (func(item))
                     {
-                        yield return ConvertTo(cachTable.Rows[count - top]);
+                        yield return item;
                     }
-                    top--;
+                    else
+                    {
+                        yield break;
+                    }
+                    top++;
                 }
             }
             finally
