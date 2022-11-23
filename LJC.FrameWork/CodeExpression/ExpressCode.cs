@@ -339,6 +339,11 @@ namespace LJC.FrameWork.CodeExpression
 
             }
 
+            if (leftResult == CalResult.DelayCalResult || rightResult == CalResult.DelayCalResult)
+            {
+                return CalResult.DelayCalResult;
+            }
+
             CalSign cs = calBinTree.TreeNode as CalSign;
             cs.LeftVal = leftResult;
             cs.RightVal = rightResult;
