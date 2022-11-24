@@ -231,6 +231,10 @@ namespace LJC.FrameWork.CodeExpression
                                 i = lastCurrentIndex;
                             }
                             var lr = leftResult.Results[i];
+                            if (lr == DelayCalResult.Def)
+                            {
+                                lr = CallResult(calBinTree.LeftTree).Result;
+                            }
                             if (!(lr is bool))
                             {
                                 throw new ExpressErrorException("if then的条件表达式条件必须为bool值！");
@@ -273,7 +277,9 @@ namespace LJC.FrameWork.CodeExpression
                     }
                     else
                     {
-                        if (!(leftResult.Result is bool))
+                        var lr = leftResult.Result;
+
+                        if (!(lr is bool))
                             throw new ExpressErrorException("if then的条件表达式条件必须为bool值！");
 
                         if (leftResult.Result.ToBool())
@@ -337,11 +343,6 @@ namespace LJC.FrameWork.CodeExpression
                     rightResult = CallResult(calBinTree.RightTree);
                 }
 
-            }
-
-            if (leftResult == CalResult.DelayCalResult || rightResult == CalResult.DelayCalResult)
-            {
-                return CalResult.DelayCalResult;
             }
 
             CalSign cs = calBinTree.TreeNode as CalSign;

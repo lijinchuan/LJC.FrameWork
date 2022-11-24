@@ -58,7 +58,14 @@ namespace LJC.FrameWork.CodeExpression
 
             for (int i = 0; i < result.Results.Length; i++)
             {
-                result.Results[i] = DoSingleOperate(CLOperData(i), CROperData(i));
+                if (CLOperData(i) == DelayCalResult.Def || CROperData(i) == DelayCalResult.Def)
+                {
+                    result.Results[i] = DelayCalResult.Def;
+                }
+                else
+                {
+                    result.Results[i] = DoSingleOperate(CLOperData(i), CROperData(i));
+                }
             }
 
             return result;

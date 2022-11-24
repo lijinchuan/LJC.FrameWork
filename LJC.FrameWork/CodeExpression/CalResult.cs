@@ -8,11 +8,6 @@ namespace LJC.FrameWork.CodeExpression
     public class CalResult
     {
         /// <summary>
-        /// 延迟计算
-        /// </summary>
-        public static readonly CalResult DelayCalResult = new CalResult();
-
-        /// <summary>
         /// 表达式结果字符串
         /// </summary>
         public object Result

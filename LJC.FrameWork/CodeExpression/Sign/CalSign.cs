@@ -68,7 +68,7 @@ namespace LJC.FrameWork.CodeExpression
         {
             get
             {
-                if (!LeftVal.IsEmpty)
+                if (LeftVal != null)
                     return LeftVal.Result;
 
                 return null;
@@ -82,7 +82,7 @@ namespace LJC.FrameWork.CodeExpression
         {
             get
             {
-                if (!LeftVal.IsEmpty)
+                if (LeftVal != null)
                     return LeftVal.Results;
 
                 return null;
@@ -105,7 +105,7 @@ namespace LJC.FrameWork.CodeExpression
         {
             get
             {
-                if (!RightVal.IsEmpty)
+                if (RightVal != null)
                     return RightVal.Result;
 
                 return null;
@@ -134,7 +134,7 @@ namespace LJC.FrameWork.CodeExpression
         {
             get
             {
-                if (!RightVal.IsEmpty)
+                if (RightVal != null)
                     return RightVal.Results;
 
                 return null;
@@ -175,12 +175,12 @@ namespace LJC.FrameWork.CodeExpression
                 {
                     OnBeginOperator();
                 }
-                if (Params > 0 && !(this is FunSign) && RightVal.IsEmpty)
+                if (Params > 0 && !(this is FunSign) && RightVal == null)
                 {
                     throw new ExpressErrorException(this.SignName + "缺少右值！");
                 }
 
-                if (Params > 1 && LeftVal.IsEmpty)
+                if (Params > 1 && LeftVal == null)
                 {
                     throw new ExpressErrorException(this.SignName + "缺少左值！");
                 }
@@ -197,14 +197,14 @@ namespace LJC.FrameWork.CodeExpression
 
                 //CommFun.Assert(Check());
 
-                if ((LeftVal.IsEmpty || LeftVal.Results == null)
-                    && (RightVal.IsEmpty || RightVal.Results == null))
+                if ((LeftVal == null || LeftVal.Results == null)
+                    && (RightVal == null || RightVal.Results == null))
                 {
                     return SingOperate();
                 }
 
-                if (LeftVal.Results != null
-                    && RightVal.Results != null
+                if (LeftVal != null && LeftVal.Results != null
+                    && RightVal != null && RightVal.Results != null
                     && LeftVal.Results.Length != RightVal.Results.Length
                     )
                 {
