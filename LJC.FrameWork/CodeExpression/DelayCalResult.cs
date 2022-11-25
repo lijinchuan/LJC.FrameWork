@@ -9,8 +9,10 @@ namespace LJC.FrameWork.CodeExpression
 {
     public struct DelayCalResult : IComparable, IFormattable, IConvertible
     {
-
-        public static readonly DelayCalResult Def = 0d;
+        /// <summary>
+        /// 告诉别人这个是延迟计算的结果
+        /// </summary>
+        public static readonly DelayCalResult Delay = 0d;
 
         internal double m_value;
 

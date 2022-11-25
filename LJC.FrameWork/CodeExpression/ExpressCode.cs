@@ -231,7 +231,7 @@ namespace LJC.FrameWork.CodeExpression
                                 i = lastCurrentIndex;
                             }
                             var lr = leftResult.Results[i];
-                            if (lr == DelayCalResult.Def)
+                            if (lr == DelayCalResult.Delay)
                             {
                                 lr = CallResult(calBinTree.LeftTree).Result;
                             }

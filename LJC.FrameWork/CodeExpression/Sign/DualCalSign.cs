@@ -58,9 +58,9 @@ namespace LJC.FrameWork.CodeExpression
 
             for (int i = 0; i < result.Results.Length; i++)
             {
-                if (CLOperData(i) == DelayCalResult.Def || CROperData(i) == DelayCalResult.Def)
+                if (CLOperData(i) == DelayCalResult.Delay || CROperData(i) == DelayCalResult.Delay)
                 {
-                    result.Results[i] = DelayCalResult.Def;
+                    result.Results[i] = DelayCalResult.Delay;
                 }
                 else
                 {
