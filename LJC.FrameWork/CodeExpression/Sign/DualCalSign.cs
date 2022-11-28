@@ -74,6 +74,13 @@ namespace LJC.FrameWork.CodeExpression
         protected sealed override CalResult SingOperate()
         {
             //Type T = Comm.GetType(LeftSigelVal.ToString());
+            if (LeftSigelVal == DelayCalResult.Delay || RightSigelVal == DelayCalResult.Delay)
+            {
+                return new CalResult
+                {
+                    Result= DelayCalResult.Delay
+                };
+            }
 
             return new CalResult
             {
