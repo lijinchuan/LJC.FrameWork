@@ -10,7 +10,7 @@ namespace LJC.FrameWork.SOA
     [Serializable]
     public class ESBConfig
     {
-        private static string configfile = LJC.FrameWork.Comm.CommFun.GetRuningPath() + "ESBConfig.xml";
+        private static string configfile = LJC.FrameWork.Comm.CommFun.GetRuningPath().TrimEnd(new[] { '\\' }) + "\\ESBConfig.xml";
 
         public string ESBServer
         {
@@ -41,9 +41,9 @@ namespace LJC.FrameWork.SOA
         {
             if (_esbConfig != null)
                 return _esbConfig;
-            if(!File.Exists(configfile))
+            if (!File.Exists(configfile))
             {
-                string configfile2 = AppDomain.CurrentDomain.BaseDirectory + "ESBConfig.xml";
+                string configfile2 = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new[] { '\\' }) + "\\ESBConfig.xml";
                 if (!File.Exists(configfile2))
                 {
                     throw new Exception(string.Format("未找到ESBConfig配置文件，路径：{0} 和路径 {1}", configfile, configfile2));
