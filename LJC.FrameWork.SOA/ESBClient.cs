@@ -59,7 +59,7 @@ namespace LJC.FrameWork.SOA
             base.ReciveMessage(message);
         }
 
-        internal T DoRequest<T>(int serviceno, int funcid, object param)
+        internal T DoRequest<T>(int serviceno, int funcid, object param, bool sendAll = false)
         {
             SOARequest request = new SOARequest();
             request.ServiceNo = serviceno;
@@ -77,7 +77,12 @@ namespace LJC.FrameWork.SOA
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
             msg.MessageBuffer = EntityBufCore.Serialize(request);
 
-            T result= SendMessageAnsy<T>(msg);
+            if (sendAll)
+            {
+                msg.AddCustomData("SendAll", "1");
+            }
+
+            T result = SendMessageAnsy<T>(msg);
             return result;
         }
 
@@ -140,7 +145,16 @@ namespace LJC.FrameWork.SOA
             return base.DoMessage(message);
         }
 
-        public static T DoSOARequest<T>(int serviceId,int functionId,object param)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="serviceId"></param>
+        /// <param name="functionId"></param>
+        /// <param name="param"></param>
+        /// <param name="sendAll">是否发送给所有的服务端</param>
+        /// <returns></returns>
+        public static T DoSOARequest<T>(int serviceId, int functionId, object param, bool sendAll = false)
         {
             //using (var client = new ESBClient())
             //{
@@ -151,7 +165,7 @@ namespace LJC.FrameWork.SOA
             //    return result;
             //}
 
-            var result =_clientmanager.RandClient().DoRequest<T>(serviceId, functionId, param);
+            var result = _clientmanager.RandClient().DoRequest<T>(serviceId, functionId, param, sendAll);
 
             return result;
         }
@@ -186,8 +200,12 @@ namespace LJC.FrameWork.SOA
             return 300;
         }
 
-        public static T DoSOARequest2<T>(int serviceId, int functionId, object param)
+        public static T DoSOARequest2<T>(int serviceId, int functionId, object param, bool sendAll = false)
         {
+            if (sendAll)
+            {
+                return DoSOARequest<T>(serviceId, functionId, param, sendAll);
+            }
             List<ESBUdpClient> udpclientlist = null;
             if (!_esbUdpClientDic.TryGetValue(serviceId, out udpclientlist))
             {

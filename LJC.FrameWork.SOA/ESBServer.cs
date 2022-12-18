@@ -267,7 +267,7 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        internal void DoTransferRequest(Session session, string msgTransactionID, SOARequest request)
+        internal void DoTransferRequest(Session session, string msgTransactionID, SOARequest request,bool sendAll=false)
         {
             session.BusinessTimeStamp = DateTime.Now;
             session.Tag = new Tuple<int, int>(request.ServiceNo, request.FuncId);
@@ -304,78 +304,121 @@ namespace LJC.FrameWork.SOA
                     resp.ErrMsg = string.Format("{0}服务未注册。", request.ServiceNo);
                 }
 
+                List<ESBServiceInfo> callList = new List<ESBServiceInfo>();
                 if (resp.IsSuccess)
                 {
-                    ESBServiceInfo serviceInfo = null;
-                    if (serviceInfos.Count == 1)
+                    if (sendAll && serviceInfos.Count > 1)
                     {
-                        serviceInfo = serviceInfos[0];
+                        callList.AddRange(serviceInfos);
                     }
                     else
                     {
-                        Random rd = new Random();
-                        var idx = rd.Next(1, serviceInfos.Count + 1);
-                        serviceInfo = serviceInfos[idx - 1];
+                        ESBServiceInfo serviceInfo = null;
+                        if (serviceInfos.Count == 1)
+                        {
+                            serviceInfo = serviceInfos[0];
+                        }
+                        else
+                        {
+                            Random rd = new Random();
+                            var idx = rd.Next(1, serviceInfos.Count + 1);
+                            serviceInfo = serviceInfos[idx - 1];
+                        }
+                        callList.Add(serviceInfo);
                     }
 
                     try
                     {
-                        if(DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds>30)
+                        var canUsedList = new List<ESBServiceInfo>();
+                        foreach (var serviceInfo in callList)
                         {
-                            lock (LockObj)
+                            if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
                             {
-                                ServiceContainer.Remove(serviceInfo);
-                                serviceInfo.Session.Close("no resp over 30s");
+                                lock (LockObj)
+                                {
+                                    ServiceContainer.Remove(serviceInfo);
+                                    serviceInfo.Session.Close("no resp over 30s");
+                                }
+                                if (sendAll)
+                                {
+                                    throw new Exception("some service instance is down");
+                                }
                             }
-                            serviceInfo = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo)).LastOrDefault();
-                            if(serviceInfo==null)
+                            else
+                            {
+                                canUsedList.Add(serviceInfo);
+                            }
+                        }
+
+                        if (!canUsedList.Any())
+                        {
+                            var canUseInfo = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo)).LastOrDefault();
+                            if (canUseInfo == null)
                             {
                                 throw new Exception(string.Format("{0}服务可能不可用,30秒无应答。", request.ServiceNo));
                             }
+                            canUsedList.Add(canUseInfo);
                         }
 
-                        string clientid = session.SessionID;
-                        SOATransferRequest transferrequest = new SOATransferRequest();
-                        transferrequest.ClientId = clientid;
-                        transferrequest.FundId = request.FuncId;
-                        transferrequest.Param = request.Param;
-                        transferrequest.ClientTransactionID = msgTransactionID;
+                        for (var i = 0; i < canUsedList.Count; i++)
+                        {
+                            
+                            var serviceInfo = canUsedList[i];
+                            string clientid = session.SessionID;
+                            SOATransferRequest transferrequest = new SOATransferRequest();
+                            transferrequest.ClientId = clientid;
+                            transferrequest.FundId = request.FuncId;
+                            transferrequest.Param = request.Param;
+                            var isLast = i == canUsedList.Count - 1;
+                            var subMsgTransactionID = msgTransactionID;
+                            if (!isLast)
+                            {
+                                subMsgTransactionID += "#" + i;
+                            }
 
-                        Message msg = new Message((int)SOAMessageType.DoSOATransferRequest);
-                        msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
-                        msg.SetMessageBody(transferrequest);
-
-                        try
-                        {
-                            ConatinerLock.EnterWriteLock();
-                            ClientSessionList.Add(msgTransactionID,new Session[2] { session, serviceInfo.Session });
-                        }
-                        finally
-                        {
-                            ConatinerLock.ExitWriteLock();
-                        }
-
-                        if (serviceInfo.Session.SendMessage(msg))
-                        {
-                            //LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2}",
-                            //    msgTransactionID, request.ServiceNo, request.FuncId));
-                            return;
-                        }
-                        else
-                        {
+                            transferrequest.ClientTransactionID = subMsgTransactionID;
                             try
                             {
                                 ConatinerLock.EnterWriteLock();
-                                ClientSessionList.Remove(msgTransactionID);
+                                ClientSessionList.Add(subMsgTransactionID, new Session[2] { session, serviceInfo.Session });
                             }
                             finally
                             {
                                 ConatinerLock.ExitWriteLock();
                             }
-                        }
-                        //var result = SendMessageAnsy<byte[]>(serviceInfo.Session, msg);
 
-                        //resp.Result = result;
+                            Message msg = new Message((int)SOAMessageType.DoSOATransferRequest);
+                            msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                            msg.SetMessageBody(transferrequest);
+
+                            if (serviceInfo.Session.SendMessage(msg))
+                            {
+                                //if (sendAll)
+                                //{
+                                //    LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2},subMsgTransactionID:{3}",
+                                //        msgTransactionID, request.ServiceNo, request.FuncId,subMsgTransactionID));
+                                //}
+                                if (isLast)
+                                {
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    ConatinerLock.EnterWriteLock();
+                                    ClientSessionList.Remove(subMsgTransactionID);
+                                }
+                                finally
+                                {
+                                    ConatinerLock.ExitWriteLock();
+                                }
+                            }
+                            //var result = SendMessageAnsy<byte[]>(serviceInfo.Session, msg);
+
+                            //resp.Result = result;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -477,8 +520,9 @@ namespace LJC.FrameWork.SOA
             }
             else if (message.IsMessage((int)SOAMessageType.DoSOARequest))
             {
+                var isSendAll = message.GetCustomData("SendAll") == "1";
                 var req = message.GetMessageBody<SOARequest>();
-                DoTransferRequest(session, message.MessageHeader.TransactionID, req);
+                DoTransferRequest(session, message.MessageHeader.TransactionID, req, isSendAll);
                 return;
             }
             else if (message.IsMessage((int)SOAMessageType.DoSOATransferResponse))
