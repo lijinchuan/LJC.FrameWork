@@ -72,9 +72,10 @@ namespace LJC.FrameWork.Comm
         {
             try
             {
-                Image bmp = Image.FromFile(bmpPath);
-                bmp.Save(savePath, System.Drawing.Imaging.ImageFormat.Jpeg);
-
+                using (Image bmp = Image.FromFile(bmpPath))
+                {
+                    bmp.Save(savePath, ImageFormat.Jpeg);
+                }
                 return true;
             }
             catch (Exception e)
