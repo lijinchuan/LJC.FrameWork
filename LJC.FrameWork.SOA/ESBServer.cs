@@ -15,7 +15,8 @@ namespace LJC.FrameWork.SOA
     {
         private static object LockObj = new object();
         protected List<ESBServiceInfo> ServiceContainer = new List<ESBServiceInfo>();
-        internal Dictionary<string, Session[]> ClientSessionList = new Dictionary<string, Session[]>();
+        //internal Dictionary<string, Session[]> ClientSessionList = new Dictionary<string, Session[]>();
+        internal Dictionary<string, object[]> ClientSessionList = new Dictionary<string, object[]>();
         internal static ReaderWriterLockSlim ConatinerLock = new ReaderWriterLockSlim();
 
         private string ManagerWebPortStr = System.Configuration.ConfigurationManager.AppSettings["esbmanport"];
@@ -127,7 +128,9 @@ namespace LJC.FrameWork.SOA
                 sb.Append("</tr>");
                 foreach (var item in liveclients)
                 {
-                    if (!clienthash.Contains(item.Value[0].SessionID)|| !clienthash.Contains(item.Value[1].SessionID))
+                    var session = (Session)item.Value[0];
+                    var seviceInfo = (ESBServiceInfo)item.Value[1];
+                    if (!clienthash.Contains(session.SessionID)|| !clienthash.Contains(seviceInfo.Session.SessionID))
                     {
                         lock (_esb.ClientSessionList)
                         {
@@ -135,10 +138,10 @@ namespace LJC.FrameWork.SOA
                         }
                     }
 
-                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>", item.Key, item.Value[0].SessionID, item.Value[0].IPAddress, item.Value[0].Port,
-                        item.Value[0].ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                        item.Value[0].LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(item.Value[0].LastSessionTime.Subtract(item.Value[0].ConnectTime).TotalMinutes, 3),
-                        item.Value[0].BytesSend, item.Value[0].BytesRev);
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>", item.Key, session.SessionID, session.IPAddress, session.Port,
+                        session.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                        session.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(session.LastSessionTime.Subtract(session.ConnectTime).TotalMinutes, 3),
+                        session.BytesSend, session.BytesRev);
                 }
                 sb.Append("</table>");
                 sb.Append("</body></html>");
@@ -171,13 +174,13 @@ namespace LJC.FrameWork.SOA
         {
             try
             {
-                Session[] session = null;
+                object[] carrayObjs = null;
 
                 ConatinerLock.EnterReadLock();
-                ClientSessionList.TryGetValue(response.ClientTransactionID, out session);
+                ClientSessionList.TryGetValue(response.ClientTransactionID, out carrayObjs);
                 ConatinerLock.ExitReadLock();
 
-                if (session != null)
+                if (carrayObjs != null)
                 {
                     ConatinerLock.EnterWriteLock();
                     ClientSessionList.Remove(response.ClientTransactionID);
@@ -191,14 +194,20 @@ namespace LJC.FrameWork.SOA
                     resp.Result = response.Result;
 
                     msgRet.SetMessageBody(resp);
-                    session[0].SendMessage(msgRet);
+                    var session = (Session)carrayObjs[0];
+                    var serviceInfo = (ESBServiceInfo)carrayObjs[1];
+                    var funid = (int)carrayObjs[2];
+                    var startTime = (DateTime)carrayObjs[3];
+                    var useSecs = (int)DateTime.Now.Subtract(startTime).TotalSeconds;
+                    session.SendMessage(msgRet);
 
-                    var toulp = (Tuple<int, int>)session[0].Tag;
+                    serviceInfo.FunctionUsedSecs.AddOrUpdate(funid, useSecs, (key, old) => old - 30 + useSecs);
 
                     if (SocketApplicationEnvironment.TraceMessage)
                     {
+                        var toulp = (Tuple<int, int>)session.Tag;
                         LogHelper.Instance.Debug(string.Format("SOA响应耗时,请求序列号:{0},服务号:{1},功能号:{2},用时:{3},结果:{4}",
-                            response.ClientTransactionID, toulp.Item1, toulp.Item2, DateTime.Now.Subtract(session[0].BusinessTimeStamp).TotalMilliseconds + "毫秒",
+                            response.ClientTransactionID, toulp.Item1, toulp.Item2, DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒",
                             Convert.ToBase64String(response.Result)));
                     }
                 }
@@ -320,9 +329,15 @@ namespace LJC.FrameWork.SOA
                         }
                         else
                         {
-                            Random rd = new Random();
-                            var idx = rd.Next(1, serviceInfos.Count + 1);
-                            serviceInfo = serviceInfos[idx - 1];
+                            serviceInfo = serviceInfos.FirstOrDefault(p => !p.FunctionUsedSecs.ContainsKey(request.FuncId));
+                            if (serviceInfo == null)
+                            {
+                                serviceInfo = serviceInfos.OrderBy(p => p.FunctionUsedSecs[request.FuncId]).First();
+                            }
+                            serviceInfo.FunctionUsedSecs.AddOrUpdate(request.FuncId, 30, (key, old) => old + 30);
+                            //Random rd = new Random();
+                            //var idx = rd.Next(1, serviceInfos.Count + 1);
+                            //serviceInfo = serviceInfos[idx - 1];
                         }
                         callList.Add(serviceInfo);
                     }
@@ -380,7 +395,7 @@ namespace LJC.FrameWork.SOA
                             try
                             {
                                 ConatinerLock.EnterWriteLock();
-                                ClientSessionList.Add(subMsgTransactionID, new Session[2] { session, serviceInfo.Session });
+                                ClientSessionList.Add(subMsgTransactionID, new object[] { session, serviceInfo, request.FuncId, DateTime.Now });
                             }
                             finally
                             {

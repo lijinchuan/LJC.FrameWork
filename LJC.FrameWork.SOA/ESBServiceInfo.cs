@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -70,5 +71,7 @@ namespace LJC.FrameWork.SOA
             get;
             set;
         }
+
+        public ConcurrentDictionary<int, long> FunctionUsedSecs = new ConcurrentDictionary<int, long>();
     }
 }
