@@ -349,6 +349,7 @@ namespace LJC.FrameWork.SOA
                             if (serviceInfos.Count == 1)
                             {
                                 serviceInfo = serviceInfos[0];
+                                serviceInfo.FunctionUsedSecs.AddOrUpdate(request.FuncId, 30, (key, old) => old + 30);
                             }
                             else
                             {
