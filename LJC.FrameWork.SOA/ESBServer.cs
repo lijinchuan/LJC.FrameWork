@@ -117,7 +117,28 @@ namespace LJC.FrameWork.SOA
                     sb.AppendFormat("<tr><td colspan='5'>{0}</td><td>{1}kb</td><td>{2}kb</td></tr>", "合计", (clients.Sum(p => p.Value.BytesSend) / 1024), (clients.Sum(p => p.Value.BytesRev) / 1024));
                 }
                 sb.Append("</table>");
+                sb.Append("<br/>");
+                //最快的节点
+                sb.AppendFormat("功能耗时统计(服务器会选择功能总耗时少的作为最快的选择)");
+                sb.AppendFormat("<table>");
+                sb.AppendFormat("<tr><td>服务号</td><td>功能耗时</td></tr>");
 
+                foreach (var item in servicelist.GroupBy(p => p.ServiceNo).Where(p => p.Count() > 1))
+                {
+                    StringBuilder sbb = new StringBuilder();
+                    sbb.Append("<table>");
+                    sbb.Append("<tr><th>服务名称</th><th>端点名称</th><th>端口地址</th><th>功能耗时统计</th></tr>");
+                    foreach (var s in item)
+                    {
+                        sbb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td></tr>", s.ServiceName, s.EndPointName, s.Session.IPAddress + ":" + s.Session.Port,
+                           "<table><tr><td>功能号</td><td>用时秒数</td></tr>" + string.Join("", s.FunctionUsedSecs.Select(k => "<tr><td>" + k.Key + "</td><td>" + k.Value+ "</td></tr>")) + "</table>");
+                    }
+                    sbb.Append("</table>");
+                    
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td></tr>", item.Key, sbb.ToString());
+                }
+
+                sb.AppendFormat("</table>");
                 //客户端
                 sb.Append("<br/>");
                 var liveclients = _esb.ClientSessionList.Select(p => p).ToList();
@@ -144,6 +165,7 @@ namespace LJC.FrameWork.SOA
                         session.BytesSend, session.BytesRev);
                 }
                 sb.Append("</table>");
+
                 sb.Append("</body></html>");
                 response.Content = sb.ToString();
                 return true;
@@ -198,7 +220,7 @@ namespace LJC.FrameWork.SOA
                     var serviceInfo = (ESBServiceInfo)carrayObjs[1];
                     var funid = (int)carrayObjs[2];
                     var startTime = (DateTime)carrayObjs[3];
-                    var useSecs = (int)DateTime.Now.Subtract(startTime).TotalSeconds;
+                    var useSecs = (int)Math.Round(DateTime.Now.Subtract(startTime).TotalSeconds, 0);
                     session.SendMessage(msgRet);
 
                     serviceInfo.FunctionUsedSecs.AddOrUpdate(funid, useSecs, (key, old) => old - 30 + useSecs);
@@ -312,135 +334,151 @@ namespace LJC.FrameWork.SOA
                     resp.IsSuccess = false;
                     resp.ErrMsg = string.Format("{0}服务未注册。", request.ServiceNo);
                 }
-
-                List<ESBServiceInfo> callList = new List<ESBServiceInfo>();
-                if (resp.IsSuccess)
+                else
                 {
-                    if (sendAll && serviceInfos.Count > 1)
+                    List<ESBServiceInfo> callList = new List<ESBServiceInfo>();
+                    if (resp.IsSuccess)
                     {
-                        callList.AddRange(serviceInfos);
-                    }
-                    else
-                    {
-                        ESBServiceInfo serviceInfo = null;
-                        if (serviceInfos.Count == 1)
+                        if (sendAll && serviceInfos.Count > 1)
                         {
-                            serviceInfo = serviceInfos[0];
+                            callList.AddRange(serviceInfos);
                         }
                         else
                         {
-                            serviceInfo = serviceInfos.FirstOrDefault(p => !p.FunctionUsedSecs.ContainsKey(request.FuncId));
-                            if (serviceInfo == null)
+                            ESBServiceInfo serviceInfo = null;
+                            if (serviceInfos.Count == 1)
                             {
-                                serviceInfo = serviceInfos.OrderBy(p => p.FunctionUsedSecs[request.FuncId]).First();
-                            }
-                            serviceInfo.FunctionUsedSecs.AddOrUpdate(request.FuncId, 30, (key, old) => old + 30);
-                            //Random rd = new Random();
-                            //var idx = rd.Next(1, serviceInfos.Count + 1);
-                            //serviceInfo = serviceInfos[idx - 1];
-                        }
-                        callList.Add(serviceInfo);
-                    }
-
-                    try
-                    {
-                        var canUsedList = new List<ESBServiceInfo>();
-                        foreach (var serviceInfo in callList)
-                        {
-                            if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
-                            {
-                                lock (LockObj)
-                                {
-                                    ServiceContainer.Remove(serviceInfo);
-                                    serviceInfo.Session.Close("no resp over 30s");
-                                }
-                                if (sendAll)
-                                {
-                                    throw new Exception("some service instance is down");
-                                }
+                                serviceInfo = serviceInfos[0];
                             }
                             else
                             {
-                                canUsedList.Add(serviceInfo);
-                            }
-                        }
-
-                        if (!canUsedList.Any())
-                        {
-                            var canUseInfo = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo)).LastOrDefault();
-                            if (canUseInfo == null)
-                            {
-                                throw new Exception(string.Format("{0}服务可能不可用,30秒无应答。", request.ServiceNo));
-                            }
-                            canUsedList.Add(canUseInfo);
-                        }
-
-                        for (var i = 0; i < canUsedList.Count; i++)
-                        {
-                            
-                            var serviceInfo = canUsedList[i];
-                            string clientid = session.SessionID;
-                            SOATransferRequest transferrequest = new SOATransferRequest();
-                            transferrequest.ClientId = clientid;
-                            transferrequest.FundId = request.FuncId;
-                            transferrequest.Param = request.Param;
-                            var isLast = i == canUsedList.Count - 1;
-                            var subMsgTransactionID = msgTransactionID;
-                            if (!isLast)
-                            {
-                                subMsgTransactionID += "#" + i;
-                            }
-
-                            transferrequest.ClientTransactionID = subMsgTransactionID;
-                            try
-                            {
-                                ConatinerLock.EnterWriteLock();
-                                ClientSessionList.Add(subMsgTransactionID, new object[] { session, serviceInfo, request.FuncId, DateTime.Now });
-                            }
-                            finally
-                            {
-                                ConatinerLock.ExitWriteLock();
-                            }
-
-                            Message msg = new Message((int)SOAMessageType.DoSOATransferRequest);
-                            msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
-                            msg.SetMessageBody(transferrequest);
-
-                            if (serviceInfo.Session.SendMessage(msg))
-                            {
-                                //if (sendAll)
-                                //{
-                                //    LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2},subMsgTransactionID:{3}",
-                                //        msgTransactionID, request.ServiceNo, request.FuncId,subMsgTransactionID));
-                                //}
-                                if (isLast)
+                                serviceInfo = serviceInfos.FirstOrDefault(p => !p.FunctionUsedSecs.ContainsKey(request.FuncId));
+                                if (serviceInfo == null)
                                 {
-                                    return;
+                                    serviceInfo = serviceInfos.OrderBy(p => p.FunctionUsedSecs[request.FuncId]).First();
+                                    serviceInfo.FunctionUsedSecs.AddOrUpdate(request.FuncId, 30, (key, old) => old + 30);
+                                }
+                                else
+                                {
+                                    //后添加的，默认也是最快的
+                                    var minSecs = serviceInfos.Where(p => p != serviceInfo).Min(p => p.FunctionUsedSecs.ContainsKey(request.FuncId) ? p.FunctionUsedSecs[request.FuncId] : long.MaxValue);
+                                    if (minSecs != long.MaxValue)
+                                    {
+                                        serviceInfo.FunctionUsedSecs.AddOrUpdate(request.FuncId, minSecs + 30, (key, old) => old + 30);
+                                    }
+                                    else
+                                    {
+                                        serviceInfo.FunctionUsedSecs.AddOrUpdate(request.FuncId, 30, (key, old) => old + 30);
+                                    }
+                                }
+
+                                //Random rd = new Random();
+                                //var idx = rd.Next(1, serviceInfos.Count + 1);
+                                //serviceInfo = serviceInfos[idx - 1];
+                            }
+                            callList.Add(serviceInfo);
+                        }
+
+                        try
+                        {
+                            var canUsedList = new List<ESBServiceInfo>();
+                            foreach (var serviceInfo in callList)
+                            {
+                                if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
+                                {
+                                    lock (LockObj)
+                                    {
+                                        ServiceContainer.Remove(serviceInfo);
+                                        serviceInfo.Session.Close("no resp over 30s");
+                                    }
+                                    if (sendAll)
+                                    {
+                                        throw new Exception("some service instance is down");
+                                    }
+                                }
+                                else
+                                {
+                                    canUsedList.Add(serviceInfo);
                                 }
                             }
-                            else
+
+                            if (!canUsedList.Any())
                             {
+                                var canUseInfo = ServiceContainer.FindAll(p => p.ServiceNo.Equals(request.ServiceNo)).LastOrDefault();
+                                if (canUseInfo == null)
+                                {
+                                    throw new Exception(string.Format("{0}服务可能不可用,30秒无应答。", request.ServiceNo));
+                                }
+                                canUsedList.Add(canUseInfo);
+                            }
+
+                            for (var i = 0; i < canUsedList.Count; i++)
+                            {
+
+                                var serviceInfo = canUsedList[i];
+                                string clientid = session.SessionID;
+                                SOATransferRequest transferrequest = new SOATransferRequest();
+                                transferrequest.ClientId = clientid;
+                                transferrequest.FundId = request.FuncId;
+                                transferrequest.Param = request.Param;
+                                var isLast = i == canUsedList.Count - 1;
+                                var subMsgTransactionID = msgTransactionID;
+                                if (!isLast)
+                                {
+                                    subMsgTransactionID += "#" + i;
+                                }
+
+                                transferrequest.ClientTransactionID = subMsgTransactionID;
                                 try
                                 {
                                     ConatinerLock.EnterWriteLock();
-                                    ClientSessionList.Remove(subMsgTransactionID);
+                                    ClientSessionList.Add(subMsgTransactionID, new object[] { session, serviceInfo, request.FuncId, DateTime.Now });
                                 }
                                 finally
                                 {
                                     ConatinerLock.ExitWriteLock();
                                 }
+
+                                Message msg = new Message((int)SOAMessageType.DoSOATransferRequest);
+                                msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                                msg.SetMessageBody(transferrequest);
+
+                                if (serviceInfo.Session.SendMessage(msg))
+                                {
+                                    //if (sendAll)
+                                    //{
+                                    //    LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2},subMsgTransactionID:{3}",
+                                    //        msgTransactionID, request.ServiceNo, request.FuncId,subMsgTransactionID));
+                                    //}
+                                    if (isLast)
+                                    {
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        ConatinerLock.EnterWriteLock();
+                                        ClientSessionList.Remove(subMsgTransactionID);
+                                    }
+                                    finally
+                                    {
+                                        ConatinerLock.ExitWriteLock();
+                                    }
+                                }
+                                //var result = SendMessageAnsy<byte[]>(serviceInfo.Session, msg);
+
+                                //resp.Result = result;
                             }
-                            //var result = SendMessageAnsy<byte[]>(serviceInfo.Session, msg);
-
-                            //resp.Result = result;
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        OnError(ex);
+                        catch (Exception ex)
+                        {
+                            OnError(ex);
 
-                        resp.IsSuccess = false;
-                        resp.ErrMsg = ex.Message;
+                            resp.IsSuccess = false;
+                            resp.ErrMsg = ex.Message;
+                        }
                     }
                 }
 
