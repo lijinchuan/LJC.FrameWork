@@ -244,8 +244,8 @@ namespace LJC.FrameWork.Comm
          });
         private static ChWord[] GetChWords()
         {
-            ChWord[] chWords = null;
             var chWordFileName = "Hanzi.json";
+            ChWord[] chWords;
             if (!File.Exists(chWordFileName))
             {
                 chWords = JsonUtil<ChWord[]>.Deserialize(ChWords.Words);
