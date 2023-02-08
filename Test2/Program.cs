@@ -5,6 +5,7 @@ using LJC.FrameWork.Comm.TextReaderWriter;
 using LJC.FrameWork.Data.EntityDataBase;
 using LJC.FrameWork.Data.Mongo;
 using LJC.FrameWork.EntityBuf;
+using LJC.FrameWork.LogManager;
 using LJC.FrameWork.SOA;
 using LJC.FrameWork.SocketApplication;
 using System;
@@ -247,6 +248,30 @@ namespace Test2
             Console.WriteLine("多线程用时:" + (DateTime.Now.Subtract(now).TotalMilliseconds));
 
             Console.Read();
+        }
+
+        static void TestStockSpell()
+        {
+            
+            var result = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<List<StockSimpleInfo>>(LJC.Com.StockService.Contract.Consts.ServiceNo,
+                LJC.Com.StockService.Contract.Consts.FunID_GetAllStockSimpleInfo, null);
+
+            foreach (var r in result)
+            {
+                try
+                {
+                    var spell = StringHelper.ChineseCapNew(r.ShortNameA.ToDBC());
+                    if (!spell.Equals(r.Spell, StringComparison.OrdinalIgnoreCase))
+                    {
+                        LogHelper.Instance.Error("不一致:" + r.ShortNameA + " " + r.Spell + " vs " + spell);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(r.ShortNameA);
+                    LogHelper.Instance.Error("TestStockSpell:" + r.ShortNameA, ex);
+                }
+            }
         }
 
         static void TestNio()
@@ -801,6 +826,11 @@ namespace Test2
         }
         static void Main(string[] args)
         {
+
+            TestStockSpell();
+
+            Console.Read();
+
             //修改系统的CultureInfo。指定日期的格式为“yyyy-MM-dd”。
             System.Globalization.CultureInfo myCI = new System.Globalization.CultureInfo("zh-CN", true);
             myCI.DateTimeFormat.ShortDatePattern = "yyyy-MM-dd";

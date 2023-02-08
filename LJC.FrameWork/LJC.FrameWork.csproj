@@ -143,6 +143,8 @@
     </Compile>
     <Compile Include="Comm\CacheItem_T.cs" />
     <Compile Include="Comm\CachItem.cs" />
+    <Compile Include="Comm\ChWord.cs" />
+    <Compile Include="Comm\ChWords.cs" />
     <Compile Include="Comm\CommFun.cs">
       <SubType>Code</SubType>
     </Compile>

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography;
+using System.IO;
 
 namespace LJC.FrameWork.Comm
 {
@@ -229,6 +230,102 @@ namespace LJC.FrameWork.Comm
             }
 
             return _result;
+        }
+
+        /// <summary>
+        /// 获取字典
+        /// </summary>
+        internal static Lazy<Dictionary<string, ChWord[]>> LzChWords = new Lazy<Dictionary<string, ChWord[]>>(() =>
+         {
+             var words = GetChWords();
+
+             return words.GroupBy(p => p.Word).ToDictionary(p => p.Key, q => q.ToArray());
+
+         });
+        private static ChWord[] GetChWords()
+        {
+            ChWord[] chWords = null;
+            var chWordFileName = "Hanzi.json";
+            if (!File.Exists(chWordFileName))
+            {
+                chWords = JsonUtil<ChWord[]>.Deserialize(ChWords.Words);
+                File.WriteAllText(chWordFileName, JsonUtil<ChWord[]>.Serialize(chWords, true), Encoding.UTF8);
+            }
+            else
+            {
+                chWords = JsonUtil<ChWord[]>.Deserialize(File.ReadAllText(chWordFileName, Encoding.UTF8));
+            }
+            return chWords;
+        }
+
+        /// <summary>
+        /// 返回大写首字母,错误直接抛出
+        /// </summary>
+        /// <param name="chineseStr">词语言</param>
+        /// <returns>多音字无法确定时抛出错误</returns>
+        public static string ChineseCapNew(string chineseStr)
+        {
+            var caps = string.Empty;
+            foreach (var ch in chineseStr)
+            {
+                var word = ch.ToString();
+                if (string.IsNullOrWhiteSpace(word))
+                {
+                    continue;
+                }
+                if (IsChinese(word))
+                {
+                    if (LzChWords.Value.ContainsKey(word))
+                    {
+                        var words = LzChWords.Value[word];
+                        if (words.Length == 1 || words.Select(p => p.Py.First()).Distinct().Count() == 1)
+                        {
+                            caps += words.First().Py.First();
+                        }
+                        else
+                        {
+
+                            var matchWord = words.Where(p => p.Phrases?.Length > 0).SelectMany(w =>
+                                {
+                                    List<Tuple<string, ChWord>> ret = new List<Tuple<string, ChWord>>();
+                                    foreach (var p in w.Phrases)
+                                    {
+                                        if (chineseStr.Contains(p))
+                                        {
+                                            ret.Add(new Tuple<string, ChWord>(p, w));
+                                        }
+                                    }
+                                    return ret;
+                                }).OrderByDescending(p => p.Item1.Length).FirstOrDefault();
+                            
+                            if (matchWord != null)
+                            {
+                                caps += matchWord.Item2.Py.First();
+                            }
+                            else
+                            {
+                                var ex = new NotSupportedException("ChineseCapNew 匹配失败,多音字“" + word + "”无法确认");
+                                ex.Data.Add("word", word);
+                                ex.Data.Add("chineseStr", chineseStr);
+                                throw ex;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var ex = new NotSupportedException("ChineseCapNew 匹配失败，字典不包含此字");
+                        ex.Data.Add("word", word);
+                        ex.Data.Add("chineseStr", chineseStr);
+                        throw ex;
+                    }
+                }
+                else
+                {
+                    caps += ch;
+                }
+            }
+
+            return caps.ToUpper();
         }
 
         public static string ChineseCap(string chineseStr)
