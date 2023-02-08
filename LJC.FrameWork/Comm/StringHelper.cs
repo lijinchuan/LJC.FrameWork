@@ -244,16 +244,20 @@ namespace LJC.FrameWork.Comm
          });
         private static ChWord[] GetChWords()
         {
-            var chWordFileName = "Hanzi.json";
+            var chWordFileName =Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"Hanzi.json");
             ChWord[] chWords;
             if (!File.Exists(chWordFileName))
             {
                 chWords = JsonUtil<ChWord[]>.Deserialize(ChWords.Words);
                 File.WriteAllText(chWordFileName, JsonUtil<ChWord[]>.Serialize(chWords, true), Encoding.UTF8);
+
+                LogManager.LogHelper.Instance.Info("汉字文件不存在，创建：" + chWordFileName);
             }
             else
             {
                 chWords = JsonUtil<ChWord[]>.Deserialize(File.ReadAllText(chWordFileName, Encoding.UTF8));
+
+                LogManager.LogHelper.Instance.Info("汉字文件存在，读取：" + chWordFileName);
             }
             return chWords;
         }
