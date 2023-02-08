@@ -253,14 +253,14 @@ namespace Test2
         static void TestStockSpell()
         {
             
-            var result = LJC.FrameWork.SOA.ESBClient.DoSOARequest2<List<StockSimpleInfo>>(LJC.Com.StockService.Contract.Consts.ServiceNo,
+            var result = ESBClient.DoSOARequest2<List<StockSimpleInfo>>(LJC.Com.StockService.Contract.Consts.ServiceNo,
                 LJC.Com.StockService.Contract.Consts.FunID_GetAllStockSimpleInfo, null);
 
             foreach (var r in result)
             {
                 try
                 {
-                    var spell = StringHelper.ChineseCapNew(r.ShortNameA.ToDBC());
+                    var spell = StringHelper.ChineseCap(r.ShortNameA);
                     if (!spell.Equals(r.Spell, StringComparison.OrdinalIgnoreCase))
                     {
                         LogHelper.Instance.Error("不一致:" + r.ShortNameA + " " + r.Spell + " vs " + spell);

@@ -262,9 +262,13 @@ namespace LJC.FrameWork.Comm
         /// 返回大写首字母,错误直接抛出
         /// </summary>
         /// <param name="chineseStr">词语言</param>
+        /// <param name="igNoreMore">是否过滤多音字</param>
         /// <returns>多音字无法确定时抛出错误</returns>
-        public static string ChineseCapNew(string chineseStr)
+        public static string ChineseCap(string chineseStr,bool igNoreMore=false)
         {
+            if (string.IsNullOrWhiteSpace(chineseStr))
+                return string.Empty;
+            chineseStr = chineseStr.Replace(" ", "").ToDBC().ToUpper();
             var caps = string.Empty;
             foreach (var ch in chineseStr)
             {
@@ -304,10 +308,17 @@ namespace LJC.FrameWork.Comm
                             }
                             else
                             {
-                                var ex = new NotSupportedException("ChineseCapNew 匹配失败,多音字“" + word + "”无法确认");
-                                ex.Data.Add("word", word);
-                                ex.Data.Add("chineseStr", chineseStr);
-                                throw ex;
+                                if (igNoreMore)
+                                {
+                                    caps += words.First().Py.First();
+                                }
+                                else
+                                {
+                                    var ex = new NotSupportedException("ChineseCapNew 匹配失败,多音字“" + word + "”无法确认");
+                                    ex.Data.Add("word", word);
+                                    ex.Data.Add("chineseStr", chineseStr);
+                                    throw ex;
+                                }
                             }
                         }
                     }
@@ -328,7 +339,7 @@ namespace LJC.FrameWork.Comm
             return caps.ToUpper();
         }
 
-        public static string ChineseCap(string chineseStr)
+        public static string ChineseCapOld(string chineseStr)
         {
             if (string.IsNullOrWhiteSpace(chineseStr))
                 return string.Empty;
