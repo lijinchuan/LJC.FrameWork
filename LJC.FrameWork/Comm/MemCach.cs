@@ -34,7 +34,7 @@ namespace LJC.FrameWork.Comm
         {
             CachPool = new Dictionary<string, CachItem>();
             rwLock = new ReaderWriterLockSlim();
-            CommFun.SetInterval(5, ClearTimeOutItem);
+            CommFun.SetInterval(5000, ClearTimeOutItem);
         }
 
         static bool ClearTimeOutItem()
