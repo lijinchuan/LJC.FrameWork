@@ -267,28 +267,16 @@ namespace LJC.FrameWork.SOA
 
             var webMappers = ServiceConfig.ReadConfig()?.WebMappers;
 
-            WebMapper matchedMapper = null;
-            if (webMappers != null && webMappers.Any())
-            {
-
-                foreach (var map in webMappers)
-                {
-                    if (!string.IsNullOrWhiteSpace(map.RegexRoute) && Regex.IsMatch(request.Url, map.RegexRoute, RegexOptions.IgnoreCase))
-                    {
-                        matchedMapper = map;
-                        break;
-                    }
-                    else if (request.Url.StartsWith(map.VirRoot, StringComparison.OrdinalIgnoreCase))
-                    {
-                        matchedMapper = map;
-                        break;
-                    }
-                }
-            }
-
+            WebMapper matchedMapper = WebTransferSvcHelper.Find(request,webMappers);
             if (matchedMapper != null)
             {
-                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(matchedMapper.LocalHost + request.Url);
+                var virUrl = request.Url;
+                if (virUrl.StartsWith(matchedMapper.VirRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    virUrl = virUrl.Substring(matchedMapper.VirRoot.Length);
+                }
+
+                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(matchedMapper.LocalHost + virUrl);
                 webRequest.Method = request.Method;
                 webRequest.AllowAutoRedirect = true;
 
@@ -297,6 +285,10 @@ namespace LJC.FrameWork.SOA
                     if (kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
                     {
                         webRequest.Host = kv.Value;
+                    }
+                    else if (kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase))
+                    {
+                        webRequest.Referer = kv.Value;
                     }
                     else if (kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
                     {
@@ -309,6 +301,14 @@ namespace LJC.FrameWork.SOA
                     else if (kv.Key.Equals("Accept", StringComparison.OrdinalIgnoreCase))
                     {
                         webRequest.Accept = kv.Value;
+                    }
+                    else if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+                    else if (kv.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        webRequest.ContentType = kv.Value;
                     }
                     else
                     {
@@ -356,6 +356,13 @@ namespace LJC.FrameWork.SOA
                 {
                     //int statusCode = (int)webResponse.StatusCode;
                     //if (statusCode >= 200 && statusCode < 400)
+                    response.Headers = new Dictionary<string, string>();
+                    for(var i=0;i<webResponse.Headers.Count;i++)
+                    {
+                        var name = webResponse.Headers.GetKey(i);
+                        var value = webResponse.Headers.Get(i);
+                        response.Headers.Add(name, value);
+                    }
 
                     byte[] contentBuffer = null;
                     using (MemoryStream ms = new MemoryStream())

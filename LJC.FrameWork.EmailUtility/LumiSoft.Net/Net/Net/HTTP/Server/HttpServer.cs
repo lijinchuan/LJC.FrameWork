@@ -13,9 +13,9 @@ namespace LJC.FrameWork.Net.HTTP.Server
     public class HttpServer
     {
         Server s;
-        Hashtable hostmap = new Hashtable();    // Map<string, string>: Host => Home folder
+        Hashtable hostmap = Hashtable.Synchronized(new Hashtable());    // Map<string, string>: Host => Home folder
         ArrayList handlers = new ArrayList();        // List<IHttpHandler>
-        Hashtable sessions = new Hashtable();        // Map<string,Session>
+        Hashtable sessions = Hashtable.Synchronized(new Hashtable());        // Map<string,Session>
 
         int sessionTimeout = 600;
 
@@ -257,16 +257,19 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
         void CleanUpSessions()
         {
-            ICollection keys = sessions.Keys;
             ArrayList toRemove = new ArrayList();
-            foreach (string k in keys)
+            lock (sessions.SyncRoot)
             {
-                Session s = (Session)sessions[k];
-                int time = (int)((DateTime.Now - s.LastTouched).TotalSeconds);
-                if (time > sessionTimeout)
+                ICollection keys = sessions.Keys;
+                foreach (string k in keys)
                 {
-                    toRemove.Add(k);
-                    Console.WriteLine("Removed session " + k);
+                    Session s = (Session)sessions[k];
+                    int time = (int)((DateTime.Now - s.LastTouched).TotalSeconds);
+                    if (time > sessionTimeout)
+                    {
+                        toRemove.Add(k);
+                        Console.WriteLine("Removed session " + k);
+                    }
                 }
             }
             foreach (object k in toRemove) sessions.Remove(k);

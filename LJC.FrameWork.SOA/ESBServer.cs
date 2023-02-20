@@ -366,25 +366,14 @@ namespace LJC.FrameWork.SOA
             WebMapper webMapper = null;
             foreach (var item in list.Where(p => p.WebMappers != null && p.WebMappers.Any()))
             {
-                foreach (var web in item.WebMappers)
-                {
-                    if (!string.IsNullOrWhiteSpace(web.RegexRoute) && Regex.IsMatch(webRequest.Url, web.RegexRoute, RegexOptions.IgnoreCase))
-                    {
-                        webMapper = web;
-                        break;
-                    }
-                    else if (webRequest.Url.StartsWith(web.VirRoot, StringComparison.OrdinalIgnoreCase))
-                    {
-                        webMapper = web;
-                        break;
-                    }
-                }
+                webMapper = WebTransferSvcHelper.Find(webRequest, item.WebMappers);
                 if (webMapper != null)
                 {
                     serviceInfo = item;
                     break;
                 }
             }
+
             if (webMapper == null)
             {
                 return null;
