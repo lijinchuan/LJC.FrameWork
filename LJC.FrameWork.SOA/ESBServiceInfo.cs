@@ -72,6 +72,12 @@ namespace LJC.FrameWork.SOA
             set;
         }
 
+        public List<WebMapper> WebMappers
+        {
+            get;
+            set;
+        }
+
         public ConcurrentDictionary<int, long> FunctionUsedSecs = new ConcurrentDictionary<int, long>();
     }
 }

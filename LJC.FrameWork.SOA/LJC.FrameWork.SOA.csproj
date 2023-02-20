@@ -40,6 +40,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApiSimulateHandler.cs" />
     <Compile Include="Consts.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoRequest.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoResponse.cs" />
@@ -52,8 +53,12 @@
     <Compile Include="Contract\SOANoticeResponse.cs" />
     <Compile Include="Contract\SOARedirectRequest.cs" />
     <Compile Include="Contract\SOARedirectResponse.cs" />
+    <Compile Include="Contract\SOATransferWebRequest.cs" />
+    <Compile Include="Contract\SOATransferWebResponse.cs" />
     <Compile Include="Contract\UnRegisterServiceRequest.cs" />
     <Compile Include="Contract\UnRegisterServiceResponse.cs" />
+    <Compile Include="Contract\WebRequest.cs" />
+    <Compile Include="Contract\WebResponse.cs" />
     <Compile Include="ESBClientInfo.cs" />
     <Compile Include="ESBClient.cs" />
     <Compile Include="ESBClientPoolManager.cs" />
@@ -67,6 +72,8 @@
     <Compile Include="IESBClient.cs" />
     <Compile Include="IService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServiceConfig.cs" />
+    <Compile Include="SimulateServerManager.cs" />
     <Compile Include="SOAException.cs" />
     <Compile Include="SOAMessageType.cs" />
     <Compile Include="Contract\SOARequest.cs" />
@@ -75,6 +82,7 @@
     <Compile Include="Contract\SOATransferResponse.cs" />
     <Compile Include="SOAServerEchoResponse.cs" />
     <Compile Include="SOAServerResponse.cs" />
+    <Compile Include="WebMapper.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LJC.FrameWork.EmailUtility\LumiSoft.Net\Net\Net\LJC.FrameWork.Net.csproj">

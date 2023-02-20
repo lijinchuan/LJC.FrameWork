@@ -19,5 +19,7 @@ namespace LJC.FrameWork.SOA
         SOANoticeResponse,
         SOANoticeClientMessage,
         QueryServiceNo,
+        SOATransferWebRequest,
+        SOATransferWebResponse
     }
 }

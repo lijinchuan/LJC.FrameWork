@@ -7,11 +7,17 @@ using System.Threading;
 using LJC.FrameWork.LogManager;
 using LJC.FrameWork.SocketApplication.SocketSTD;
 using LJC.FrameWork.SOA.Contract;
+using LJC.FrameWork.EntityBuf;
+using System.Text.RegularExpressions;
+using System.IO;
+using LJC.FrameWork.Comm;
 
 namespace LJC.FrameWork.SOA
 {
     public class ESBService:SessionClient,IService
     {
+        private const int Func_WebRequest = -100;
+
         private bool SupportTcpServiceRidrect
         {
             get;
@@ -147,7 +153,7 @@ namespace LJC.FrameWork.SOA
 
                     try
                     {
-                        var result = DoResponse(request.FundId, request.Param,request.ClientId);
+                        var result = DoResponse(request.FundId, request.Param, request.ClientId);
                         responseBody.Result = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(result);
                         responseBody.IsSuccess = true;
 
@@ -183,6 +189,61 @@ namespace LJC.FrameWork.SOA
                     return;
                 }
             }
+            else if (message.IsMessage((int)SOAMessageType.SOATransferWebRequest))
+            {
+                SOATransferWebRequest request = null;
+                try
+                {
+                    var responseMsg = new Message((int)SOAMessageType.SOATransferWebResponse);
+                    responseMsg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                    SOATransferWebResponse responseBody = new SOATransferWebResponse();
+                    request = message.GetMessageBody<SOATransferWebRequest>();
+                    responseBody.ClientTransactionID = request.ClientTransactionID;
+                    responseBody.ClientId = request.ClientId;
+
+                    if (SocketApplicationEnvironment.TraceMessage)
+                    {
+                        LogHelper.Instance.Debug(string.Format("接收服务请求,请求号:{0}", request.ClientTransactionID));
+                    }
+
+                    try
+                    {
+                        var result = DoResponse(Func_WebRequest, request.Param, request.ClientId);
+                        responseBody.Result = EntityBuf.EntityBufCore.Serialize(result);
+                        responseBody.IsSuccess = true;
+
+                        if (SocketApplicationEnvironment.TraceMessage)
+                        {
+                            LogHelper.Instance.Debug(string.Format("处理请求：请求号:{0},客户端请求号:{1},服务号:{2},功能号:{3},结果:{4},序列化结果:{5}",
+                                responseMsg.MessageHeader.TransactionID, request.ClientTransactionID, ServiceNo, request.FundId, Comm.JsonUtil<object>.Serialize(result), Convert.ToBase64String(responseBody.Result)));
+
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        responseBody.IsSuccess = false;
+                        responseBody.ErrMsg = ex.Message;
+
+                        LogHelper.Instance.Error(string.Format("服务转发出错,请求号:{0},服务号:{1},功能号:{2}",
+                            request.ClientTransactionID, ServiceNo, 0), ex);
+
+                    }
+
+                    responseMsg.SetMessageBody(responseBody);
+
+                    SendMessage(responseMsg);
+
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.Instance.Error(string.Format("服务转发出错,请求号:{0},服务号:{1},功能号:{2}",
+                        request == null ? "0" : request.ClientTransactionID,
+                        ServiceNo, request == null ? 0 : request.FundId), ex);
+
+                    return;
+                }
+            }
 
             base.ReciveMessage(message);
         }
@@ -200,8 +261,153 @@ namespace LJC.FrameWork.SOA
             return base.DoMessage(message);
         }
 
+        private object DoWebResponse(WebRequest request)
+        {
+            WebResponse response = new WebResponse();
+
+            var webMappers = ServiceConfig.ReadConfig()?.WebMappers;
+
+            WebMapper matchedMapper = null;
+            if (webMappers != null && webMappers.Any())
+            {
+
+                foreach (var map in webMappers)
+                {
+                    if (!string.IsNullOrWhiteSpace(map.RegexRoute) && Regex.IsMatch(request.Url, map.RegexRoute, RegexOptions.IgnoreCase))
+                    {
+                        matchedMapper = map;
+                        break;
+                    }
+                    else if (request.Url.StartsWith(map.VirRoot, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchedMapper = map;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedMapper != null)
+            {
+                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(matchedMapper.LocalHost + request.Url);
+                webRequest.Method = request.Method;
+                webRequest.AllowAutoRedirect = true;
+
+                foreach (var kv in request.Headers)
+                {
+                    if (kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
+                    {
+                        webRequest.Host = kv.Value;
+                    }
+                    else if (kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+                    {
+                        webRequest.KeepAlive = "keep-alive".Equals(kv.Value, StringComparison.OrdinalIgnoreCase);
+                    }
+                    else if (kv.Key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
+                    {
+                        webRequest.UserAgent = kv.Value;
+                    }
+                    else if (kv.Key.Equals("Accept", StringComparison.OrdinalIgnoreCase))
+                    {
+                        webRequest.Accept = kv.Value;
+                    }
+                    else
+                    {
+                        webRequest.Headers.Add(kv.Key, kv.Value);
+                    }
+                }
+
+                webRequest.CookieContainer = new System.Net.CookieContainer();
+                foreach (var kv in request.Cookies)
+                {
+                    webRequest.CookieContainer.Add(new System.Net.Cookie
+                    {
+                        Name = kv.Key,
+                        Value = WebUtility.UrlEncode(kv.Value),
+                        Domain=webRequest.Host.Split(':').First(),
+                        Path="/"
+                    });
+                }
+
+                if (request.TimeOut > 0)
+                {
+                    webRequest.Timeout = request.TimeOut;
+                }
+                //if (SupportCompression)
+                {
+                    //webRequest.Headers.Add(HttpRequestHeader.AcceptEncoding, "gzip, deflate");
+                    webRequest.Headers.Add(System.Net.HttpRequestHeader.AcceptEncoding, "gzip");
+                }
+
+                var buff = request.InputData;
+                if (buff != null && buff.Length > 0)
+                {
+                    //byte[] buff = this.WebEncoding.GetBytes(data);
+                    //webRequest.ContentType = "application/x-www-form-urlencoded;charset=UTF-8;";
+                    //webRequest.ContentType = contentType;
+                    webRequest.ContentLength = buff.Length;
+
+                    using (Stream requestStream = webRequest.GetRequestStream())
+                    {
+                        requestStream.Write(buff, 0, buff.Length);
+                    }
+                }
+
+                using (System.Net.HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
+                {
+                    //int statusCode = (int)webResponse.StatusCode;
+                    //if (statusCode >= 200 && statusCode < 400)
+
+                    byte[] contentBuffer = null;
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        using (Stream s = webResponse.GetResponseStream())
+                        {
+                            byte[] buffer = new byte[2048];
+                            int len = 0;
+                            while ((len = s.Read(buffer, 0, 1024)) > 0)
+                            {
+                                ms.Write(buffer, 0, len);
+                            }
+                        }
+
+                        if (webResponse.ContentEncoding.Equals("gzip", StringComparison.OrdinalIgnoreCase))
+                        {
+                            contentBuffer = Comm.GZip.Decompress(ms.ToArray());
+                        }
+                        else
+                        {
+                            contentBuffer = ms.ToArray();
+                        }
+
+                        response.ResponseData = contentBuffer;
+                    }
+
+                    response.ResponseCode = (int)webResponse.StatusCode;
+                    response.ContentType = webResponse.ContentType;
+
+                    //response.Cookies = new Dictionary<string, string>();
+                    //if (webResponse.Cookies.Count > 0)
+                    //{
+
+                    //    for (int i = 0; i < webResponse.Cookies.Count; i++)
+                    //    {
+                    //        response.Cookies.Add(webResponse.Cookies[i].Name, webResponse.Cookies[i].Value);
+                    //    }
+                    //}
+                }
+            }
+
+
+            return response;
+        }
+
         public virtual object DoResponse(int funcId, byte[] Param,string clientid)
         {
+            if (funcId == Func_WebRequest)
+            {
+                return DoWebResponse(EntityBufCore.DeSerialize<WebRequest>(Param));
+            }
+
             return null;
         }
 
@@ -231,6 +437,12 @@ namespace LJC.FrameWork.SOA
             {
                 msg.AddCustomData(nameof(this.ServiceName), this.ServiceName);
                 msg.AddCustomData(nameof(this.EndPointName), this.EndPointName);
+            }
+
+            var serviceConfig = ServiceConfig.ReadConfig();
+            if (serviceConfig?.WebMappers?.Any() == true)
+            {
+                msg.AddCustomData(nameof(ServiceConfig.WebMappers), Comm.SerializerHelper.SerializerToXML(serviceConfig.WebMappers));
             }
 
             msg.SetMessageBody(req);

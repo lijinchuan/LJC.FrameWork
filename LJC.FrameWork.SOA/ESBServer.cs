@@ -8,6 +8,9 @@ using System.Diagnostics;
 using System.Threading;
 using LJC.FrameWork.LogManager;
 using LJC.FrameWork.EntityBuf;
+using LJC.FrameWork.SOA.Contract;
+using System.Text.RegularExpressions;
+using LJC.FrameWork.Comm;
 
 namespace LJC.FrameWork.SOA
 {
@@ -19,7 +22,14 @@ namespace LJC.FrameWork.SOA
         internal Dictionary<string, object[]> ClientSessionList = new Dictionary<string, object[]>();
         internal static ReaderWriterLockSlim ConatinerLock = new ReaderWriterLockSlim();
 
+        /// <summary>
+        /// 管理页面端口
+        /// </summary>
         private string ManagerWebPortStr = System.Configuration.ConfigurationManager.AppSettings["esbmanport"];
+        /// <summary>
+        /// 网站服务端口
+        /// </summary>
+        private string WebServerPortStr = System.Configuration.ConfigurationManager.AppSettings["webwerverport"];
 
         #region 管理web
         public class DefaultHander : LJC.FrameWork.Net.HTTP.Server.IRESTfulHandler
@@ -184,6 +194,17 @@ namespace LJC.FrameWork.SOA
 
                 LJC.FrameWork.Net.HTTP.Server.HttpServer manhttpserver = new Net.HTTP.Server.HttpServer(new Net.HTTP.Server.Server(manport));
                 manhttpserver.Handlers.Add(new LJC.FrameWork.Net.HTTP.Server.RESTfulApiHandlerBase(LJC.FrameWork.Net.HTTP.Server.HMethod.GET, "/esb/index", new List<string>() { }, new DefaultHander(this)));
+
+                LogHelper.Instance.Info("管理WEB服务开启:" + manport);
+            }
+
+            if (!string.IsNullOrWhiteSpace(WebServerPortStr))
+            {
+                var webport= int.Parse(WebServerPortStr);
+                SimulateServerManager.StartServer(webport);
+                SimulateServerManager.TransferRequest = DoWebRequest;
+
+                LogHelper.Instance.Info("web服务开启:" + webport);
             }
         }
 
@@ -249,6 +270,46 @@ namespace LJC.FrameWork.SOA
             }
         }
 
+        internal void DoTransferWebResponse(SOATransferWebResponse response)
+        {
+            try
+            {
+                object[] carrayObjs = null;
+
+                ConatinerLock.EnterReadLock();
+                ClientSessionList.TryGetValue(response.ClientTransactionID, out carrayObjs);
+                ConatinerLock.ExitReadLock();
+
+                if (carrayObjs != null)
+                {
+                    ConatinerLock.EnterWriteLock();
+                    ClientSessionList.Remove(response.ClientTransactionID);
+                    ConatinerLock.ExitWriteLock();
+
+                    if (response.Result != null)
+                    {
+                        carrayObjs[carrayObjs.Length - 1] = EntityBufCore.DeSerialize<WebResponse>(response.Result);
+                    }
+
+                    var ae = (carrayObjs[0] as AutoResetEvent);
+                    ae.Set();
+                }
+                else
+                {
+                    Exception ex = new Exception(string.Format("DoTransferWebResponse(TransferWebResponse response)失败,请求序列号:{0}", response.ClientTransactionID));
+                    ex.Data.Add("response.ClientId", response.ClientId);
+
+                    LogHelper.Instance.Error("DoTransferResponse出错", ex);
+                }
+            }
+            catch (Exception ex)
+            {
+                ex.Data.Add("请求序列号", response.ClientTransactionID);
+
+                LogHelper.Instance.Error("DoTransferResponse出错", ex);
+            }
+        }
+
         public virtual object DoRequest(int funcId,byte[] param)
         {
             switch(funcId)
@@ -295,6 +356,127 @@ namespace LJC.FrameWork.SOA
                     {
                         throw new NotImplementedException(string.Format("未实现的功能:{0}", funcId));
                     }
+            }
+        }
+
+        internal WebResponse DoWebRequest(WebRequest webRequest)
+        {
+            var list = ServiceContainer.ToList();
+            ESBServiceInfo serviceInfo = null;
+            WebMapper webMapper = null;
+            foreach (var item in list.Where(p => p.WebMappers != null && p.WebMappers.Any()))
+            {
+                foreach (var web in item.WebMappers)
+                {
+                    if (!string.IsNullOrWhiteSpace(web.RegexRoute) && Regex.IsMatch(webRequest.Url, web.RegexRoute, RegexOptions.IgnoreCase))
+                    {
+                        webMapper = web;
+                        break;
+                    }
+                    else if (webRequest.Url.StartsWith(web.VirRoot, StringComparison.OrdinalIgnoreCase))
+                    {
+                        webMapper = web;
+                        break;
+                    }
+                }
+                if (webMapper != null)
+                {
+                    serviceInfo = item;
+                    break;
+                }
+            }
+            if (webMapper == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
+                {
+                    lock (LockObj)
+                    {
+                        ServiceContainer.Remove(serviceInfo);
+                        serviceInfo.Session.Close("no resp over 30s");
+
+                        return null;
+                    }
+                }
+
+                string clientid = Guid.NewGuid().ToString("N");
+                SOATransferWebRequest transferrequest = new SOATransferWebRequest();
+                transferrequest.ClientId = clientid;
+                transferrequest.FundId = 0;
+                transferrequest.Param = EntityBuf.EntityBufCore.Serialize(webRequest);
+
+                transferrequest.ClientTransactionID = clientid;
+
+                using (AutoResetEvent autoResetEvent = new AutoResetEvent(false))
+                {
+                    var carrayObj = new object[] { autoResetEvent, serviceInfo, 0, DateTime.Now, null };
+                    try
+                    {
+                        ConatinerLock.EnterWriteLock();
+                        ClientSessionList.Add(clientid, carrayObj);
+                    }
+                    finally
+                    {
+                        ConatinerLock.ExitWriteLock();
+                    }
+
+                    Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
+                    msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                    msg.SetMessageBody(transferrequest);
+
+                    if (serviceInfo.Session.SendMessage(msg))
+                    {
+                        //if (sendAll)
+                        //{
+                        //    LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2},subMsgTransactionID:{3}",
+                        //        msgTransactionID, request.ServiceNo, request.FuncId,subMsgTransactionID));
+                        //}
+                        if (autoResetEvent.WaitOne(webRequest.TimeOut))
+                        {
+                            return (WebResponse)carrayObj.Last();
+                        }
+                        else
+                        {
+                            try
+                            {
+                                ConatinerLock.EnterWriteLock();
+                                ClientSessionList.Remove(clientid);
+                            }
+                            finally
+                            {
+                                ConatinerLock.ExitWriteLock();
+                            }
+                            throw new TimeoutException();
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            ConatinerLock.EnterWriteLock();
+                            ClientSessionList.Remove(clientid);
+
+                            return null;
+                        }
+                        finally
+                        {
+                            ConatinerLock.ExitWriteLock();
+                        }
+                    }
+                }
+                //var result = SendMessageAnsy<byte[]>(serviceInfo.Session, msg);
+
+                //resp.Result = result;
+            }
+            catch (Exception ex)
+            {
+                OnError(ex);
+
+                return null;
             }
         }
 
@@ -515,6 +697,13 @@ namespace LJC.FrameWork.SOA
 
                         if (!ServiceContainer.Any(p => p.Session.SessionID == session.SessionID && p.ServiceNo == req.ServiceNo))
                         {
+                            var webMappersData = message.GetCustomData(nameof(ServiceConfig.WebMappers));
+                            List<WebMapper> webMappers = new List<WebMapper>();
+                            if (!string.IsNullOrWhiteSpace(webMappersData))
+                            {
+                                webMappers = Comm.SerializerHelper.DeserializerXML<List<WebMapper>>(webMappersData);
+                            }
+
                             ServiceContainer.Add(new ESBServiceInfo
                             {
                                 ServiceNo = req.ServiceNo,
@@ -524,7 +713,8 @@ namespace LJC.FrameWork.SOA
                                 RedirectTcpIps = req.RedirectTcpIps,
                                 RedirectTcpPort = req.RedirectTcpPort,
                                 RedirectUdpIps = req.RedirectUdpIps,
-                                RedirectUdpPort = req.RedirectUdpPort
+                                RedirectUdpPort = req.RedirectUdpPort,
+                                WebMappers = webMappers
                             });
                         }
                     }
@@ -585,6 +775,12 @@ namespace LJC.FrameWork.SOA
                 DoTransferResponse(resp);
                 return;
             }
+            else if (message.IsMessage((int)SOAMessageType.SOATransferWebResponse))
+            {
+                var resp = message.GetMessageBody<SOATransferWebResponse>();
+                DoTransferWebResponse(resp);
+                return;
+            }
             else if (message.IsMessage((int)SOAMessageType.SOANoticeRequest))
             {
                 var req = message.GetMessageBody<Contract.SOANoticeRequest>();
@@ -596,9 +792,9 @@ namespace LJC.FrameWork.SOA
 
                     notice.SetMessageBody(new Contract.SOANoticeClientMessage
                     {
-                        NoticeBody=req.NoticeBody,
-                        NoticeType=req.NoticeType,
-                        ServiceNo=service==null?-1:service.ServiceNo
+                        NoticeBody = req.NoticeBody,
+                        NoticeType = req.NoticeType,
+                        ServiceNo = service == null ? -1 : service.ServiceNo
                     });
                     List<string> succlist = new List<string>();
                     List<string> faillist = new List<string>();
@@ -634,9 +830,9 @@ namespace LJC.FrameWork.SOA
                         respmesg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
                         respmesg.SetMessageBody(new Contract.SOANoticeResponse
                         {
-                            FailList=faillist.ToArray(),
-                            SuccList=succlist.ToArray(),
-                            IsDone=true
+                            FailList = faillist.ToArray(),
+                            SuccList = succlist.ToArray(),
+                            IsDone = true
                         });
                         session.SendMessage(respmesg);
                     }
