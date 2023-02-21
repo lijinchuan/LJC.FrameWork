@@ -1,4 +1,5 @@
-﻿using LJC.FrameWork.Net.HTTP.Server;
+﻿using LJC.FrameWork.LogManager;
+using LJC.FrameWork.Net.HTTP.Server;
 using LJC.FrameWork.SOA.Contract;
 using System;
 using System.Collections.Generic;
@@ -9,51 +10,54 @@ namespace LJC.FrameWork.SOA
 {
     internal static class SimulateServerManager
     {
-        static HttpServer manhttpserver = null;
+        /// <summary>
+        /// 网站服务端口
+        /// </summary>
+        internal static string DefaltWebPort = System.Configuration.ConfigurationManager.AppSettings["webwerverport"];
 
         internal static Func<WebRequest, WebResponse> TransferRequest;
 
-        private static void InitServer()
+        private static object rwLocker = new object();
+
+        private static Dictionary<int, SimulateServer> SimulateServers = new Dictionary<int, SimulateServer>();
+
+        public static void AddDefaultServer()
         {
-           manhttpserver.Handlers.Add(new ApiSimulateHandler());
-        }
-
-        /// <summary>
-        /// 开启服务
-        /// </summary>
-        /// <param name="port"></param>
-        /// <returns></returns>
-        public static bool StartServer(int port)
-        {
-            if (manhttpserver == null)
+            if (!string.IsNullOrWhiteSpace(DefaltWebPort))
             {
-                manhttpserver = new HttpServer(new Server(port));
-                InitServer();
-                return true;
-            }
-            else if (manhttpserver.Server.Port != port)
-            {
-                manhttpserver.Server.Close();
+                var webport = int.Parse(DefaltWebPort);
+                SimulateServerManager.AddSimulateServer(webport);
 
-                manhttpserver = new HttpServer(new Server(port));
-
-                InitServer();
-                return true;
+                LogHelper.Instance.Info("web默认服务开启:" + webport);
             }
 
-            return false;
         }
 
-        public static bool Stop()
+        public static void AddSimulateServer(int port)
         {
-            if (manhttpserver != null && manhttpserver.Server != null)
+            lock (rwLocker)
             {
-                manhttpserver.Server.Close();
-                manhttpserver = null;
-                return true;
+                if (SimulateServers.ContainsKey(port))
+                {
+                    return;
+                }
+                var server = new SimulateServer(port);
+                server.StartServer();
+                SimulateServers.Add(port, server);
             }
-
-            return false;
         }
+
+        public static void RemoveSimulateServer(int port)
+        {
+            lock (rwLocker)
+            {
+                if (SimulateServers.TryGetValue(port, out SimulateServer simulateServer))
+                {
+                    SimulateServers.Remove(port);
+                    simulateServer.Dispose();
+                }
+            }
+        }
+
     }
 }

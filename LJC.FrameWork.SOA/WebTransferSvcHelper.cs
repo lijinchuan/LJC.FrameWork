@@ -14,47 +14,38 @@ namespace LJC.FrameWork.SOA
             WebMapper webMapper = null;
             foreach (var web in webMappers)
             {
-                if (IsMatch(web, webRequest.Url))
+                if (IsMatch(web, webRequest.Host, webRequest.VirUrl))
                 {
                     webMapper = web;
                     break;
                 }
             }
 
-            if (webMapper == null)
-            {
-                var refer = webRequest.Headers?.FirstOrDefault(p => p.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase));
-                if (refer != null && refer.Value.Key != null)
-                {
-                    var referUrl = refer.Value.Value;
-                    //if (referUrl.Equals("http://localhost:8081/"))
-                    //{
-                    //    referUrl += "quancheng";
-                    //}
-                    var reliUrl = string.Join("/", referUrl.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Skip(2));
-
-                    foreach (var web in webMappers)
-                    {
-                        if (IsMatch(web, reliUrl))
-                        {
-                            webMapper = web;
-                            break;
-                        }
-                    }
-                }
-            }
-
             return webMapper;
 
-            bool IsMatch(WebMapper web,string url)
+            bool IsMatch(WebMapper web, string host,string url)
             {
-                if (!string.IsNullOrWhiteSpace(web.RegexRoute) && Regex.IsMatch(url, web.RegexRoute, RegexOptions.IgnoreCase))
+                if (web.MappingPort > 0)
                 {
-                    return true;
+                    var hostAndPort = host.Split(':');
+                    var port = 80;
+                    if (hostAndPort.Length == 2)
+                    {
+                        port = int.Parse(hostAndPort[1]);
+                    }
+                    if (web.MappingPort == port)
+                    {
+                        return true;
+                    }
                 }
-                else if (url.StartsWith(web.VirRoot, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrWhiteSpace(web.MappingRoot))
                 {
-                    return true;
+                    var mappingRoot = web.MappingRoot;
+                    if (!mappingRoot.EndsWith("/"))
+                    {
+                        mappingRoot += "/";
+                    }
+                    return url.StartsWith(mappingRoot, StringComparison.OrdinalIgnoreCase);
                 }
 
                 return false;

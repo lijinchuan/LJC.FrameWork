@@ -7,7 +7,13 @@ namespace LJC.FrameWork.SOA.Contract
 {
     public class WebRequest
     {
-        public string Url
+        public string Host
+        {
+            get;
+            set;
+        }
+
+        public string VirUrl
         {
             get;
             set;

@@ -8,32 +8,30 @@ namespace LJC.FrameWork.SOA
     public class WebMapper
     {
         /// <summary>
-        /// 虚拟节点，简单路由
+        /// 本地映射端口，0则使用默认端口
         /// </summary>
-        public string VirRoot
+        public int MappingPort
         {
             get;
             set;
         }
 
         /// <summary>
-        /// 正则路径，优先度高与VirRoot
+        /// 本地映射虚拟目录
         /// </summary>
-        public string RegexRoute
+        public string MappingRoot
         {
             get;
             set;
         }
 
         /// <summary>
-        /// 本地访问host，不填写填写localhost
+        /// 目标网站
         /// </summary>
-        public string LocalHost
+        public string TragetWebHost
         {
             get;
             set;
         }
-
-
     }
 }

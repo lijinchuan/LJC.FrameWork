@@ -270,13 +270,13 @@ namespace LJC.FrameWork.SOA
             WebMapper matchedMapper = WebTransferSvcHelper.Find(request,webMappers);
             if (matchedMapper != null)
             {
-                var virUrl = request.Url;
-                if (virUrl.StartsWith(matchedMapper.VirRoot, StringComparison.OrdinalIgnoreCase))
+                var virUrl = request.VirUrl;
+                if (!string.IsNullOrWhiteSpace(matchedMapper.MappingRoot) && virUrl.StartsWith(matchedMapper.MappingRoot, StringComparison.OrdinalIgnoreCase))
                 {
-                    virUrl = virUrl.Substring(matchedMapper.VirRoot.Length);
+                    virUrl = virUrl.Substring(matchedMapper.MappingRoot.Length);
                 }
 
-                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(matchedMapper.LocalHost + virUrl);
+                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(new Uri(new Uri(matchedMapper.TragetWebHost), virUrl));
                 webRequest.Method = request.Method;
                 webRequest.AllowAutoRedirect = true;
 
@@ -332,11 +332,7 @@ namespace LJC.FrameWork.SOA
                 {
                     webRequest.Timeout = request.TimeOut;
                 }
-                //if (SupportCompression)
-                {
-                    //webRequest.Headers.Add(HttpRequestHeader.AcceptEncoding, "gzip, deflate");
-                    webRequest.Headers.Add(System.Net.HttpRequestHeader.AcceptEncoding, "gzip");
-                }
+                
 
                 var buff = request.InputData;
                 if (buff != null && buff.Length > 0)
@@ -377,14 +373,8 @@ namespace LJC.FrameWork.SOA
                             }
                         }
 
-                        if (webResponse.ContentEncoding.Equals("gzip", StringComparison.OrdinalIgnoreCase))
-                        {
-                            contentBuffer = Comm.GZip.Decompress(ms.ToArray());
-                        }
-                        else
-                        {
-                            contentBuffer = ms.ToArray();
-                        }
+
+                        contentBuffer = ms.ToArray();
 
                         response.ResponseData = contentBuffer;
                     }

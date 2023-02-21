@@ -26,10 +26,7 @@ namespace LJC.FrameWork.SOA
         /// 管理页面端口
         /// </summary>
         private string ManagerWebPortStr = System.Configuration.ConfigurationManager.AppSettings["esbmanport"];
-        /// <summary>
-        /// 网站服务端口
-        /// </summary>
-        private string WebServerPortStr = System.Configuration.ConfigurationManager.AppSettings["webwerverport"];
+        
 
         #region 管理web
         public class DefaultHander : LJC.FrameWork.Net.HTTP.Server.IRESTfulHandler
@@ -198,14 +195,8 @@ namespace LJC.FrameWork.SOA
                 LogHelper.Instance.Info("管理WEB服务开启:" + manport);
             }
 
-            if (!string.IsNullOrWhiteSpace(WebServerPortStr))
-            {
-                var webport= int.Parse(WebServerPortStr);
-                SimulateServerManager.StartServer(webport);
-                SimulateServerManager.TransferRequest = DoWebRequest;
-
-                LogHelper.Instance.Info("web服务开启:" + webport);
-            }
+            SimulateServerManager.TransferRequest = DoWebRequest;
+            SimulateServerManager.AddDefaultServer();
         }
 
         internal System.Collections.Concurrent.ConcurrentDictionary<string, Session> GetConnectedList()
@@ -691,6 +682,11 @@ namespace LJC.FrameWork.SOA
                             if (!string.IsNullOrWhiteSpace(webMappersData))
                             {
                                 webMappers = Comm.SerializerHelper.DeserializerXML<List<WebMapper>>(webMappersData);
+
+                                foreach (var port in webMappers.Where(p => p.MappingPort > 0).Select(p => p.MappingPort).Distinct())
+                                {
+                                    SimulateServerManager.AddSimulateServer(port);
+                                }
                             }
 
                             ServiceContainer.Add(new ESBServiceInfo
@@ -733,7 +729,24 @@ namespace LJC.FrameWork.SOA
                     var req = message.GetMessageBody<UnRegisterServiceRequest>();
                     lock (LockObj)
                     {
-                        ServiceContainer.RemoveAll(p => p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo));
+                        var remList = ServiceContainer.Where(p => p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo));
+                        List<int> mapPorts = new List<int>(); 
+                        foreach (var item in remList)
+                        {
+                            if (item.WebMappers != null && item.WebMappers.Any())
+                            {
+                                mapPorts.AddRange(item.WebMappers.Where(p => p.MappingPort > 0).Select(p => p.MappingPort));
+                            }
+                            ServiceContainer.Remove(item);
+                        }
+                        foreach(var port in mapPorts.Distinct())
+                        {
+                            if (ServiceContainer.Any(p => p.WebMappers != null && p.WebMappers.Any() && p.WebMappers.Any(q => q.MappingPort == port)))
+                            {
+                                continue;
+                            }
+                            SimulateServerManager.RemoveSimulateServer(port);
+                        }
                     }
                     msg.SetMessageBody(new UnRegisterServiceResponse
                     {

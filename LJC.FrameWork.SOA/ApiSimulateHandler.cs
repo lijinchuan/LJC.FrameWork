@@ -27,7 +27,8 @@ namespace LJC.FrameWork.SOA
             
             var simulateResponse = SimulateServerManager.TransferRequest(new Contract.WebRequest
             {
-                Url=url,
+                Host=request.Host,
+                VirUrl=url,
                 Cookies=request.Cookies,
                 Headers=request.Header,
                 Method=request.Method,
