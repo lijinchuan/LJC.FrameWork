@@ -33,7 +33,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
             //处理查询参数
             string sQueryString = request.QueryString;
             if (m_method == HMethod.DELETE || m_method == HMethod.PUT)
-                sQueryString = request.Content;
+                sQueryString = request.GetContent();
 
             Dictionary<string, string> queryParam = GetParam(sQueryString);
             if (queryParam.Count != m_listParam.Count)

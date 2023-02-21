@@ -24,15 +24,15 @@ namespace LJC.FrameWork.SOA
             {
                 url = string.Join("/", url.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries));
             }
-            
+
             var simulateResponse = SimulateServerManager.TransferRequest(new Contract.WebRequest
             {
-                Host=request.Host,
-                VirUrl=url,
-                Cookies=request.Cookies,
-                Headers=request.Header,
-                Method=request.Method,
-                InputData=Encoding.UTF8.GetBytes(request.Content)
+                Host = request.Host,
+                VirUrl = url,
+                Cookies = request.Cookies,
+                Headers = request.Header,
+                Method = request.Method,
+                InputData = request.RawData
             });
             if (simulateResponse != null)
             {

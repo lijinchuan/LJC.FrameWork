@@ -145,7 +145,7 @@ namespace LJC.FrameWork.HttpApi
             object retResult = null;
             try
             {
-                var req = GetRequest(request, request.Content);
+                var req = GetRequest(request, request.GetContent());
                 if (req == null)
                 {
                     throw new ArgumentException("未传入请求参数");

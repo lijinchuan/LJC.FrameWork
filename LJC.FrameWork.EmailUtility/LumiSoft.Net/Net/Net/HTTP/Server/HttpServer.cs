@@ -158,7 +158,12 @@ namespace LJC.FrameWork.Net.HTTP.Server
             }
             try
             {
-                data.req.Content += Encoding.UTF8.GetString(bytes, ofs, len - ofs);
+                if (data.req.RawStream == null)
+                {
+                    data.req.RawStream = new MemoryStream();
+                }
+                data.req.RawStream.Write(bytes, ofs, len - ofs);
+                //data.req.Content += Encoding.UTF8.GetString(bytes, ofs, len - ofs);
                 data.req.BytesRead += len - ofs;
                 data.headerskip += len - ofs;
 #if DEBUG
@@ -166,10 +171,13 @@ namespace LJC.FrameWork.Net.HTTP.Server
 #endif
                 if (data.req.BytesRead >= data.req.ContentLength)
                 {
+                    //销毁
+                    _ = data.req.RawData;
+
                     if (data.req.Method == "POST")
                     {
-                        if (data.req.QueryString == "") data.req.QueryString = data.req.Content;
-                        else data.req.QueryString += "&" + data.req.Content;
+                        if (data.req.QueryString == "") data.req.QueryString = data.req.GetContent();
+                        else data.req.QueryString += "&" + data.req.GetContent();
                     }
                     ParseQuery(data.req);
                     DoProcess(ci);
@@ -360,7 +368,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 sb.Append("<h3>Query</h3>");
                 foreach (KeyValuePair<string, string> ide in req.Query) sb.Append(" " + ide.Key + ": " + ide.Value + "<br>");
                 sb.Append("<h3>Content</h3>");
-                sb.Append(req.Content);
+                sb.Append(req.GetContent());
                 resp.Content = sb.ToString();
                 return true;
             }
@@ -396,7 +404,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 sb.Append("<h3>Query</h3>");
                 foreach (KeyValuePair<string, string> ide in req.Query) sb.Append(" " + ide.Key + ": " + ide.Value + "<br>");
                 sb.Append("<h3>Content</h3>");
-                sb.Append(req.Content);
+                sb.Append(req.GetContent());
                 sb.Append("<h3>Error:</h3>");
                 sb.Append(ex.ToString());
                 resp.Content = sb.ToString();
@@ -408,13 +416,38 @@ namespace LJC.FrameWork.Net.HTTP.Server
     public class HttpRequest
     {
         public bool GotHeader = false;
-        public string Method, Url, Page, HttpVersion, Host, Content, HeaderText, QueryString;
+        public string Method, Url, Page, HttpVersion, Host, HeaderText, QueryString;
         public IPAddress From;
-        //public byte[] RawContent;
+        internal MemoryStream RawStream;
         public Dictionary<string, string> Query = new Dictionary<string, string>(), Header = new Dictionary<string, string>(), Cookies = new Dictionary<string, string>();
 
         public int ContentLength, BytesRead;
         public Session Session;
+
+        private string _content = null;
+        public string GetContent(Encoding encoding = null)
+        {
+            if (_content != null|| RawData==null)
+            {
+                return _content;
+            }
+            _content = (encoding ?? Encoding.UTF8).GetString(RawData);
+            return _content;
+        }
+
+        private byte[] _rawData = null;
+        public byte[] RawData
+        {
+            get
+            {
+                if (RawStream != null && _rawData == null)
+                {
+                    _rawData = RawStream.ToArray();
+                    RawStream.Dispose();
+                }
+                return _rawData;
+            }
+        }
     }
 
     public class HttpResponse
