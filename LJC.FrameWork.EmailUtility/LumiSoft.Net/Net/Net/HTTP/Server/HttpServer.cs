@@ -327,10 +327,33 @@ namespace LJC.FrameWork.Net.HTTP.Server
             {
                 bb.Add(en.GetBytes("\r\nSet-Cookie: _sessid=" + req.Session.ID + "; path=/"));
             }
+            var cookieHeader = "Set-Cookie";
             foreach (KeyValuePair<string, string> de in resp.Header)
             {
-                //bb.Add(Encoding.UTF8.GetBytes("\r\n" + de.Key + ": " + de.Value));
-                bb.Add(en.GetBytes("\r\n" + de.Key + ": " + de.Value));
+                var name = de.Key;
+                var value = de.Value;
+                if (name.Equals(cookieHeader, StringComparison.OrdinalIgnoreCase))
+                {
+                    StringBuilder sb = new StringBuilder();
+                    for (var j = 0; j < value.Length - 1; j++)
+                    {
+                        if (value[j] == ',' && value[j + 1] != ' ')
+                        {
+                            bb.Add(en.GetBytes("\r\n" + de.Key + ": " + sb.ToString()));
+                            sb.Clear();
+                            continue;
+                        }
+
+                        sb.Append(value[j]);
+                    }
+                    sb.Append(value[value.Length - 1]);
+                    bb.Add(en.GetBytes("\r\n" + de.Key + ": " + sb.ToString()));
+                }
+                else
+                {
+                    //bb.Add(Encoding.UTF8.GetBytes("\r\n" + de.Key + ": " + de.Value));
+                    bb.Add(en.GetBytes("\r\n" + de.Key + ": " + de.Value));
+                }
             }
             bb.Add(en.GetBytes("\r\n\r\n")); // End of header
             if (resp.RawContent != null)

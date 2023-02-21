@@ -276,7 +276,7 @@ namespace LJC.FrameWork.SOA
                     virUrl = virUrl.Substring(matchedMapper.MappingRoot.Length);
                 }
 
-                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(new Uri(new Uri(matchedMapper.TragetWebHost), virUrl));
+                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(matchedMapper.TragetWebHost.TrimEnd('/')+'/'+virUrl.TrimStart('/'));
                 webRequest.Method = request.Method;
                 webRequest.AllowAutoRedirect = true;
 
@@ -353,10 +353,12 @@ namespace LJC.FrameWork.SOA
                     //int statusCode = (int)webResponse.StatusCode;
                     //if (statusCode >= 200 && statusCode < 400)
                     response.Headers = new Dictionary<string, string>();
-                    for(var i=0;i<webResponse.Headers.Count;i++)
+
+                    for (var i = 0; i < webResponse.Headers.Count; i++)
                     {
                         var name = webResponse.Headers.GetKey(i);
                         var value = webResponse.Headers.Get(i);
+
                         response.Headers.Add(name, value);
                     }
 

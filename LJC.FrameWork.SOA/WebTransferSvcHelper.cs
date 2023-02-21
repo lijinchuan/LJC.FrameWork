@@ -33,7 +33,11 @@ namespace LJC.FrameWork.SOA
                     {
                         port = int.Parse(hostAndPort[1]);
                     }
-                    if (web.MappingPort == port)
+                    if (web.MappingPort != port)
+                    {
+                        return false;
+                    }
+                    if (web.MappingPort == port && string.IsNullOrWhiteSpace(web.MappingRoot))
                     {
                         return true;
                     }
@@ -45,7 +49,7 @@ namespace LJC.FrameWork.SOA
                     {
                         mappingRoot += "/";
                     }
-                    return url.StartsWith(mappingRoot, StringComparison.OrdinalIgnoreCase);
+                    return (url+"/").StartsWith(mappingRoot, StringComparison.OrdinalIgnoreCase);
                 }
 
                 return false;
