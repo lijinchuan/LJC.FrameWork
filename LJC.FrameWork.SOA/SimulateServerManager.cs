@@ -44,6 +44,8 @@ namespace LJC.FrameWork.SOA
                 var server = new SimulateServer(port);
                 server.StartServer();
                 SimulateServers.Add(port, server);
+
+                LogHelper.Instance.Info("web服务开启:" + port);
             }
         }
 

@@ -347,7 +347,7 @@ namespace LJC.FrameWork.SOA
                         requestStream.Write(buff, 0, buff.Length);
                     }
                 }
-
+                Console.WriteLine(webRequest.RequestUri.ToString());
                 using (System.Net.HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
                 {
                     //int statusCode = (int)webResponse.StatusCode;
@@ -404,7 +404,15 @@ namespace LJC.FrameWork.SOA
         {
             if (funcId == Func_WebRequest)
             {
-                return DoWebResponse(EntityBufCore.DeSerialize<WebRequest>(Param));
+                try
+                {
+                    return DoWebResponse(EntityBufCore.DeSerialize<WebRequest>(Param));
+                }
+                catch(Exception ex)
+                {
+                    LogHelper.Instance.Error("DoResponse", ex);
+                    throw;
+                }
             }
 
             return null;
