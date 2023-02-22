@@ -14,11 +14,41 @@ namespace LJC.FrameWork.SOA
 
         private ESBClient[] Clients = null;
 
-        public ESBClientPoolManager(uint clientcount=5,Func<int,ESBClient> getClient=null)
+        private static Dictionary<ESBServerConfigItem, ESBClient[]> BaseClients = new Dictionary<ESBServerConfigItem, ESBClient[]>();
+
+        static ESBClientPoolManager()
         {
-            if(clientcount==0)
+            var esbConfig = ESBConfig.ReadConfig();
+            var configItems = esbConfig.ESBServerConfigItems ?? new List<ESBServerConfigItem>();
+            if (!configItems.Any(p => p.ESBServer == esbConfig.ESBServer && p.ESBPort == esbConfig.ESBPort))
             {
-                clientcount = 5;
+                configItems.Add(new ESBServerConfigItem
+                {
+                    AutoStart = esbConfig.AutoStart,
+                    ESBPort = esbConfig.ESBPort,
+                    ESBServer = esbConfig.ESBServer,
+                    IsSecurity = esbConfig.IsSecurity,
+                    MaxClientCount = esbConfig.MaxClientCount
+                });
+            }
+
+            foreach(var item in configItems)
+            {
+                var count = Math.Min(item.MaxClientCount == 0 ? 2 : item.MaxClientCount, 100);
+                List<ESBClient> clients = new List<ESBClient>();
+                for(var i = 0; i < count; i++)
+                {
+                    clients.Add(new ESBClient(item.ESBServer, item.ESBPort, item.AutoStart, item.IsSecurity));
+                }
+                BaseClients.Add(item, clients.ToArray());
+            }
+        }
+
+        public ESBClientPoolManager(uint clientcount=2,Func<int,ESBClient> getClient=null)
+        {
+            if (clientcount == 0)
+            {
+                clientcount = 2;
             }
 
             if (MAXCLIENTCOUNT > 0 && clientcount > MAXCLIENTCOUNT)

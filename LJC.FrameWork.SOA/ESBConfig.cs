@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Net.Sockets;
+using System.Xml.Serialization;
 
 namespace LJC.FrameWork.SOA
 {
@@ -31,6 +32,31 @@ namespace LJC.FrameWork.SOA
         }
 
         public bool AutoStart
+        {
+            get;
+            set;
+        }
+
+        public int MaxClientCount
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// 其他的根服务节点
+        /// </summary>
+        public List<ESBServerConfigItem> ESBServerConfigItems
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// 注册的服务
+        /// </summary>
+        [XmlIgnore]
+        public List<RegisterServiceInfo> RegisterServiceInfos
         {
             get;
             set;

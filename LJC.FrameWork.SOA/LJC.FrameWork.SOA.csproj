@@ -44,6 +44,8 @@
     <Compile Include="Consts.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoRequest.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoResponse.cs" />
+    <Compile Include="Contract\ListServiceInfosRequest.cs" />
+    <Compile Include="Contract\ListServiceInfosResponse.cs" />
     <Compile Include="Contract\QueryServiceNoResponse.cs" />
     <Compile Include="Contract\RegisterServiceInfo.cs" />
     <Compile Include="Contract\RegisterServiceRequest.cs" />
@@ -64,6 +66,7 @@
     <Compile Include="ESBClientPoolManager.cs" />
     <Compile Include="ESBConfig.cs" />
     <Compile Include="ESBRedirectService.cs" />
+    <Compile Include="ESBServerConfigItem.cs" />
     <Compile Include="ESBService.cs" />
     <Compile Include="ESBServiceInfo.cs" />
     <Compile Include="ESBServer.cs" />

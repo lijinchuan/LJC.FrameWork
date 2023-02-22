@@ -347,6 +347,23 @@ namespace LJC.FrameWork.SOA
 
                         return resp;
                     }
+                case Consts.FunNo_ListServiceInfos:
+                    {
+                        var req = EntityBuf.EntityBufCore.DeSerialize<ListServiceInfosRequest>(param);
+                        ListServiceInfosResponse resp = new ListServiceInfosResponse();
+
+                        resp.Services = ServiceContainer.Select(p => new RegisterServiceInfo
+                        {
+                            ServiceNo = p.ServiceNo,
+                            RedirectTcpIps = p.RedirectTcpIps,
+                            RedirectTcpPort = p.RedirectTcpPort,
+                            RedirectUdpIps = p.RedirectUdpIps,
+                            RedirectUdpPort = p.RedirectUdpPort,
+                        }).ToArray();
+
+                        return resp;
+
+                    }
                 default:
                     {
                         throw new NotImplementedException(string.Format("未实现的功能:{0}", funcId));

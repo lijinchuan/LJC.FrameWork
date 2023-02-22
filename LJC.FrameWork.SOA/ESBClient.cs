@@ -324,7 +324,7 @@ namespace LJC.FrameWork.SOA
                                                 var resp = client.DoRedirectRequest<Contract.QueryServiceNoResponse>((int)SOAMessageType.QueryServiceNo, null);
                                                 if (resp.ServiceNo == serviceId)
                                                 {
-                                                    poollist.Add(new ESBClientPoolManager(5, (idx) =>
+                                                    poollist.Add(new ESBClientPoolManager(0, (idx) =>
                                                     {
                                                         if (idx == 0)
                                                         {
