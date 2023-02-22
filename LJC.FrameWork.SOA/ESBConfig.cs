@@ -52,16 +52,6 @@ namespace LJC.FrameWork.SOA
             set;
         }
 
-        /// <summary>
-        /// 注册的服务
-        /// </summary>
-        [XmlIgnore]
-        public List<RegisterServiceInfo> RegisterServiceInfos
-        {
-            get;
-            set;
-        }
-
         private static ESBConfig _esbConfig = null;
         public static ESBConfig ReadConfig()
         {

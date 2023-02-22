@@ -11,7 +11,6 @@ namespace LJC.FrameWork.SOA
 {
     public class ESBClient:SessionClient
     {
-        private static ESBClientPoolManager _clientmanager = new ESBClientPoolManager();
         private static Dictionary<int, List<ESBClientPoolManager>> _esbClientDicManager = new Dictionary<int, List<ESBClientPoolManager>>();
         private static Dictionary<int, List<ESBUdpClient>> _esbUdpClientDic = new Dictionary<int, List<ESBUdpClient>>();
 
@@ -22,11 +21,11 @@ namespace LJC.FrameWork.SOA
         {
         }
 
-        internal ESBClient()
-            :base(ESBConfig.ReadConfig().ESBServer,ESBConfig.ReadConfig().ESBPort,ESBConfig.ReadConfig().IsSecurity,ESBConfig.ReadConfig().AutoStart)
-        {
+        //internal ESBClient()
+        //    :base(ESBConfig.ReadConfig().ESBServer,ESBConfig.ReadConfig().ESBPort,ESBConfig.ReadConfig().IsSecurity,ESBConfig.ReadConfig().AutoStart)
+        //{
             
-        }
+        //}
 
         public string GetESBServer()
         {
@@ -165,9 +164,45 @@ namespace LJC.FrameWork.SOA
             //    return result;
             //}
 
-            var result = _clientmanager.RandClient().DoRequest<T>(serviceId, functionId, param, sendAll);
+            if (serviceId == Consts.ESBServerServiceNo && ESBClientPoolManager.BaseClients.Count > 1)
+            {
 
-            return result;
+                throw new ArgumentException("0服务不能使用此方法");
+            }
+
+            if (sendAll)
+            {
+                var clients = ESBClientPoolManager.FindServices(serviceId);
+                if (!clients.Any())
+                {
+                    throw new SOAException("查找服务失败：" + serviceId);
+                }
+                var i = 0;
+                T result = default;
+                foreach(var client in clients)
+                {
+                    if (i++ == 0)
+                    {
+                        result = client.DoRequest<T>(serviceId, functionId, param, sendAll);
+                    }
+                    else
+                    {
+                        _ = client.DoRequest<T>(serviceId, functionId, param, sendAll);
+                    }
+                }
+                return result;
+            }
+            else
+            {
+                var client = ESBClientPoolManager.FindService(serviceId);
+                if (client == null)
+                {
+                    throw new SOAException("查找服务失败：" + serviceId);
+                }
+                var result = client.DoRequest<T>(serviceId, functionId, param);
+
+                return result;
+            }
         }
 
         private static int OrderIp(string ip)
@@ -227,7 +262,13 @@ namespace LJC.FrameWork.SOA
                 {
                     new Action(() =>
                     {
-                        var respserviceinfo = DoSOARequest<GetRegisterServiceInfoResponse>(Consts.ESBServerServiceNo, Consts.FunNo_GetRegisterServiceInfo, new GetRegisterServiceInfoRequest
+                        var svcClient = ESBClientPoolManager.FindService(serviceId);
+                        if (svcClient == null)
+                        {
+                            return;
+                        }
+                        
+                        var respserviceinfo = svcClient.DoRequest<GetRegisterServiceInfoResponse>(Consts.ESBServerServiceNo, Consts.FunNo_GetRegisterServiceInfo, new GetRegisterServiceInfoRequest
                         {
                             ServiceNo = serviceId
                         });
@@ -428,8 +469,8 @@ namespace LJC.FrameWork.SOA
 
         public static void Close()
         {
-            _clientmanager.Dispose();
-
+            //_clientmanager.Dispose();
+            ESBClientPoolManager.Realse();
             foreach (var man in _esbClientDicManager)
             {
                 if (man.Value != null)

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Serialization;
 
 namespace LJC.FrameWork.SOA
 {
@@ -33,6 +34,16 @@ namespace LJC.FrameWork.SOA
         }
 
         public int MaxClientCount
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// 注册的服务
+        /// </summary>
+        [XmlIgnore]
+        public List<RegisterServiceInfo> RegisterServiceInfos
         {
             get;
             set;

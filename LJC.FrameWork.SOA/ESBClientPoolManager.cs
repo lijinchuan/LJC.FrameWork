@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LJC.FrameWork.SOA.Contract;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,7 +15,9 @@ namespace LJC.FrameWork.SOA
 
         private ESBClient[] Clients = null;
 
-        private static Dictionary<ESBServerConfigItem, ESBClient[]> BaseClients = new Dictionary<ESBServerConfigItem, ESBClient[]>();
+        internal static Dictionary<ESBServerConfigItem, ESBClient[]> BaseClients = new Dictionary<ESBServerConfigItem, ESBClient[]>();
+
+        private static System.Timers.Timer backGroundWorker = null;
 
         static ESBClientPoolManager()
         {
@@ -38,13 +41,20 @@ namespace LJC.FrameWork.SOA
                 List<ESBClient> clients = new List<ESBClient>();
                 for(var i = 0; i < count; i++)
                 {
-                    clients.Add(new ESBClient(item.ESBServer, item.ESBPort, item.AutoStart, item.IsSecurity));
+                    var newClient = new ESBClient(item.ESBServer, item.ESBPort, item.AutoStart, item.IsSecurity);
+                    clients.Add(newClient);
                 }
                 BaseClients.Add(item, clients.ToArray());
             }
+
+            backGroundWorker = Comm.TaskHelper.SetInterval(30000, () =>
+              {
+                  RefrashServicesList(true);
+                  return false;
+              });
         }
 
-        public ESBClientPoolManager(uint clientcount=2,Func<int,ESBClient> getClient=null)
+        public ESBClientPoolManager(uint clientcount = 2, Func<int, ESBClient> getClient = null)
         {
             if (clientcount == 0)
             {
@@ -55,14 +65,16 @@ namespace LJC.FrameWork.SOA
             {
                 clientcount = MAXCLIENTCOUNT;
             }
-
-            Clients = new ESBClient[clientcount];
-            for (int i = 0; i < clientcount; i++)
+            if (getClient != null)
             {
-                var client = getClient == null ? new ESBClient() : getClient(i);
-                client.Error += client_Error;
-                client.Login(null, null);
-                Clients[i] = client;
+                Clients = new ESBClient[clientcount];
+                for (int i = 0; i < clientcount; i++)
+                {
+                    var client = getClient(i);
+                    client.Error += client_Error;
+                    client.Login(null, null);
+                    Clients[i] = client;
+                }
             }
         }
 
@@ -86,6 +98,45 @@ namespace LJC.FrameWork.SOA
             return client;
         }
 
+        public static List<ESBClient> FindServices(int serviceNo)
+        {
+            RefrashServicesList();
+            List<ESBClient> clients = new List<ESBClient>();
+            foreach (var client in BaseClients)
+            {
+                if (client.Key.RegisterServiceInfos.Any(p => p.ServiceNo == serviceNo))
+                {
+                    var idx = new Random(DateTime.Now.Ticks.GetHashCode()).Next(0, client.Value.Length);
+                    clients.Add(client.Value[idx]);
+                }
+            }
+            return clients;
+        }
+
+        private static void RefrashServicesList(bool force = false)
+        {
+            foreach (var client in BaseClients)
+            {
+                if (force || client.Key.RegisterServiceInfos == null)
+                {
+                    var resp = client.Value.First().DoRequest<ListServiceInfosResponse>(Consts.ESBServerServiceNo,
+                        Consts.FunNo_ListServiceInfos, new ListServiceInfosRequest());
+
+                    lock (client.Key)
+                    {
+                        client.Key.RegisterServiceInfos = resp.Services.ToList();
+                    }
+                }
+            }
+        }
+
+        public static ESBClient FindService(int serviceNo)
+        {
+            var findClients = FindServices(serviceNo);
+            var idx = new Random(DateTime.Now.Ticks.GetHashCode()).Next(0, findClients.Count);
+            return findClients[idx];
+        }
+
         public IEnumerable<ESBClient> EnumClients()
         {
             if (Clients != null && Clients.Length > 0)
@@ -95,11 +146,41 @@ namespace LJC.FrameWork.SOA
                     yield return item;
                 }
             }
+
+            foreach(var client in BaseClients)
+            {
+                foreach(var item in client.Value)
+                {
+                    yield return item;
+                }
+            }
         }
 
         void client_Error(Exception obj)
         {
             Console.WriteLine("出错:" + obj.Message);
+        }
+
+        /// <summary>
+        /// 释放客户端
+        /// </summary>
+        public static void Realse()
+        {
+            if (backGroundWorker != null)
+            {
+                backGroundWorker.Dispose();
+            }
+
+            foreach(var client in BaseClients)
+            {
+                foreach (var item in client.Value)
+                {
+                    using (item)
+                    {
+                        item.CloseClient();
+                    }
+                }
+            }
         }
     }
 }
