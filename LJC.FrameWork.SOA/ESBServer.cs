@@ -156,7 +156,11 @@ namespace LJC.FrameWork.SOA
                 sb.Append("</tr>");
                 foreach (var item in liveclients)
                 {
-                    var session = (Session)item.Value[0];
+                    var session = item.Value[0] as Session;
+                    if (session == null)
+                    {
+                        continue;
+                    }
                     var seviceInfo = (ESBServiceInfo)item.Value[1];
                     if (!clienthash.Contains(session.SessionID)|| !clienthash.Contains(seviceInfo.Session.SessionID))
                     {
