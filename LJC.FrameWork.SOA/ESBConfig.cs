@@ -95,5 +95,10 @@ namespace LJC.FrameWork.SOA
             config.AutoStart = autoStrat;
             LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(config,configfile);
         }
+
+        public static void WriteConfig(ESBConfig esbConfig)
+        {
+            LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(esbConfig, configfile);
+        }
     }
 }

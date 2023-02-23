@@ -122,6 +122,7 @@ namespace LJC.FrameWork.SOA
 
         protected sealed override void ReciveMessage(Message message)
         {
+            //此服务特殊，不可通过转发调用
             if (message.IsMessage((int)SOAMessageType.QueryServiceNo))
             {
                 var responseMsg = new Message((int)SOAMessageType.QueryServiceNo);
