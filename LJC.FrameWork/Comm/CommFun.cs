@@ -178,6 +178,23 @@ namespace LJC.FrameWork.Comm
             return timer;
         }
 
+        public static Timer SetInterval(Timer timer,int millSecond,Func<bool> act)
+        {
+            if (timer == null)
+            {
+                return SetInterval(millSecond, act);
+            }
+
+            timer.Stop();
+
+            timer.Interval = millSecond;
+            timer.Elapsed += (o, e) => { if (act()) { timer.Stop(); timer.Close(); timer.Dispose(); } };
+
+            timer.Start();
+
+            return timer;
+        }
+
         /// <summary>
         /// 转化为几位有效小数
         /// </summary>
