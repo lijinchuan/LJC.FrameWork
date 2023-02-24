@@ -11,14 +11,15 @@ namespace LJC.FrameWork.SOA
         /// <summary>
         /// 最大客户端数连接设置
         /// </summary>
-        public static uint MAXCLIENTCOUNT = 0;
+        public static readonly uint MAXCLIENTCOUNT = 3;
 
-        private ESBClient[] Clients = null;
+        private readonly ESBClient[] Clients = null;
 
-        internal static Dictionary<ESBServerConfigItem, ESBClient[]> BaseClients = new Dictionary<ESBServerConfigItem, ESBClient[]>();
+        internal static readonly Dictionary<ESBServerConfigItem, ESBClient[]> BaseClients = new Dictionary<ESBServerConfigItem, ESBClient[]>();
 
         private static System.Timers.Timer backGroundWorker = null;
 
+#pragma warning disable S3963 // "static" fields should be initialized inline
         static ESBClientPoolManager()
         {
             var esbConfig = ESBConfig.ReadConfig();
@@ -37,7 +38,7 @@ namespace LJC.FrameWork.SOA
 
             foreach(var item in configItems)
             {
-                var count = Math.Min(item.MaxClientCount == 0 ? 2 : item.MaxClientCount, 100);
+                var count = Math.Min(item.MaxClientCount == 0 ? (int)MAXCLIENTCOUNT : item.MaxClientCount, 100);
                 List<ESBClient> clients = new List<ESBClient>();
                 for(var i = 0; i < count; i++)
                 {
@@ -47,14 +48,18 @@ namespace LJC.FrameWork.SOA
                 BaseClients.Add(item, clients.ToArray());
             }
 
-            backGroundWorker = Comm.TaskHelper.SetInterval(30000, () =>
-              {
-                  RefrashServicesList(true);
-                  return false;
-              });
+            if (configItems.Count > 1)
+            {
+                backGroundWorker = Comm.TaskHelper.SetInterval(30000, () =>
+                  {
+                      RefrashServicesList(true);
+                      return false;
+                  });
+            }
         }
+#pragma warning restore S3963 // "static" fields should be initialized inline
 
-        public ESBClientPoolManager(uint clientcount = 2, Func<int, ESBClient> getClient = null)
+        public ESBClientPoolManager(uint clientcount = 0, Func<int, ESBClient> getClient = null)
         {
             if (clientcount == 0)
             {
@@ -100,14 +105,23 @@ namespace LJC.FrameWork.SOA
 
         public static List<ESBClient> FindServices(int serviceNo)
         {
-            RefrashServicesList();
             List<ESBClient> clients = new List<ESBClient>();
-            foreach (var client in BaseClients)
+            if (BaseClients.Count == 1)
             {
-                if (client.Key.RegisterServiceInfos.Any(p => p.ServiceNo == serviceNo))
+                var values = BaseClients.First().Value;
+                var idx = new Random(DateTime.Now.Ticks.GetHashCode()).Next(0, values.Length);
+                clients.Add(values[idx]);
+            }
+            else if (BaseClients.Count > 1)
+            {
+                RefrashServicesList();
+                foreach (var client in BaseClients)
                 {
-                    var idx = new Random(DateTime.Now.Ticks.GetHashCode()).Next(0, client.Value.Length);
-                    clients.Add(client.Value[idx]);
+                    if (client.Key.RegisterServiceInfos.Any(p => p.ServiceNo == serviceNo))
+                    {
+                        var idx = new Random(DateTime.Now.Ticks.GetHashCode()).Next(0, client.Value.Length);
+                        clients.Add(client.Value[idx]);
+                    }
                 }
             }
             return clients;
@@ -133,7 +147,12 @@ namespace LJC.FrameWork.SOA
         public static ESBClient FindService(int serviceNo)
         {
             var findClients = FindServices(serviceNo);
-            var idx = new Random(DateTime.Now.Ticks.GetHashCode()).Next(0, findClients.Count);
+            if (!findClients.Any())
+            {
+                return null;
+            }
+
+            var idx = findClients.Count == 1 ? 0 : new Random(DateTime.Now.Ticks.GetHashCode()).Next(0, findClients.Count);
             return findClients[idx];
         }
 
