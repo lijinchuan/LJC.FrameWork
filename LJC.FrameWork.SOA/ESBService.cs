@@ -11,6 +11,7 @@ using LJC.FrameWork.EntityBuf;
 using System.Text.RegularExpressions;
 using System.IO;
 using LJC.FrameWork.Comm;
+using System.Net.Http;
 
 namespace LJC.FrameWork.SOA
 {
@@ -265,7 +266,7 @@ namespace LJC.FrameWork.SOA
         private object DoWebResponse(WebRequest request)
         {
             WebResponse response = new WebResponse();
-
+            
             var webMappers = ServiceConfig.ReadConfig()?.WebMappers;
 
             WebMapper matchedMapper = WebTransferSvcHelper.Find(request,webMappers);
@@ -277,9 +278,41 @@ namespace LJC.FrameWork.SOA
                     virUrl = virUrl.Substring(matchedMapper.MappingRoot.Length);
                 }
 
-                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(matchedMapper.TragetWebHost.TrimEnd('/')+'/'+virUrl.TrimStart('/'));
+                //using (HttpRequestMessage httpRequestMessage = new HttpRequestMessage())
+                //{
+                //    httpRequestMessage.Method = new HttpMethod(request.Method);
+                //    httpRequestMessage.RequestUri = new Uri(matchedMapper.TragetWebHost.TrimEnd('/') + '/' + virUrl.TrimStart('/'));
+                //    httpRequestMessage.Content = new ByteArrayContent(request.InputData);
+                //    foreach(var kv in request.Headers)
+                //    {
+                //        httpRequestMessage.Headers.Add(kv.Key, kv.Value);
+                //    }
+
+                //    using (var client = new HttpClient())
+                //    {
+                //        using (var httpResponseMessage = client.SendAsync(httpRequestMessage).Result)
+                //        {
+                //            response.Headers = new Dictionary<string, string>();
+                //            var headers = httpResponseMessage.Headers.ToList();
+                //            for (var i = 0; i < headers.Count; i++)
+                //            {
+                //                var name = headers[i].Key;
+                //                var value = headers[i].Value;
+
+                //                response.Headers.Add(name,string.Join(", ", value));
+                //            }
+
+                //            byte[] contentBuffer = httpResponseMessage.Content.ReadAsByteArrayAsync().Result;
+                //            response.ResponseData = contentBuffer;
+
+                //            response.ResponseCode = (int)httpResponseMessage.StatusCode;
+                //            //response.ContentType = 
+                //        }
+                //    }
+                //}
+
+                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(matchedMapper.TragetWebHost.TrimEnd('/') + '/' + virUrl.TrimStart('/'));
                 webRequest.Method = request.Method;
-                webRequest.AllowAutoRedirect = false;
 
                 foreach (var kv in request.Headers)
                 {
@@ -320,7 +353,7 @@ namespace LJC.FrameWork.SOA
                         webRequest.Headers.Add(kv.Key, kv.Value);
                     }
                 }
-
+                webRequest.AllowAutoRedirect = false;
                 webRequest.CookieContainer = new System.Net.CookieContainer();
                 foreach (var kv in request.Cookies)
                 {
@@ -328,8 +361,8 @@ namespace LJC.FrameWork.SOA
                     {
                         Name = kv.Key,
                         Value = WebUtility.UrlEncode(kv.Value),
-                        Domain=webRequest.Host.Split(':').First(),
-                        Path="/"
+                        Domain = webRequest.Host.Split(':').First(),
+                        Path = "/"
                     });
                 }
 
@@ -337,7 +370,7 @@ namespace LJC.FrameWork.SOA
                 {
                     webRequest.Timeout = request.TimeOut;
                 }
-                
+
 
                 var buff = request.InputData;
                 if (buff != null && buff.Length > 0)
@@ -360,7 +393,7 @@ namespace LJC.FrameWork.SOA
                     webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
 
                 }
-                catch(System.Net.WebException ex)
+                catch (System.Net.WebException ex)
                 {
                     webResponse = (System.Net.HttpWebResponse)ex.Response;
                     if (webResponse == null)
@@ -401,7 +434,7 @@ namespace LJC.FrameWork.SOA
 
                                 response.ResponseData = contentBuffer;
                             }
-                            
+
                             response.ResponseCode = (int)webResponse.StatusCode;
                             response.ContentType = webResponse.ContentType;
 
