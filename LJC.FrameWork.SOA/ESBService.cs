@@ -279,7 +279,7 @@ namespace LJC.FrameWork.SOA
 
                 System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(matchedMapper.TragetWebHost.TrimEnd('/')+'/'+virUrl.TrimStart('/'));
                 webRequest.Method = request.Method;
-                webRequest.AllowAutoRedirect = true;
+                webRequest.AllowAutoRedirect = false;
 
                 foreach (var kv in request.Headers)
                 {
@@ -310,6 +310,10 @@ namespace LJC.FrameWork.SOA
                     else if (kv.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
                     {
                         webRequest.ContentType = kv.Value;
+                    }
+                    else if (kv.Key.Equals("If-Modified-Since", StringComparison.OrdinalIgnoreCase))
+                    {
+                        webRequest.IfModifiedSince = DateTime.Parse(kv.Value);
                     }
                     else
                     {
@@ -349,51 +353,76 @@ namespace LJC.FrameWork.SOA
                     }
                 }
                 Console.WriteLine(webRequest.RequestUri.ToString());
-                using (System.Net.HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
+
+                System.Net.HttpWebResponse webResponse = null;
+                try
                 {
-                    //int statusCode = (int)webResponse.StatusCode;
-                    //if (statusCode >= 200 && statusCode < 400)
-                    response.Headers = new Dictionary<string, string>();
+                    webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
 
-                    for (var i = 0; i < webResponse.Headers.Count; i++)
+                }
+                catch(System.Net.WebException ex)
+                {
+                    webResponse = (System.Net.HttpWebResponse)ex.Response;
+                    if (webResponse == null)
                     {
-                        var name = webResponse.Headers.GetKey(i);
-                        var value = webResponse.Headers.Get(i);
-
-                        response.Headers.Add(name, value);
+                        throw;
                     }
-
-                    byte[] contentBuffer = null;
-                    using (MemoryStream ms = new MemoryStream())
+                }
+                finally
+                {
+                    try
                     {
-                        using (Stream s = webResponse.GetResponseStream())
+                        if (webResponse != null)
                         {
-                            byte[] buffer = new byte[2048];
-                            int len = 0;
-                            while ((len = s.Read(buffer, 0, 1024)) > 0)
+                            response.Headers = new Dictionary<string, string>();
+
+                            for (var i = 0; i < webResponse.Headers.Count; i++)
                             {
-                                ms.Write(buffer, 0, len);
+                                var name = webResponse.Headers.GetKey(i);
+                                var value = webResponse.Headers.Get(i);
+
+                                response.Headers.Add(name, value);
                             }
+
+                            byte[] contentBuffer = null;
+                            using (MemoryStream ms = new MemoryStream())
+                            {
+                                using (Stream s = webResponse.GetResponseStream())
+                                {
+                                    byte[] buffer = new byte[2048];
+                                    int len = 0;
+                                    while ((len = s.Read(buffer, 0, 1024)) > 0)
+                                    {
+                                        ms.Write(buffer, 0, len);
+                                    }
+                                }
+
+                                contentBuffer = ms.ToArray();
+
+                                response.ResponseData = contentBuffer;
+                            }
+                            
+                            response.ResponseCode = (int)webResponse.StatusCode;
+                            response.ContentType = webResponse.ContentType;
+
+                            //response.Cookies = new Dictionary<string, string>();
+                            //if (webResponse.Cookies.Count > 0)
+                            //{
+
+                            //    for (int i = 0; i < webResponse.Cookies.Count; i++)
+                            //    {
+                            //        response.Cookies.Add(webResponse.Cookies[i].Name, webResponse.Cookies[i].Value);
+                            //    }
+                            //}
                         }
-
-
-                        contentBuffer = ms.ToArray();
-
-                        response.ResponseData = contentBuffer;
                     }
-
-                    response.ResponseCode = (int)webResponse.StatusCode;
-                    response.ContentType = webResponse.ContentType;
-
-                    //response.Cookies = new Dictionary<string, string>();
-                    //if (webResponse.Cookies.Count > 0)
-                    //{
-
-                    //    for (int i = 0; i < webResponse.Cookies.Count; i++)
-                    //    {
-                    //        response.Cookies.Add(webResponse.Cookies[i].Name, webResponse.Cookies[i].Value);
-                    //    }
-                    //}
+                    finally
+                    {
+                        if (webResponse != null)
+                        {
+                            webResponse.Close();
+                        }
+                    }
                 }
             }
 
@@ -412,7 +441,13 @@ namespace LJC.FrameWork.SOA
                 catch(Exception ex)
                 {
                     LogHelper.Instance.Error("DoResponse", ex);
-                    throw;
+
+                    return new WebResponse
+                    {
+                        ResponseCode=500,
+                        ResponseData=Encoding.UTF8.GetBytes(ex.Message),
+                        ContentType = string.Format("{0}; charset={1}", "text/html", "utf-8")
+                    };
                 }
             }
 

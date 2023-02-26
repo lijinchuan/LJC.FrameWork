@@ -11,8 +11,8 @@ namespace LJC.FrameWork.SOA
     {
         public bool Process(HttpServer server, HttpRequest request, HttpResponse response)
         {
-            var url = request.Url.ToLower();
-            if (url.StartsWith("http"))
+            var url = request.Url;
+            if (url.StartsWith("http",StringComparison.OrdinalIgnoreCase))
             {
                 var sqlArray = url.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
                 if (sqlArray.Length > 2)
@@ -36,7 +36,7 @@ namespace LJC.FrameWork.SOA
             });
             if (simulateResponse != null)
             {
-                response.Header = simulateResponse.Headers;
+                response.Header = simulateResponse.Headers??new Dictionary<string, string>();
                 response.RawContent = simulateResponse.ResponseData;
                 
                 response.ContentType = simulateResponse.ContentType;
