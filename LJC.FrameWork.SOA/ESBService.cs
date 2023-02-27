@@ -17,6 +17,11 @@ namespace LJC.FrameWork.SOA
 {
     public class ESBService:SessionClient,IService
     {
+        static ESBService()
+        {
+            ThreadPoolHelper.CheckSetMinThreads(100, 100);
+        }
+
         private const int Func_WebRequest = -100;
 
         private bool SupportTcpServiceRidrect
