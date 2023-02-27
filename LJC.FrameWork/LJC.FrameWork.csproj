@@ -239,6 +239,7 @@
     <Compile Include="Comm\TextReaderWriter\ObjTextReaderWriterEncodeType.cs" />
     <Compile Include="Comm\TextReaderWriter\ObjTextReaderWriterBase.cs" />
     <Compile Include="Comm\TextReaderWriter\ObjTextWriter.cs" />
+    <Compile Include="Comm\ThreadPoolHelper.cs" />
     <Compile Include="Comm\WatchTimer.cs">
       <SubType>Code</SubType>
     </Compile>

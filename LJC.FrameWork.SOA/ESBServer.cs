@@ -62,6 +62,7 @@ namespace LJC.FrameWork.SOA
     </style>
                 ");
                 sb.AppendFormat("当前时间:{0}<br/><br/>",DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                sb.AppendFormat("线程池参数:{0}<br/>", ThreadPoolHelper.PrintDetail());
                 var servicelist = _esb.ServiceContainer.Select(p => p).ToList();
                 sb.AppendFormat("当前注册了{0}个服务实例<br/>", servicelist.Count);
                 if (servicelist.Count > 0)
