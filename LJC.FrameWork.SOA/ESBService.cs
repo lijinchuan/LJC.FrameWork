@@ -367,6 +367,7 @@ namespace LJC.FrameWork.SOA
                         Name = kv.Key,
                         Value = WebUtility.UrlEncode(kv.Value),
                         Domain = webRequest.Host.Split(':').First(),
+                        //Domain=new Uri(matchedMapper.TragetWebHost).Host,
                         Path = "/"
                     });
                 }
@@ -389,6 +390,14 @@ namespace LJC.FrameWork.SOA
                     {
                         requestStream.Write(buff, 0, buff.Length);
                     }
+                }
+                else if (request.Method.Equals("post", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.ContentLength = 0;
+                    //using (Stream requestStream = webRequest.GetRequestStream())
+                    //{
+                    //    requestStream.Write(new byte[0], 0, 0);
+                    //}
                 }
                 Console.WriteLine(webRequest.RequestUri.ToString());
 
