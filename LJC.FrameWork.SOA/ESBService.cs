@@ -316,7 +316,12 @@ namespace LJC.FrameWork.SOA
                 //    }
                 //}
 
-                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(matchedMapper.TragetWebHost.TrimEnd('/') + '/' + virUrl.TrimStart('/'));
+                var realUrl = matchedMapper.TragetWebHost;
+                if (!string.IsNullOrWhiteSpace(virUrl))
+                {
+                    realUrl += '/' + virUrl.TrimStart('/');
+                }
+                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
                 webRequest.Method = request.Method;
 
                 foreach (var kv in request.Headers)
