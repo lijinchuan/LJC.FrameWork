@@ -956,8 +956,8 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
                 ss = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 ss.Bind(new IPEndPoint(IPAddress.Any, port));
-                ss.Listen(100);
-
+                ss.Listen(1000);
+                ss.NoDelay = true;
                 // Start the accept process. When a connection is accepted, the callback
                 // must do this again to accept another connection
                 ss.BeginAccept(new AsyncCallback(AcceptCallback), ss);
