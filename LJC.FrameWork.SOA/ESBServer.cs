@@ -415,6 +415,10 @@ namespace LJC.FrameWork.SOA
 
                 using (AutoResetEvent autoResetEvent = new AutoResetEvent(false))
                 {
+                    Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
+                    msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                    msg.SetMessageBody(transferrequest);
+
                     var carrayObj = new object[] { autoResetEvent, serviceInfo, 0, DateTime.Now, null };
                     try
                     {
@@ -426,43 +430,35 @@ namespace LJC.FrameWork.SOA
                         ConatinerLock.ExitWriteLock();
                     }
 
-                    Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
-                    msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
-                    msg.SetMessageBody(transferrequest);
-
-                    if (serviceInfo.Session.SendMessage(msg))
+                    try
                     {
-                        //if (sendAll)
-                        //{
-                        //    LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2},subMsgTransactionID:{3}",
-                        //        msgTransactionID, request.ServiceNo, request.FuncId,subMsgTransactionID));
-                        //}
-                        if (autoResetEvent.WaitOne(webRequest.TimeOut))
+                        if (serviceInfo.Session.SendMessage(msg))
                         {
-                            return (WebResponse)carrayObj.Last();
+                            //if (sendAll)
+                            //{
+                            //    LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2},subMsgTransactionID:{3}",
+                            //        msgTransactionID, request.ServiceNo, request.FuncId,subMsgTransactionID));
+                            //}
+                            if (autoResetEvent.WaitOne(webRequest.TimeOut))
+                            {
+                                return (WebResponse)carrayObj.Last();
+                            }
+                            else
+                            {
+                                throw new TimeoutException();
+                            }
                         }
                         else
                         {
-                            try
-                            {
-                                ConatinerLock.EnterWriteLock();
-                                ClientSessionList.Remove(clientid);
-                            }
-                            finally
-                            {
-                                ConatinerLock.ExitWriteLock();
-                            }
-                            throw new TimeoutException();
+                            throw new SOAException("发送消息返回失败");
                         }
                     }
-                    else
+                    finally
                     {
                         try
                         {
                             ConatinerLock.EnterWriteLock();
                             ClientSessionList.Remove(clientid);
-
-                            return null;
                         }
                         finally
                         {
@@ -707,7 +703,14 @@ namespace LJC.FrameWork.SOA
 
                                 foreach (var port in webMappers.Where(p => p.MappingPort > 0).Select(p => p.MappingPort).Distinct())
                                 {
-                                    SimulateServerManager.AddSimulateServer(port);
+                                    try
+                                    {
+                                        SimulateServerManager.AddSimulateServer(port);
+                                    }
+                                    catch
+                                    {
+                                        throw new SocketApplicationException("在端口创建服务失败:" + port);
+                                    }
                                 }
                             }
 

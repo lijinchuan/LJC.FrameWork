@@ -37,681 +37,687 @@ namespace LJC.FrameWork.Net.HTTP.Server
             }
         }
 
-        // OnReadBytes: catch the raw bytes as they arrive
-        // OnRead: for text ended with a marker character
-        // OnReadMessage: for binary info on a messaged client
-        public class ClientInfo
+    // OnReadBytes: catch the raw bytes as they arrive
+    // OnRead: for text ended with a marker character
+    // OnReadMessage: for binary info on a messaged client
+    public class ClientInfo
+    {
+        internal Server server = null;
+        private Socket sock;
+        private String buffer;
+        public event ConnectionRead OnRead;
+        public event ConnectionClosed OnClose;
+        public event ConnectionReadBytes OnReadBytes;
+        public event ConnectionReadMessage OnReadMessage;
+        public event ConnectionReadPartialMessage OnPartialMessage;
+        public event ConnectionNotify OnReady;
+        public MessageType MessageType;
+        private ClientDirection dir;
+        int id;
+        bool alreadyclosed = false;
+        public static int NextID = 100;
+        private Exception closeException;
+        private string closeReason = null;
+        //private ClientThread t;
+        public object Data = null;
+        private Control threadSyncControl;
+
+        // Encryption info
+        EncryptionType encType;
+        int encRead = 0, encStage, encExpected;
+        internal bool encComplete;
+        internal byte[] encKey;
+        internal RSAParameters encParams;
+
+        public EncryptionType EncryptionType
         {
-            internal Server server = null;
-            private Socket sock;
-            private String buffer;
-            public event ConnectionRead OnRead;
-            public event ConnectionClosed OnClose;
-            public event ConnectionReadBytes OnReadBytes;
-            public event ConnectionReadMessage OnReadMessage;
-            public event ConnectionReadPartialMessage OnPartialMessage;
-            public event ConnectionNotify OnReady;
-            public MessageType MessageType;
-            private ClientDirection dir;
-            int id;
-            bool alreadyclosed = false;
-            public static int NextID = 100;
-            private Exception closeException;
-            private string closeReason = null;
-            //private ClientThread t;
-            public object Data = null;
-            private Control threadSyncControl;
-
-            // Encryption info
-            EncryptionType encType;
-            int encRead = 0, encStage, encExpected;
-            internal bool encComplete;
-            internal byte[] encKey;
-            internal RSAParameters encParams;
-
-            public EncryptionType EncryptionType
+            get { return encType; }
+            set
             {
-                get { return encType; }
-                set
+                if (encStage != 0) throw new ArgumentException("Key exchange has already begun");
+                encType = value;
+                encComplete = encType == EncryptionType.None;
+                encExpected = -1;
+            }
+        }
+        public bool EncryptionReady { get { return encComplete; } }
+        internal ICryptoTransform encryptor, decryptor;
+        public ICryptoTransform Encryptor { get { return encryptor; } }
+        public ICryptoTransform Decryptor { get { return decryptor; } }
+        public Control ThreadSyncControl { get { return threadSyncControl; } set { threadSyncControl = value; } }
+
+        private string delim;
+        public const int BUFSIZE = 1024;
+        byte[] buf = new byte[BUFSIZE];
+        ByteBuilder bytes = new ByteBuilder(10);
+
+        byte[] msgheader = new byte[8];
+        byte headerread = 0;
+        bool wantingChecksum = true;
+
+        bool sentReady = false;
+
+        public string Delimiter
+        {
+            get { return delim; }
+            set { delim = value; }
+        }
+
+        public ClientDirection Direction { get { return dir; } }
+        public Socket Socket { get { return sock; } }
+        public Server Server { get { return server; } }
+        public int ID { get { return id; } }
+
+        public bool Closed
+        {
+            get { return !sock.Connected; }
+        }
+
+        public string CloseReason { get { return closeReason; } }
+        public Exception CloseException { get { return closeException; } }
+
+        public ClientInfo(Socket cl, bool StartNow) : this(cl, null, null, ClientDirection.Both, StartNow, EncryptionType.None) { }
+        //public ClientInfo(Socket cl, ConnectionRead read, ConnectionReadBytes readevt, ClientDirection d) : this(cl, read, readevt, d, true, EncryptionType.None) {}
+        public ClientInfo(Socket cl, ConnectionRead read, ConnectionReadBytes readevt, ClientDirection d, bool StartNow) : this(cl, read, readevt, d, StartNow, EncryptionType.None) { }
+        public ClientInfo(Socket cl, ConnectionRead read, ConnectionReadBytes readevt, ClientDirection d, bool StartNow, EncryptionType encryptionType)
+        {
+            sock = cl; buffer = ""; OnReadBytes = readevt; encType = encryptionType;
+            encStage = 0; encComplete = encType == EncryptionType.None;
+            OnRead = read;
+            MessageType = MessageType.EndMarker;
+            dir = d; delim = "\n";
+            id = NextID; // Assign each client an application-unique ID
+            unchecked { NextID++; }
+            //t = new ClientThread(this);
+            if (StartNow) BeginReceive();
+        }
+
+        public void BeginReceive()
+        {
+            //            t.t.Start();
+            if ((encType == EncryptionType.None) && (!sentReady))
+            {
+                sentReady = true;
+                if (OnReady != null) OnReady(this);
+            }
+            sock.BeginReceive(buf, 0, BUFSIZE, 0, new AsyncCallback(ReadCallback), this);
+        }
+
+        public String Send(String text)
+        {
+            byte[] ba = Encoding.UTF8.GetBytes(text);
+            String s = "";
+            for (int i = 0; i < ba.Length; i++) s += ba[i] + " ";
+            Send(ba);
+            return s;
+        }
+
+        public void SendMessage(uint code, byte[] bytes) { SendMessage(code, bytes, 0, bytes.Length); }
+        public void SendMessage(uint code, byte[] bytes, byte paramType) { SendMessage(code, bytes, paramType, bytes.Length); }
+        public void SendMessage(uint code, byte[] bytes, byte paramType, int len)
+        {
+            if (paramType > 0)
+            {
+                ByteBuilder b = new ByteBuilder(3);
+                b.AddParameter(bytes, paramType);
+                bytes = b.Read(0, b.Length);
+                len = bytes.Length;
+            }
+
+            lock (sock)
+            {
+                byte checksum = 0; byte[] ba;
+                switch (MessageType)
                 {
-                    if (encStage != 0) throw new ArgumentException("Key exchange has already begun");
-                    encType = value;
-                    encComplete = encType == EncryptionType.None;
-                    encExpected = -1;
+                    case MessageType.CodeAndLength:
+                        Send(ba = UintToBytes(code));
+                        for (int i = 0; i < 4; i++) checksum += ba[i];
+                        Send(ba = IntToBytes(len));
+                        for (int i = 0; i < 4; i++) checksum += ba[i];
+                        if (encType != EncryptionType.None) Send(new byte[] { checksum });
+                        break;
+                    case MessageType.Length:
+                        Send(ba = IntToBytes(len));
+                        for (int i = 0; i < 4; i++) checksum += ba[i];
+                        if (encType != EncryptionType.None) Send(new byte[] { checksum });
+                        break;
                 }
-            }
-            public bool EncryptionReady { get { return encComplete; } }
-            internal ICryptoTransform encryptor, decryptor;
-            public ICryptoTransform Encryptor { get { return encryptor; } }
-            public ICryptoTransform Decryptor { get { return decryptor; } }
-            public Control ThreadSyncControl { get { return threadSyncControl; } set { threadSyncControl = value; } }
-
-            private string delim;
-            public const int BUFSIZE = 1024;
-            byte[] buf = new byte[BUFSIZE];
-            ByteBuilder bytes = new ByteBuilder(10);
-
-            byte[] msgheader = new byte[8];
-            byte headerread = 0;
-            bool wantingChecksum = true;
-
-            bool sentReady = false;
-
-            public string Delimiter
-            {
-                get { return delim; }
-                set { delim = value; }
-            }
-
-            public ClientDirection Direction { get { return dir; } }
-            public Socket Socket { get { return sock; } }
-            public Server Server { get { return server; } }
-            public int ID { get { return id; } }
-
-            public bool Closed
-            {
-                get { return !sock.Connected; }
-            }
-
-            public string CloseReason { get { return closeReason; } }
-            public Exception CloseException { get { return closeException; } }
-
-            public ClientInfo(Socket cl, bool StartNow) : this(cl, null, null, ClientDirection.Both, StartNow, EncryptionType.None) { }
-            //public ClientInfo(Socket cl, ConnectionRead read, ConnectionReadBytes readevt, ClientDirection d) : this(cl, read, readevt, d, true, EncryptionType.None) {}
-            public ClientInfo(Socket cl, ConnectionRead read, ConnectionReadBytes readevt, ClientDirection d, bool StartNow) : this(cl, read, readevt, d, StartNow, EncryptionType.None) { }
-            public ClientInfo(Socket cl, ConnectionRead read, ConnectionReadBytes readevt, ClientDirection d, bool StartNow, EncryptionType encryptionType)
-            {
-                sock = cl; buffer = ""; OnReadBytes = readevt; encType = encryptionType;
-                encStage = 0; encComplete = encType == EncryptionType.None;
-                OnRead = read;
-                MessageType = MessageType.EndMarker;
-                dir = d; delim = "\n";
-                id = NextID; // Assign each client an application-unique ID
-                unchecked { NextID++; }
-                //t = new ClientThread(this);
-                if (StartNow) BeginReceive();
-            }
-
-            public void BeginReceive()
-            {
-                //            t.t.Start();
-                if ((encType == EncryptionType.None) && (!sentReady))
-                {
-                    sentReady = true;
-                    if (OnReady != null) OnReady(this);
-                }
-                sock.BeginReceive(buf, 0, BUFSIZE, 0, new AsyncCallback(ReadCallback), this);
-            }
-
-            public String Send(String text)
-            {
-                byte[] ba = Encoding.UTF8.GetBytes(text);
-                String s = "";
-                for (int i = 0; i < ba.Length; i++) s += ba[i] + " ";
-                Send(ba);
-                return s;
-            }
-
-            public void SendMessage(uint code, byte[] bytes) { SendMessage(code, bytes, 0, bytes.Length); }
-            public void SendMessage(uint code, byte[] bytes, byte paramType) { SendMessage(code, bytes, paramType, bytes.Length); }
-            public void SendMessage(uint code, byte[] bytes, byte paramType, int len)
-            {
-                if (paramType > 0)
-                {
-                    ByteBuilder b = new ByteBuilder(3);
-                    b.AddParameter(bytes, paramType);
-                    bytes = b.Read(0, b.Length);
-                    len = bytes.Length;
-                }
-
-                lock (sock)
-                {
-                    byte checksum = 0; byte[] ba;
-                    switch (MessageType)
-                    {
-                        case MessageType.CodeAndLength:
-                            Send(ba = UintToBytes(code));
-                            for (int i = 0; i < 4; i++) checksum += ba[i];
-                            Send(ba = IntToBytes(len));
-                            for (int i = 0; i < 4; i++) checksum += ba[i];
-                            if (encType != EncryptionType.None) Send(new byte[] { checksum });
-                            break;
-                        case MessageType.Length:
-                            Send(ba = IntToBytes(len));
-                            for (int i = 0; i < 4; i++) checksum += ba[i];
-                            if (encType != EncryptionType.None) Send(new byte[] { checksum });
-                            break;
-                    }
-                    Send(bytes, len);
-                    if (encType != EncryptionType.None)
-                    {
-                        checksum = 0;
-                        for (int i = 0; i < len; i++) checksum += bytes[i];
-                        Send(new byte[] { checksum });
-                    }
-                }
-
-            }
-            public void Send(byte[] bytes) { Send(bytes, bytes.Length); }
-            public void Send(byte[] bytes, int len)
-            {
-                if (!encComplete) throw new IOException("Key exchange is not yet completed");
+                Send(bytes, len);
                 if (encType != EncryptionType.None)
                 {
-                    byte[] outbytes = new byte[len];
-                    Encryptor.TransformBlock(bytes, 0, len, outbytes, 0);
-                    bytes = outbytes;
-                    //Console.Write("Encryptor IV: "); LogBytes(encryptor.Key, encryptor.IV.length);
+                    checksum = 0;
+                    for (int i = 0; i < len; i++) checksum += bytes[i];
+                    Send(new byte[] { checksum });
                 }
+            }
+
+        }
+        public void Send(byte[] bytes) { Send(bytes, bytes.Length); }
+        public void Send(byte[] bytes, int len)
+        {
+            if (!encComplete) throw new IOException("Key exchange is not yet completed");
+            if (encType != EncryptionType.None)
+            {
+                byte[] outbytes = new byte[len];
+                Encryptor.TransformBlock(bytes, 0, len, outbytes, 0);
+                bytes = outbytes;
+                //Console.Write("Encryptor IV: "); LogBytes(encryptor.Key, encryptor.IV.length);
+            }
 #if DEBUG
             Console.Write(ID + " Sent: "); LogBytes(bytes, len);
 #endif
-                try
-                {
-                    sock.Send(bytes, len, SocketFlags.None);
-                }
-                catch (Exception e)
-                {
-                    closeException = e;
-                    closeReason = "Exception in send: " + e.Message;
-                    Close();
-                }
-            }
-
-            public bool MessageWaiting()
+            try
             {
-                FillBuffer(sock);
-                return buffer.IndexOf(delim) >= 0;
+                sock.Send(bytes, len, SocketFlags.None);
             }
-
-            public String Read()
+            catch (Exception e)
             {
-                //FillBuffer(sock);
-                int p = buffer.IndexOf(delim);
-                if (p >= 0)
+                closeException = e;
+                closeReason = "Exception in send: " + e.Message;
+                Close();
+            }
+        }
+
+        public bool MessageWaiting()
+        {
+            FillBuffer(sock);
+            return buffer.IndexOf(delim) >= 0;
+        }
+
+        public String Read()
+        {
+            //FillBuffer(sock);
+            int p = buffer.IndexOf(delim);
+            if (p >= 0)
+            {
+                String res = buffer.Substring(0, p);
+                buffer = buffer.Substring(p + delim.Length);
+                return res;
+            }
+            else return "";
+        }
+
+        private void FillBuffer(Socket sock)
+        {
+            byte[] buf = new byte[256];
+            int read;
+            while (sock.Available != 0)
+            {
+                read = sock.Receive(buf);
+                if (OnReadBytes != null) OnReadBytes(this, buf, read);
+                buffer += Encoding.UTF8.GetString(buf, 0, read);
+            }
+        }
+
+        void ReadCallback(IAsyncResult ar)
+        {
+            try
+            {
+                int read = sock.EndReceive(ar);
+                //Console.WriteLine("Socket "+ID+" read "+read+" bytes");
+                if (read > 0)
                 {
-                    String res = buffer.Substring(0, p);
-                    buffer = buffer.Substring(p + delim.Length);
-                    return res;
+                    DoRead(buf, read);
+                    BeginReceive();
                 }
-                else return "";
-            }
-
-            private void FillBuffer(Socket sock)
-            {
-                byte[] buf = new byte[256];
-                int read;
-                while (sock.Available != 0)
+                else
                 {
-                    read = sock.Receive(buf);
-                    if (OnReadBytes != null) OnReadBytes(this, buf, read);
-                    buffer += Encoding.UTF8.GetString(buf, 0, read);
-                }
-            }
-
-            void ReadCallback(IAsyncResult ar)
-            {
-                try
-                {
-                    int read = sock.EndReceive(ar);
-                    //Console.WriteLine("Socket "+ID+" read "+read+" bytes");
-                    if (read > 0)
-                    {
-                        DoRead(buf, read);
-                        BeginReceive();
-                    }
-                    else
-                    {
 #if DEBUG
                     Console.WriteLine(ID + " zero byte read closure");
 #endif
-                        closeReason = "Zero byte read (no data available)";
-                        closeException = null;
-                        Close();
-                    }
-                }
-                catch (SocketException e)
-                {
-#if DEBUG
-                Console.WriteLine(ID + " socket exception closure: "+e);
-#endif
-                    closeReason = "Socket exception (" + e.Message + ")";
-                    closeException = e;
+                    closeReason = "Zero byte read (no data available)";
+                    closeException = null;
                     Close();
                 }
-                catch (ObjectDisposedException e)
-                {
+            }
+            catch (SocketException e)
+            {
+#if DEBUG
+                Console.WriteLine(ID + " socket exception closure: " + e);
+#endif
+                closeReason = "Socket exception (" + e.Message + ")";
+                closeException = e;
+                Close();
+            }
+            catch (ObjectDisposedException e)
+            {
 #if DEBUG
                 Console.WriteLine(ID + " disposed exception closure");
 #endif
-                    closeReason = "Disposed exception (socket object was disposed by the subsystem)";
-                    closeException = e;
-                    Close();
-                }
+                closeReason = "Disposed exception (socket object was disposed by the subsystem)";
+                closeException = e;
+                Close();
             }
+        }
 
-            internal void DoRead(byte[] buf, int read)
+        internal void DoRead(byte[] buf, int read)
+        {
+            if (read > 0)
             {
-                if (read > 0)
-                {
-                    if (OnRead != null)
-                    { // Simple text mode
-                        buffer += Encoding.UTF8.GetString(buf, 0, read);
-                        while (buffer.IndexOf(delim) >= 0)
-                        {
-                            if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnRead, new object[] { this, Read() });
-                            else OnRead(this, Read());
-                        }
+                if (OnRead != null)
+                { // Simple text mode
+                    buffer += Encoding.UTF8.GetString(buf, 0, read);
+                    while (buffer.IndexOf(delim) >= 0)
+                    {
+                        if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnRead, new object[] { this, Read() });
+                        else OnRead(this, Read());
                     }
                 }
-                Console.WriteLine(ID + " read " + read + " bytes for event handler");
-                ReadInternal(buf, read, false);
             }
+            Console.WriteLine(ID + " read " + read + " bytes for event handler");
+            ReadInternal(buf, read, false);
+        }
 
-            public static void LogBytes(byte[] buf, int len)
+        public static void LogBytes(byte[] buf, int len)
+        {
+            byte[] ba = new byte[len];
+            Array.Copy(buf, ba, len);
+            Console.WriteLine(ByteBuilder.FormatParameter(new Parameter(ba, ParameterType.Byte)));
+        }
+
+        void ReadInternal(byte[] buf, int read, bool alreadyEncrypted)
+        {
+
+            Console.WriteLine(ID + " read " + read + " bytes for event handler");
+            if ((!alreadyEncrypted) && (encType != EncryptionType.None))
             {
-                byte[] ba = new byte[len];
-                Array.Copy(buf, ba, len);
-                Console.WriteLine(ByteBuilder.FormatParameter(new Parameter(ba, ParameterType.Byte)));
-            }
-
-            void ReadInternal(byte[] buf, int read, bool alreadyEncrypted)
-            {
-
-                Console.WriteLine(ID + " read " + read + " bytes for event handler");
-                if ((!alreadyEncrypted) && (encType != EncryptionType.None))
+                if (encComplete)
                 {
-                    if (encComplete)
-                    {
 #if DEBUG
                     Console.Write(ID + " Received: "); LogBytes(buf, read);
 #endif
-                        buf = decryptor.TransformFinalBlock(buf, 0, read);
+                    buf = decryptor.TransformFinalBlock(buf, 0, read);
 #if DEBUG
                     Console.Write(ID + " Decrypted: "); LogBytes(buf, read);
 #endif
+                }
+                else
+                {
+                    // Client side key exchange
+                    int ofs = 0;
+                    if (encExpected < 0)
+                    {
+                        encStage++;
+                        ofs++; read--; encExpected = buf[0]; // length of key to come
+                        encKey = new byte[encExpected];
+                        encRead = 0;
+                    }
+                    if (read >= encExpected)
+                    {
+                        Array.Copy(buf, ofs, encKey, encRead, encExpected);
+                        int togo = read - encExpected;
+                        encExpected = -1;
+#if DEBUG
+                        Console.WriteLine(ID + " Read encryption key: " + ByteBuilder.FormatParameter(new Parameter(encKey, ParameterType.Byte)));
+#endif
+                        if (server == null) ClientEncryptionTransferComplete();
+                        else ServerEncryptionTransferComplete();
+                        if (togo > 0)
+                        {
+                            byte[] newbuf = new byte[togo];
+                            Array.Copy(buf, read + ofs - togo, newbuf, 0, togo);
+                            ReadInternal(newbuf, togo, false);
+                        }
                     }
                     else
                     {
-                        // Client side key exchange
-                        int ofs = 0;
-                        if (encExpected < 0)
+                        Array.Copy(buf, ofs, encKey, encRead, read);
+                        encExpected -= read; encRead += read;
+                    }
+                    return;
+                }
+            }
+
+            if ((!alreadyEncrypted) && (OnReadBytes != null))
+            {
+                if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnReadBytes, new object[] { this, buf, read });
+                else OnReadBytes(this, buf, read);
+            }
+
+            if ((OnReadMessage != null) && (MessageType != MessageType.Unmessaged))
+            {
+                // Messaged mode
+                int copied;
+                uint code = 0;
+                switch (MessageType)
+                {
+                    case MessageType.CodeAndLength:
+                    case MessageType.Length:
+                        int length;
+                        if (MessageType == MessageType.Length)
                         {
-                            encStage++;
-                            ofs++; read--; encExpected = buf[0]; // length of key to come
-                            encKey = new byte[encExpected];
-                            encRead = 0;
-                        }
-                        if (read >= encExpected)
-                        {
-                            Array.Copy(buf, ofs, encKey, encRead, encExpected);
-                            int togo = read - encExpected;
-                            encExpected = -1;
-#if DEBUG
-                        Console.WriteLine(ID + " Read encryption key: "+ByteBuilder.FormatParameter(new Parameter(encKey, ParameterType.Byte)));
-#endif
-                            if (server == null) ClientEncryptionTransferComplete();
-                            else ServerEncryptionTransferComplete();
-                            if (togo > 0)
-                            {
-                                byte[] newbuf = new byte[togo];
-                                Array.Copy(buf, read + ofs - togo, newbuf, 0, togo);
-                                ReadInternal(newbuf, togo, false);
-                            }
+                            copied = FillHeader(ref buf, 4, read);
+                            if (headerread < 4) break;
+                            length = GetInt(msgheader, 0, 4);
                         }
                         else
                         {
-                            Array.Copy(buf, ofs, encKey, encRead, read);
-                            encExpected -= read; encRead += read;
+                            copied = FillHeader(ref buf, 8, read);
+                            if (headerread < 8) break;
+                            code = (uint)GetInt(msgheader, 0, 4);
+                            length = GetInt(msgheader, 4, 4);
                         }
-                        return;
-                    }
-                }
-
-                if ((!alreadyEncrypted) && (OnReadBytes != null))
-                {
-                    if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnReadBytes, new object[] { this, buf, read });
-                    else OnReadBytes(this, buf, read);
-                }
-
-                if ((OnReadMessage != null) && (MessageType != MessageType.Unmessaged))
-                {
-                    // Messaged mode
-                    int copied;
-                    uint code = 0;
-                    switch (MessageType)
-                    {
-                        case MessageType.CodeAndLength:
-                        case MessageType.Length:
-                            int length;
-                            if (MessageType == MessageType.Length)
+                        if (read == copied) break;
+                        // If encryption is on, the next byte is a checksum of the header
+                        int ofs = 0;
+                        if (wantingChecksum && (encType != EncryptionType.None))
+                        {
+                            byte checksum = buf[0];
+                            ofs++;
+                            wantingChecksum = false;
+                            byte headersum = 0;
+                            for (int i = 0; i < 8; i++) headersum += msgheader[i];
+                            if (checksum != headersum)
                             {
-                                copied = FillHeader(ref buf, 4, read);
-                                if (headerread < 4) break;
-                                length = GetInt(msgheader, 0, 4);
+                                Close();
+                                throw new IOException("Header checksum failed! (was " + checksum + ", calculated " + headersum + ")");
+                            }
+                        }
+                        bytes.Add(buf, ofs, read - ofs - copied);
+                        if (encType != EncryptionType.None) length++; // checksum byte
+
+                        // Now we know we are reading into the body of the message
+#if DEBUG
+                        Console.WriteLine(ID + " Added " + (read - ofs - copied) + " bytes, have " + bytes.Length + " of " + length);
+#endif
+                        if (OnPartialMessage != null)
+                        {
+                            if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnPartialMessage, new object[] { this, code, buf, ofs, read - ofs - copied, bytes.Length, length });
+                            else OnPartialMessage(this, code, buf, ofs, read - ofs - copied, bytes.Length, length);
+                        }
+
+                        if (bytes.Length >= length)
+                        {
+                            // A message was received!
+                            headerread = 0; wantingChecksum = true;
+                            byte[] msg = bytes.Read(0, length);
+                            if (encType != EncryptionType.None)
+                            {
+                                byte checksum = msg[length - 1], msgsum = 0;
+                                for (int i = 0; i < length - 1; i++) msgsum += msg[i];
+                                if (checksum != msgsum)
+                                {
+                                    Close();
+                                    throw new IOException("Content checksum failed! (was " + checksum + ", calculated " + msgsum + ")");
+                                }
+                                if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnReadMessage, new object[] { this, code, msg, length - 1 });
+                                else OnReadMessage(this, code, msg, length - 1);
                             }
                             else
                             {
-                                copied = FillHeader(ref buf, 8, read);
-                                if (headerread < 8) break;
-                                code = (uint)GetInt(msgheader, 0, 4);
-                                length = GetInt(msgheader, 4, 4);
+                                if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnReadMessage, new object[] { this, code, msg, length });
+                                else OnReadMessage(this, code, msg, length);
                             }
-                            if (read == copied) break;
-                            // If encryption is on, the next byte is a checksum of the header
-                            int ofs = 0;
-                            if (wantingChecksum && (encType != EncryptionType.None))
+                            // Don't forget to put the rest through the mill
+                            int togo = bytes.Length - length;
+                            if (togo > 0)
                             {
-                                byte checksum = buf[0];
-                                ofs++;
-                                wantingChecksum = false;
-                                byte headersum = 0;
-                                for (int i = 0; i < 8; i++) headersum += msgheader[i];
-                                if (checksum != headersum)
-                                {
-                                    Close();
-                                    throw new IOException("Header checksum failed! (was " + checksum + ", calculated " + headersum + ")");
-                                }
+                                byte[] whatsleft = bytes.Read(length, togo);
+                                bytes.Clear();
+                                ReadInternalSecondPass(whatsleft);
                             }
-                            bytes.Add(buf, ofs, read - ofs - copied);
-                            if (encType != EncryptionType.None) length++; // checksum byte
-
-                            // Now we know we are reading into the body of the message
-#if DEBUG
-                        Console.WriteLine(ID + " Added "+(read - ofs - copied)+" bytes, have "+bytes.Length+" of "+length);
-#endif
-                            if (OnPartialMessage != null)
-                            {
-                                if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnPartialMessage, new object[] { this, code, buf, ofs, read - ofs - copied, bytes.Length, length });
-                                else OnPartialMessage(this, code, buf, ofs, read - ofs - copied, bytes.Length, length);
-                            }
-
-                            if (bytes.Length >= length)
-                            {
-                                // A message was received!
-                                headerread = 0; wantingChecksum = true;
-                                byte[] msg = bytes.Read(0, length);
-                                if (encType != EncryptionType.None)
-                                {
-                                    byte checksum = msg[length - 1], msgsum = 0;
-                                    for (int i = 0; i < length - 1; i++) msgsum += msg[i];
-                                    if (checksum != msgsum)
-                                    {
-                                        Close();
-                                        throw new IOException("Content checksum failed! (was " + checksum + ", calculated " + msgsum + ")");
-                                    }
-                                    if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnReadMessage, new object[] { this, code, msg, length - 1 });
-                                    else OnReadMessage(this, code, msg, length - 1);
-                                }
-                                else
-                                {
-                                    if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnReadMessage, new object[] { this, code, msg, length });
-                                    else OnReadMessage(this, code, msg, length);
-                                }
-                                // Don't forget to put the rest through the mill
-                                int togo = bytes.Length - length;
-                                if (togo > 0)
-                                {
-                                    byte[] whatsleft = bytes.Read(length, togo);
-                                    bytes.Clear();
-                                    ReadInternalSecondPass(whatsleft);
-                                }
-                                else bytes.Clear();
-                            }
-                            //if(OnStatus != null) OnStatus(this, bytes.Length, length);
-                            break;
-                    }
+                            else bytes.Clear();
+                        }
+                        //if(OnStatus != null) OnStatus(this, bytes.Length, length);
+                        break;
                 }
             }
+        }
 
-            void ReadInternalSecondPass(byte[] newbytes)
-            {
-                ReadInternal(newbytes, newbytes.Length, true);
-            }
+        void ReadInternalSecondPass(byte[] newbytes)
+        {
+            ReadInternal(newbytes, newbytes.Length, true);
+        }
 
-            int FillHeader(ref byte[] buf, int to, int read)
+        int FillHeader(ref byte[] buf, int to, int read)
+        {
+            int copied = 0;
+            if (headerread < to)
             {
-                int copied = 0;
-                if (headerread < to)
+                // First copy the header into the header variable.
+                for (int i = 0; (i < read) && (headerread < to); i++, headerread++, copied++)
                 {
-                    // First copy the header into the header variable.
-                    for (int i = 0; (i < read) && (headerread < to); i++, headerread++, copied++)
-                    {
-                        msgheader[headerread] = buf[i];
-                    }
+                    msgheader[headerread] = buf[i];
                 }
-                if (copied > 0)
-                {
-                    // Take the header bytes off the 'message' section
-                    byte[] newbuf = new byte[read - copied];
-                    for (int i = 0; i < newbuf.Length; i++) newbuf[i] = buf[i + copied];
-                    buf = newbuf;
-                }
-                return copied;
             }
-
-            internal ICryptoTransform MakeEncryptor() { return MakeCrypto(true); }
-            internal ICryptoTransform MakeDecryptor() { return MakeCrypto(false); }
-            internal ICryptoTransform MakeCrypto(bool encrypt)
+            if (copied > 0)
             {
-                if (encrypt) return new SimpleEncryptor(encKey);
-                else return new SimpleDecryptor(encKey);
+                // Take the header bytes off the 'message' section
+                byte[] newbuf = new byte[read - copied];
+                for (int i = 0; i < newbuf.Length; i++) newbuf[i] = buf[i + copied];
+                buf = newbuf;
             }
+            return copied;
+        }
 
-            void ServerEncryptionTransferComplete()
+        internal ICryptoTransform MakeEncryptor() { return MakeCrypto(true); }
+        internal ICryptoTransform MakeDecryptor() { return MakeCrypto(false); }
+        internal ICryptoTransform MakeCrypto(bool encrypt)
+        {
+            if (encrypt) return new SimpleEncryptor(encKey);
+            else return new SimpleDecryptor(encKey);
+        }
+
+        void ServerEncryptionTransferComplete()
+        {
+            switch (encType)
             {
-                switch (encType)
-                {
-                    case EncryptionType.None:
-                        throw new ArgumentException("Should not have key exchange for unencrypted connection!");
-                    case EncryptionType.ServerKey:
-                        throw new ArgumentException("Should not have server-side key exchange for server keyed connection!");
-                    case EncryptionType.ServerRSAClientKey:
-                        // Symmetric key is in RSA-encoded encKey
-                        RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
-                        rsa.ImportParameters(encParams);
-                        encKey = rsa.Decrypt(encKey, false);
+                case EncryptionType.None:
+                    throw new ArgumentException("Should not have key exchange for unencrypted connection!");
+                case EncryptionType.ServerKey:
+                    throw new ArgumentException("Should not have server-side key exchange for server keyed connection!");
+                case EncryptionType.ServerRSAClientKey:
+                    // Symmetric key is in RSA-encoded encKey
+                    RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+                    rsa.ImportParameters(encParams);
+                    encKey = rsa.Decrypt(encKey, false);
 #if DEBUG
                     Console.WriteLine("Symmetric key is: "); LogBytes(encKey, encKey.Length);
 #endif
-                        MakeEncoders();
-                        server.KeyExchangeComplete(this);
-                        break;
-                }
-            }
-
-            void ClientEncryptionTransferComplete()
-            {
-                // A part of the key exchange process has been completed, and the key is
-                // in encKey
-                switch (encType)
-                {
-                    case EncryptionType.None:
-                        throw new ArgumentException("Should not have key exchange for unencrypted connection!");
-                    case EncryptionType.ServerKey:
-                        // key for transfer is now in encKey, so all is good
-                        MakeEncoders();
-                        break;
-                    case EncryptionType.ServerRSAClientKey:
-                        // Stage 1: modulus; Stage 2: exponent
-                        // When the exponent arrives, create a random DES key
-                        // and send it
-                        switch (encStage)
-                        {
-                            case 1: encParams.Modulus = encKey; break;
-                            case 2:
-                                encParams.Exponent = encKey;
-                                RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
-                                rsa.ImportParameters(encParams);
-                                encKey = EncryptionUtils.GetRandomBytes(24, false);
-                                byte[] send = GetLengthEncodedVector(rsa.Encrypt(encKey, false));
-                                sock.Send(send);
-#if DEBUG
-                            Console.WriteLine("Sent symmetric key: "+ByteBuilder.FormatParameter(new Parameter(send, ParameterType.Byte)));
-#endif
-                                MakeEncoders();
-                                break;
-                        }
-                        break;
-                }
-            }
-
-            internal void MakeEncoders()
-            {
-                encryptor = MakeEncryptor();
-                decryptor = MakeDecryptor();
-                encComplete = true;
-                if (OnReady != null) OnReady(this);
-            }
-
-            public static byte[] GetLengthEncodedVector(byte[] from)
-            {
-                int l = from.Length;
-                if (l > 255) throw new ArgumentException("Cannot length encode more than 255");
-                byte[] to = new byte[l + 1];
-                to[0] = (byte)l;
-                Array.Copy(from, 0, to, 1, l);
-                return to;
-            }
-
-            public static int GetInt(byte[] ba, int from, int len)
-            {
-                int r = 0;
-                for (int i = 0; i < len; i++)
-                    r += ba[from + i] << ((len - i - 1) * 8);
-                return r;
-            }
-
-            public static int[] GetIntArray(byte[] ba) { return GetIntArray(ba, 0, ba.Length, 4); }
-            public static int[] GetIntArray(byte[] ba, int from, int len) { return GetIntArray(ba, from, len, 4); }
-            public static int[] GetIntArray(byte[] ba, int from, int len, int stride)
-            {
-                int[] res = new int[len / stride];
-                for (int i = 0; i < res.Length; i++)
-                {
-                    res[i] = GetInt(ba, from + (i * stride), stride);
-                }
-                return res;
-            }
-
-            public static uint[] GetUintArray(byte[] ba)
-            {
-                uint[] res = new uint[ba.Length / 4];
-                for (int i = 0; i < res.Length; i++)
-                {
-                    res[i] = (uint)GetInt(ba, i * 4, 4);
-                }
-                return res;
-            }
-
-            public static double[] GetDoubleArray(byte[] ba)
-            {
-                double[] res = new double[ba.Length / 8];
-                for (int i = 0; i < res.Length; i++)
-                {
-                    res[i] = BitConverter.ToDouble(ba, i * 8);
-                }
-                return res;
-            }
-
-            public static byte[] IntToBytes(int val) { return UintToBytes((uint)val); }
-            public static byte[] UintToBytes(uint val)
-            {
-                byte[] res = new byte[4];
-                for (int i = 3; i >= 0; i--)
-                {
-                    res[i] = (byte)val; val >>= 8;
-                }
-                return res;
-            }
-
-            public static byte[] IntArrayToBytes(int[] val)
-            {
-                byte[] res = new byte[val.Length * 4];
-                for (int i = 0; i < val.Length; i++)
-                {
-                    byte[] vb = IntToBytes(val[i]);
-                    res[(i * 4)] = vb[0];
-                    res[(i * 4) + 1] = vb[1];
-                    res[(i * 4) + 2] = vb[2];
-                    res[(i * 4) + 3] = vb[3];
-                }
-                return res;
-            }
-
-            public static byte[] UintArrayToBytes(uint[] val)
-            {
-                byte[] res = new byte[val.Length * 4];
-                for (uint i = 0; i < val.Length; i++)
-                {
-                    byte[] vb = IntToBytes((int)val[i]);
-                    res[(i * 4)] = vb[0];
-                    res[(i * 4) + 1] = vb[1];
-                    res[(i * 4) + 2] = vb[2];
-                    res[(i * 4) + 3] = vb[3];
-                }
-                return res;
-            }
-
-            public static byte[] DoubleArrayToBytes(double[] val)
-            {
-                byte[] res = new byte[val.Length * 8];
-                for (int i = 0; i < val.Length; i++)
-                {
-                    byte[] vb = BitConverter.GetBytes(val[i]);
-                    for (int ii = 0; ii < 8; ii++) res[(i * 8) + ii] = vb[ii];
-                }
-                return res;
-            }
-
-            public static byte[] StringArrayToBytes(string[] val, Encoding e)
-            {
-                byte[][] baa = new byte[val.Length][];
-                int l = 0;
-                for (int i = 0; i < val.Length; i++) { baa[i] = e.GetBytes(val[i]); l += 4 + baa[i].Length; }
-                byte[] r = new byte[l + 4];
-                IntToBytes(val.Length).CopyTo(r, 0);
-                int ofs = 4;
-                for (int i = 0; i < baa.Length; i++)
-                {
-                    IntToBytes(baa[i].Length).CopyTo(r, ofs); ofs += 4;
-                    baa[i].CopyTo(r, ofs); ofs += baa[i].Length;
-                }
-                return r;
-            }
-
-            public static string[] GetStringArray(byte[] ba, Encoding e)
-            {
-                int l = GetInt(ba, 0, 4), ofs = 4;
-                string[] r = new string[l];
-                for (int i = 0; i < l; i++)
-                {
-                    int thislen = GetInt(ba, ofs, 4); ofs += 4;
-                    r[i] = e.GetString(ba, ofs, thislen); ofs += thislen;
-                }
-                return r;
-            }
-
-            public void Close(string reason) { if (!alreadyclosed) { closeReason = reason; Close(); } }
-            public void Close()
-            {
-                if (!alreadyclosed)
-                {
-                    if (server != null) server.ClientClosed(this);
-                    if (OnClose != null)
-                    {
-                        if ((threadSyncControl != null) && (threadSyncControl.InvokeRequired))
-                            threadSyncControl.Invoke(OnClose, new object[] { this });
-                        else OnClose(this);
-                    }
-                    alreadyclosed = true;
-#if DEBUG
-                Console.WriteLine("**closed client** at "+DateTime.Now.Ticks);
-#endif
-                }
-                sock.Close();
+                    MakeEncoders();
+                    server.KeyExchangeComplete(this);
+                    break;
             }
         }
+
+        void ClientEncryptionTransferComplete()
+        {
+            // A part of the key exchange process has been completed, and the key is
+            // in encKey
+            switch (encType)
+            {
+                case EncryptionType.None:
+                    throw new ArgumentException("Should not have key exchange for unencrypted connection!");
+                case EncryptionType.ServerKey:
+                    // key for transfer is now in encKey, so all is good
+                    MakeEncoders();
+                    break;
+                case EncryptionType.ServerRSAClientKey:
+                    // Stage 1: modulus; Stage 2: exponent
+                    // When the exponent arrives, create a random DES key
+                    // and send it
+                    switch (encStage)
+                    {
+                        case 1: encParams.Modulus = encKey; break;
+                        case 2:
+                            encParams.Exponent = encKey;
+                            RSACryptoServiceProvider rsa = new RSACryptoServiceProvider();
+                            rsa.ImportParameters(encParams);
+                            encKey = EncryptionUtils.GetRandomBytes(24, false);
+                            byte[] send = GetLengthEncodedVector(rsa.Encrypt(encKey, false));
+                            sock.Send(send);
+#if DEBUG
+                            Console.WriteLine("Sent symmetric key: " + ByteBuilder.FormatParameter(new Parameter(send, ParameterType.Byte)));
+#endif
+                            MakeEncoders();
+                            break;
+                    }
+                    break;
+            }
+        }
+
+        internal void MakeEncoders()
+        {
+            encryptor = MakeEncryptor();
+            decryptor = MakeDecryptor();
+            encComplete = true;
+            if (OnReady != null) OnReady(this);
+        }
+
+        public static byte[] GetLengthEncodedVector(byte[] from)
+        {
+            int l = from.Length;
+            if (l > 255) throw new ArgumentException("Cannot length encode more than 255");
+            byte[] to = new byte[l + 1];
+            to[0] = (byte)l;
+            Array.Copy(from, 0, to, 1, l);
+            return to;
+        }
+
+        public static int GetInt(byte[] ba, int from, int len)
+        {
+            int r = 0;
+            for (int i = 0; i < len; i++)
+                r += ba[from + i] << ((len - i - 1) * 8);
+            return r;
+        }
+
+        public static int[] GetIntArray(byte[] ba) { return GetIntArray(ba, 0, ba.Length, 4); }
+        public static int[] GetIntArray(byte[] ba, int from, int len) { return GetIntArray(ba, from, len, 4); }
+        public static int[] GetIntArray(byte[] ba, int from, int len, int stride)
+        {
+            int[] res = new int[len / stride];
+            for (int i = 0; i < res.Length; i++)
+            {
+                res[i] = GetInt(ba, from + (i * stride), stride);
+            }
+            return res;
+        }
+
+        public static uint[] GetUintArray(byte[] ba)
+        {
+            uint[] res = new uint[ba.Length / 4];
+            for (int i = 0; i < res.Length; i++)
+            {
+                res[i] = (uint)GetInt(ba, i * 4, 4);
+            }
+            return res;
+        }
+
+        public static double[] GetDoubleArray(byte[] ba)
+        {
+            double[] res = new double[ba.Length / 8];
+            for (int i = 0; i < res.Length; i++)
+            {
+                res[i] = BitConverter.ToDouble(ba, i * 8);
+            }
+            return res;
+        }
+
+        public static byte[] IntToBytes(int val) { return UintToBytes((uint)val); }
+        public static byte[] UintToBytes(uint val)
+        {
+            byte[] res = new byte[4];
+            for (int i = 3; i >= 0; i--)
+            {
+                res[i] = (byte)val; val >>= 8;
+            }
+            return res;
+        }
+
+        public static byte[] IntArrayToBytes(int[] val)
+        {
+            byte[] res = new byte[val.Length * 4];
+            for (int i = 0; i < val.Length; i++)
+            {
+                byte[] vb = IntToBytes(val[i]);
+                res[(i * 4)] = vb[0];
+                res[(i * 4) + 1] = vb[1];
+                res[(i * 4) + 2] = vb[2];
+                res[(i * 4) + 3] = vb[3];
+            }
+            return res;
+        }
+
+        public static byte[] UintArrayToBytes(uint[] val)
+        {
+            byte[] res = new byte[val.Length * 4];
+            for (uint i = 0; i < val.Length; i++)
+            {
+                byte[] vb = IntToBytes((int)val[i]);
+                res[(i * 4)] = vb[0];
+                res[(i * 4) + 1] = vb[1];
+                res[(i * 4) + 2] = vb[2];
+                res[(i * 4) + 3] = vb[3];
+            }
+            return res;
+        }
+
+        public static byte[] DoubleArrayToBytes(double[] val)
+        {
+            byte[] res = new byte[val.Length * 8];
+            for (int i = 0; i < val.Length; i++)
+            {
+                byte[] vb = BitConverter.GetBytes(val[i]);
+                for (int ii = 0; ii < 8; ii++) res[(i * 8) + ii] = vb[ii];
+            }
+            return res;
+        }
+
+        public static byte[] StringArrayToBytes(string[] val, Encoding e)
+        {
+            byte[][] baa = new byte[val.Length][];
+            int l = 0;
+            for (int i = 0; i < val.Length; i++) { baa[i] = e.GetBytes(val[i]); l += 4 + baa[i].Length; }
+            byte[] r = new byte[l + 4];
+            IntToBytes(val.Length).CopyTo(r, 0);
+            int ofs = 4;
+            for (int i = 0; i < baa.Length; i++)
+            {
+                IntToBytes(baa[i].Length).CopyTo(r, ofs); ofs += 4;
+                baa[i].CopyTo(r, ofs); ofs += baa[i].Length;
+            }
+            return r;
+        }
+
+        public static string[] GetStringArray(byte[] ba, Encoding e)
+        {
+            int l = GetInt(ba, 0, 4), ofs = 4;
+            string[] r = new string[l];
+            for (int i = 0; i < l; i++)
+            {
+                int thislen = GetInt(ba, ofs, 4); ofs += 4;
+                r[i] = e.GetString(ba, ofs, thislen); ofs += thislen;
+            }
+            return r;
+        }
+
+        public void Close(string reason) { if (!alreadyclosed) { closeReason = reason; Close(); } }
+        public void Close()
+        {
+            if (!alreadyclosed)
+            {
+                if (server != null) server.ClientClosed(this);
+                if (OnClose != null)
+                {
+                    if ((threadSyncControl != null) && (threadSyncControl.InvokeRequired))
+                        threadSyncControl.Invoke(OnClose, new object[] { this });
+                    else OnClose(this);
+                }
+                alreadyclosed = true;
+#if DEBUG
+                Console.WriteLine("**closed client** at " + DateTime.Now.Ticks);
+#endif
+            }
+            sock.Close();
+        }
+
+        public void Clear()
+        {
+            this.buffer = "";
+            ((HttpServer.ClientData)this.Data)?.Clear();
+        }
+    }
 
         public class Sockets
         {
@@ -956,8 +962,8 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
                 ss = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 ss.Bind(new IPEndPoint(IPAddress.Any, port));
-                ss.Listen(100);
-
+                ss.Listen(1000);
+                ss.NoDelay = true;
                 // Start the accept process. When a connection is accepted, the callback
                 // must do this again to accept another connection
                 ss.BeginAccept(new AsyncCallback(AcceptCallback), ss);
