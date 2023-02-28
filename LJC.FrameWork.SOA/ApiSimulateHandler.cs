@@ -25,6 +25,11 @@ namespace LJC.FrameWork.SOA
                 url = string.Join("/", url.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries));
             }
 
+            if (request.Url.EndsWith("/"))
+            {
+                url += "/";
+            }
+
             var simulateResponse = SimulateServerManager.TransferRequest(new Contract.WebRequest
             {
                 Host = request.Host,

@@ -44,6 +44,11 @@ namespace LJC.FrameWork.SOA
 
             _config = Comm.SerializerHelper.DeSerializerFile<ServiceConfig>(configfile, true);
 
+            if (_config?.WebMappers?.Count > 1)
+            {
+                _config.WebMappers = _config.WebMappers.OrderBy(p => p.MappingPort).ThenByDescending(p => p.MappingRoot).ToList();
+            }
+
             return _config;
         }
 

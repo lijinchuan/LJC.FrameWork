@@ -359,6 +359,7 @@ namespace LJC.FrameWork.SOA
                     }
                 }
                 webRequest.AllowAutoRedirect = false;
+                webRequest.AllowWriteStreamBuffering = true;
                 webRequest.CookieContainer = new System.Net.CookieContainer();
                 foreach (var kv in request.Cookies)
                 {
@@ -391,7 +392,7 @@ namespace LJC.FrameWork.SOA
                         requestStream.Write(buff, 0, buff.Length);
                     }
                 }
-                else if (request.Method.Equals("post", StringComparison.OrdinalIgnoreCase))
+                else
                 {
                     webRequest.ContentLength = 0;
                     //using (Stream requestStream = webRequest.GetRequestStream())
