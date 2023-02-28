@@ -305,6 +305,8 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
         void SendResponse(ClientInfo ci, HttpRequest req, HttpResponse resp, bool close)
         {
+            close = true;
+
             var en = Encoding.UTF8;
 #if DEBUG
             Console.WriteLine("Response: " + resp.ReturnCode + Responses[resp.ReturnCode]);
