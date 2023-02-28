@@ -56,8 +56,8 @@ namespace LJC.FrameWork.Net.HTTP.Server
             data.req.HeaderText = text;
             // First line: METHOD /path/url HTTP/version
             string[] firstline = lines[0].Split(' ');
-            if (firstline.Length != 3) { SendResponse(ci, data.req, new HttpResponse(400, "Incorrect first header line " + lines[0]), true); return; }
-            if (firstline[2].Substring(0, 4) != "HTTP") { SendResponse(ci, data.req, new HttpResponse(400, "Unknown protocol " + firstline[2]), true); return; }
+            if (firstline.Length != 3) { SendResponse(ci, data.req, new HttpResponse(400, "Incorrect first header line " + lines[0]), false); return; }
+            if (firstline[2].Substring(0, 4) != "HTTP") { SendResponse(ci, data.req, new HttpResponse(400, "Unknown protocol " + firstline[2]), false); return; }
             data.req.Method = firstline[0];
             data.req.Url = firstline[1];
             data.req.HttpVersion = firstline[2].Substring(5);
@@ -81,9 +81,9 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 data.req.QueryString = "";
             }
 
-            if (data.req.Page.IndexOf("..") >= 0) { SendResponse(ci, data.req, new HttpResponse(400, "Invalid path"), true); return; }
+            if (data.req.Page.IndexOf("..") >= 0) { SendResponse(ci, data.req, new HttpResponse(400, "Invalid path"), false); return; }
 
-            if (!data.req.Header.TryGetValue("Host", out data.req.Host)) { SendResponse(ci, data.req, new HttpResponse(400, "No Host specified"), true); return; }
+            if (!data.req.Header.TryGetValue("Host", out data.req.Host)) { SendResponse(ci, data.req, new HttpResponse(400, "No Host specified"), false); return; }
 
             string cookieHeader;
             if (data.req.Header.TryGetValue("Cookie", out cookieHeader))
@@ -232,15 +232,15 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 if (handler.Process(this, req, resp))
                 {
                     //SendResponse(ci, req, resp, resp.ReturnCode != 200);
-                    SendResponse(ci, req, resp, true);
+                    SendResponse(ci, req, resp, false);
                     return resp.ReturnCode != 200;
                 }
             }
             return true;
         }
 
-        enum ClientState { Closed, Header, PreContent, Content };
-        class ClientData
+        internal enum ClientState { Closed, Header, PreContent, Content };
+        internal class ClientData
         {
             internal HttpRequest req = new HttpRequest();
             internal ClientState state = ClientState.Header;
@@ -249,6 +249,13 @@ namespace LJC.FrameWork.Net.HTTP.Server
             internal ClientData(ClientInfo ci)
             {
                 req.From = ((IPEndPoint)ci.Socket.RemoteEndPoint).Address;
+            }
+
+            public void Clear()
+            {
+                req.Clear();
+                state = ClientState.Header;
+                skip = read = headerskip = default;
             }
         }
 
@@ -369,7 +376,15 @@ namespace LJC.FrameWork.Net.HTTP.Server
 #if DEBUG
             Console.WriteLine("** SENDING\n" + resp.Content);
 #endif
-            if (close) ci.Close();
+            ci.Clear();
+            if (close)
+            {
+                ci.Close();
+            }
+            else
+            {
+                ci.BeginReceive();
+            }
         }
 
         class FallbackHandler : IHttpHandler
@@ -467,9 +482,25 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 {
                     _rawData = RawStream.ToArray();
                     RawStream.Dispose();
+                    RawStream = default;
                 }
                 return _rawData;
             }
+        }
+
+        public void Clear()
+        {
+            GotHeader = false;
+            Method = Url = Page = HttpVersion = Host = HeaderText = QueryString = default;
+            if (RawStream != null)
+            {
+                RawStream.Dispose();
+                RawStream = default;
+            }
+            Query.Clear();
+            Header.Clear();
+            Cookies.Clear();
+            ContentLength = BytesRead = default;
         }
     }
 
