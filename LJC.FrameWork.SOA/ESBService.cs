@@ -319,13 +319,18 @@ namespace LJC.FrameWork.SOA
                 var realUrl = matchedMapper.TragetWebHost;
                 if (!string.IsNullOrWhiteSpace(virUrl))
                 {
-                    realUrl += '/' + virUrl.TrimStart('/');
+                    realUrl = realUrl.TrimEnd('/') + '/' + virUrl.TrimStart('/');
                 }
                 System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
                 webRequest.Method = request.Method;
 
                 foreach (var kv in request.Headers)
                 {
+                    if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     if (kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
                     {
                         webRequest.Host = kv.Value;
@@ -336,7 +341,7 @@ namespace LJC.FrameWork.SOA
                     }
                     else if (kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
                     {
-                        webRequest.KeepAlive = "keep-alive".Equals(kv.Value, StringComparison.OrdinalIgnoreCase);
+                        //webRequest.KeepAlive = "keep-alive".Equals(kv.Value, StringComparison.OrdinalIgnoreCase);
                     }
                     else if (kv.Key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
                     {
@@ -345,10 +350,6 @@ namespace LJC.FrameWork.SOA
                     else if (kv.Key.Equals("Accept", StringComparison.OrdinalIgnoreCase))
                     {
                         webRequest.Accept = kv.Value;
-                    }
-                    else if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
                     }
                     else if (kv.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
                     {
@@ -364,6 +365,7 @@ namespace LJC.FrameWork.SOA
                     }
                 }
                 webRequest.AllowAutoRedirect = false;
+                webRequest.KeepAlive = false;
                 webRequest.AllowWriteStreamBuffering = true;
                 webRequest.CookieContainer = new System.Net.CookieContainer();
                 foreach (var kv in request.Cookies)
@@ -432,8 +434,15 @@ namespace LJC.FrameWork.SOA
                             for (var i = 0; i < webResponse.Headers.Count; i++)
                             {
                                 var name = webResponse.Headers.GetKey(i);
+                                
+                                if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                                    || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
+                                    || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
+                                    || name.Equals("Date", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    continue;
+                                }
                                 var value = webResponse.Headers.Get(i);
-
                                 response.Headers.Add(name, value);
                             }
 

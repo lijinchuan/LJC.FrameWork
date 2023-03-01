@@ -11,6 +11,8 @@ namespace LJC.FrameWork.SOA
     {
         public bool Process(HttpServer server, HttpRequest request, HttpResponse response)
         {
+            server.RequestSession(request).Touch();
+
             var url = request.Url;
             if (url.StartsWith("http",StringComparison.OrdinalIgnoreCase))
             {

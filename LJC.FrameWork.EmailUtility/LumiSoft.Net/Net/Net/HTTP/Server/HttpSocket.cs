@@ -43,8 +43,8 @@ namespace LJC.FrameWork.Net.HTTP.Server
     public class ClientInfo
     {
         internal Server server = null;
-        private Socket sock;
-        private String buffer;
+        private readonly Socket sock;
+        private string buffer;
         public event ConnectionRead OnRead;
         public event ConnectionClosed OnClose;
         public event ConnectionReadBytes OnReadBytes;
@@ -53,7 +53,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
         public event ConnectionNotify OnReady;
         public MessageType MessageType;
         private ClientDirection dir;
-        int id;
+        readonly int id;
         bool alreadyclosed = false;
         public static int NextID = 100;
         private Exception closeException;
@@ -68,6 +68,15 @@ namespace LJC.FrameWork.Net.HTTP.Server
         internal bool encComplete;
         internal byte[] encKey;
         internal RSAParameters encParams;
+
+        /// <summary>
+        /// 最后接收数据时间
+        /// </summary>
+        public DateTime LastDataTime
+        {
+            get;
+            private set;
+        } = DateTime.Now;
 
         public EncryptionType EncryptionType
         {
@@ -91,7 +100,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
         byte[] buf = new byte[BUFSIZE];
         ByteBuilder bytes = new ByteBuilder(10);
 
-        byte[] msgheader = new byte[8];
+        readonly byte[] msgheader = new byte[8];
         byte headerread = 0;
         bool wantingChecksum = true;
 
@@ -209,6 +218,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
             try
             {
                 sock.Send(bytes, len, SocketFlags.None);
+                LastDataTime = DateTime.Now;
             }
             catch (Exception e)
             {
@@ -257,6 +267,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 //Console.WriteLine("Socket "+ID+" read "+read+" bytes");
                 if (read > 0)
                 {
+                    LastDataTime = DateTime.Now;
                     DoRead(buf, read);
                     BeginReceive();
                 }
@@ -697,6 +708,20 @@ namespace LJC.FrameWork.Net.HTTP.Server
         {
             if (!alreadyclosed)
             {
+                if (OnRead != null)
+                {
+                    foreach (var item in OnRead.GetInvocationList())
+                    {
+                        OnRead -= (ConnectionRead)item;
+                    }
+                }
+                if (OnReadBytes != null)
+                {
+                    foreach (var item in OnReadBytes.GetInvocationList())
+                    {
+                        OnReadBytes -= (ConnectionReadBytes)item;
+                    }
+                }
                 if (server != null) server.ClientClosed(this);
                 if (OnClose != null)
                 {
@@ -709,6 +734,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 Console.WriteLine("**closed client** at " + DateTime.Now.Ticks);
 #endif
             }
+            
             sock.Close();
         }
 
@@ -918,8 +944,8 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 }
             }
 
-            Hashtable clients = new Hashtable();
-            Socket ss;
+            readonly Hashtable clients = new Hashtable();
+            readonly Socket ss;
 
             public event ClientEvent Connect, ClientReady;
             public IEnumerable Clients

@@ -4234,6 +4234,11 @@
             Gets list of aliases(CNAME) that are associated with a host.
             </summary>
         </member>
+        <member name="P:LJC.FrameWork.Net.HTTP.Server.ClientInfo.LastDataTime">
+            <summary>
+            最后接收数据时间
+            </summary>
+        </member>
         <member name="T:LJC.FrameWork.Net.HTTP.Server.RESTfulApiHandlerBase">
             <summary>
             RESTfull处理器的接口

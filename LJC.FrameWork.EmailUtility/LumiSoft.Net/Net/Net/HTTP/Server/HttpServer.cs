@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Collections;
+using System.Linq;
 
 namespace LJC.FrameWork.Net.HTTP.Server
 {
@@ -19,28 +20,75 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
         int sessionTimeout = 600;
 
+        private readonly System.Threading.Timer backGroundTaskTimer;
+
         public Hashtable Hostmap { get { return hostmap; } }
         public Server Server { get { return s; } }
         public ArrayList Handlers { get { return handlers; } }
         public int SessionTimeout
         {
             get { return sessionTimeout; }
-            set { sessionTimeout = value; CleanUpSessions(); }
+            set { sessionTimeout = value; /*CleanUpSessions();*/ }
         }
 
         public HttpServer(Server s)
         {
             this.s = s;
-            s.Connect += new ClientEvent(ClientConnect);
+            s.Connect += ClientConnect;
             handlers.Add(new FallbackHandler());
+
+            backGroundTaskTimer = new System.Threading.Timer(new System.Threading.TimerCallback(CheckClient), null, 30 * 1000, System.Threading.Timeout.Infinite);
+        }
+
+        private void CheckClient(object o)
+        {
+            try
+            {
+                
+                List<ClientInfo> clientInfosToRem = new List<ClientInfo>();
+                lock (Server.SyncRoot)
+                {
+                    var cnt = 0;
+                    foreach (ClientInfo ci in this.Server.Clients)
+                    {
+                        cnt++;
+                        if (DateTime.Now.Subtract(ci.LastDataTime).TotalSeconds > 120)
+                        {
+                            clientInfosToRem.Add(ci);
+                        }
+                    }
+                    Console.WriteLine("清理客户端[" + Server.Port + "]，共有客户端数:" + cnt);
+                }
+                if (clientInfosToRem.Count > 0)
+                {
+                    foreach (var ci in clientInfosToRem)
+                    {
+                        try
+                        {
+                            ci.Close();
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+                }
+
+                CleanUpSessions();
+                Console.WriteLine("清理客户端结束");
+            }
+            finally
+            {
+                backGroundTaskTimer.Change(30 * 1000, System.Threading.Timeout.Infinite);
+            }
         }
 
         bool ClientConnect(Server s, ClientInfo ci)
         {
             ci.Delimiter = "\r\n\r\n";
             ci.Data = new ClientData(ci);
-            ci.OnRead += new ConnectionRead(ClientRead);
-            ci.OnReadBytes += new ConnectionReadBytes(ClientReadBytes);
+            ci.OnRead += ClientRead;
+            ci.OnReadBytes += ClientReadBytes;
             return true;
         }
 
@@ -56,8 +104,8 @@ namespace LJC.FrameWork.Net.HTTP.Server
             data.req.HeaderText = text;
             // First line: METHOD /path/url HTTP/version
             string[] firstline = lines[0].Split(' ');
-            if (firstline.Length != 3) { SendResponse(ci, data.req, new HttpResponse(400, "Incorrect first header line " + lines[0]), false); return; }
-            if (firstline[2].Substring(0, 4) != "HTTP") { SendResponse(ci, data.req, new HttpResponse(400, "Unknown protocol " + firstline[2]), false); return; }
+            if (firstline.Length != 3) { SendResponse(ci, data.req, new HttpResponse(400, "Incorrect first header line " + lines[0]), true); return; }
+            if (firstline[2].Substring(0, 4) != "HTTP") { SendResponse(ci, data.req, new HttpResponse(400, "Unknown protocol " + firstline[2]), true); return; }
             data.req.Method = firstline[0];
             data.req.Url = firstline[1];
             data.req.HttpVersion = firstline[2].Substring(5);
@@ -81,9 +129,9 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 data.req.QueryString = "";
             }
 
-            if (data.req.Page.IndexOf("..") >= 0) { SendResponse(ci, data.req, new HttpResponse(400, "Invalid path"), false); return; }
+            if (data.req.Page.IndexOf("..") >= 0) { SendResponse(ci, data.req, new HttpResponse(400, "Invalid path"), true); return; }
 
-            if (!data.req.Header.TryGetValue("Host", out data.req.Host)) { SendResponse(ci, data.req, new HttpResponse(400, "No Host specified"), false); return; }
+            if (!data.req.Header.TryGetValue("Host", out data.req.Host)) { SendResponse(ci, data.req, new HttpResponse(400, "No Host specified"), true); return; }
 
             string cookieHeader;
             if (data.req.Header.TryGetValue("Cookie", out cookieHeader))
@@ -136,12 +184,12 @@ namespace LJC.FrameWork.Net.HTTP.Server
             HttpRequest oldreq = data.req;
             data.req = new HttpRequest(); // Once processed, the connection will be used for a new request
             data.req.Session = oldreq.Session; // ... but session is persisted
-            data.req.From = ((IPEndPoint)ci.Socket.RemoteEndPoint).Address;
+            //data.req.From = ((IPEndPoint)ci.Socket.RemoteEndPoint).Address;
         }
 
         void ClientReadBytes(ClientInfo ci, byte[] bytes, int len)
         {
-            CleanUpSessions();
+            //CleanUpSessions();
             int ofs = 0;
             ClientData data = (ClientData)ci.Data;
             Console.WriteLine("Reading " + len + " bytes of content, in state " + data.state + ", skipping " + data.skip + ", read " + data.read);
@@ -232,7 +280,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 if (handler.Process(this, req, resp))
                 {
                     //SendResponse(ci, req, resp, resp.ReturnCode != 200);
-                    SendResponse(ci, req, resp, false);
+                    SendResponse(ci, req, resp, resp.ReturnCode != 200);
                     return resp.ReturnCode != 200;
                 }
             }
@@ -276,6 +324,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
             lock (sessions.SyncRoot)
             {
                 ICollection keys = sessions.Keys;
+                Console.WriteLine("会话数:" + keys.Count);
                 foreach (string k in keys)
                 {
                     Session s = (Session)sessions[k];
@@ -305,8 +354,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
         void SendResponse(ClientInfo ci, HttpRequest req, HttpResponse resp, bool close)
         {
-            close = true;
-
+            //close = true;
             var en = Encoding.UTF8;
 #if DEBUG
             Console.WriteLine("Response: " + resp.ReturnCode + Responses[resp.ReturnCode]);
@@ -314,7 +362,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
             ByteBuilder bb = new ByteBuilder();
             bb.Add(en.GetBytes("HTTP/1.1 " + resp.ReturnCode + " " + Responses[resp.ReturnCode] +
                     "\r\nDate: " + DateTime.Now.ToString("R") +
-                    "\r\nServer: RedCoronaEmbedded/1.0" +
+                    "\r\nServer: MyWebHost/1.0" +
                     "\r\nConnection: " + (close ? "close" : "Keep-Alive")));
             if (resp.RawContent == null)
             {
@@ -382,10 +430,6 @@ namespace LJC.FrameWork.Net.HTTP.Server
             if (close)
             {
                 ci.Close();
-            }
-            else
-            {
-                ci.BeginReceive();
             }
         }
 
@@ -531,11 +575,11 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
     public class Session
     {
-        string id;
-        IPAddress user;
+        readonly string id;
+        readonly IPAddress user;
         DateTime lasttouched;
 
-        Hashtable data = new Hashtable();
+        readonly Hashtable data = new Hashtable();
 
         public string ID { get { return id; } }
         public DateTime LastTouched { get { return lasttouched; } }
