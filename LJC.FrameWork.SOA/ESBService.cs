@@ -339,6 +339,10 @@ namespace LJC.FrameWork.SOA
                     {
                         webRequest.Referer = kv.Value;
                     }
+                    else if (kv.Key.Equals("Expect", StringComparison.OrdinalIgnoreCase))
+                    {
+                        webRequest.Expect = kv.Value;
+                    }
                     else if (kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
                     {
                         //webRequest.KeepAlive = "keep-alive".Equals(kv.Value, StringComparison.OrdinalIgnoreCase);
@@ -434,11 +438,12 @@ namespace LJC.FrameWork.SOA
                             for (var i = 0; i < webResponse.Headers.Count; i++)
                             {
                                 var name = webResponse.Headers.GetKey(i);
-                                
+
                                 if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
                                     || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
                                     || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
-                                    || name.Equals("Date", StringComparison.OrdinalIgnoreCase))
+                                    || name.Equals("Date", StringComparison.OrdinalIgnoreCase)
+                                    || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
                                 {
                                     continue;
                                 }
