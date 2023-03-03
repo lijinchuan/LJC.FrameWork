@@ -26,7 +26,7 @@ namespace LJC.FrameWork.SOA
             if (!string.IsNullOrWhiteSpace(DefaltWebPort))
             {
                 var webport = int.Parse(DefaltWebPort);
-                SimulateServerManager.AddSimulateServer(webport);
+                AddSimulateServer(webport);
 
                 LogHelper.Instance.Info("web默认服务开启:" + webport);
             }

@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.IO;
 using LJC.FrameWork.Comm;
 using System.Net.Http;
+using System.Net.Http.Headers;
 
 namespace LJC.FrameWork.SOA
 {
@@ -268,6 +269,262 @@ namespace LJC.FrameWork.SOA
             return base.DoMessage(message);
         }
 
+        private WebResponse DoWebResponseWithHttpClient(WebRequest request, string realUrl)
+        {
+            WebResponse response = new WebResponse();
+            var client = HttpClientFactory.GetHttpClient(realUrl);
+
+            using (HttpRequestMessage httpRequestMessage = new HttpRequestMessage())
+            {
+                httpRequestMessage.Method = new HttpMethod(request.Method);
+                httpRequestMessage.RequestUri = new Uri(realUrl);
+                
+                if (request.InputData?.Length > 0)
+                {
+                    httpRequestMessage.Content = new ByteArrayContent(request.InputData);
+                    httpRequestMessage.Content.Headers.ContentLength = request.InputData.Length;
+                }
+                else if (httpRequestMessage.Method == HttpMethod.Post)
+                {
+                    httpRequestMessage.Content = new ByteArrayContent(new byte[0]);
+                    httpRequestMessage.Content.Headers.ContentLength = 0;
+                }
+
+                foreach (var kv in request.Headers)
+                {
+                    if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                        || kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+                    if (kv.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) && httpRequestMessage.Content != null)
+                    {
+                        //application/x-www-form-urlencoded; charset=UTF-8
+                        httpRequestMessage.Content.Headers.Add(kv.Key, kv.Value);
+                        continue;
+                    }
+                    httpRequestMessage.Headers.Add(kv.Key, kv.Value);
+                }
+
+                if (request.Cookies?.Any() == true)
+                {
+                    System.Net.CookieContainer cookieContainer = new System.Net.CookieContainer();
+                    var domin = httpRequestMessage.RequestUri.Host.Split(':').First();
+                    foreach (var cookie in request.Cookies)
+                    {
+                        cookieContainer.Add(new System.Net.Cookie
+                        {
+                            Name = cookie.Key,
+                            Value = WebUtility.UrlEncode(cookie.Value),
+                            Domain = domin,
+                            //Domain=new Uri(matchedMapper.TragetWebHost).Host,
+                            Path = "/"
+                        });
+                    }
+                    httpRequestMessage.Headers.Add("Cookie", cookieContainer.GetCookieHeader(httpRequestMessage.RequestUri));
+                }
+
+                using (var httpResponseMessage = client.SendAsync(httpRequestMessage).Result)
+                {
+                    response.Headers = new Dictionary<string, string>();
+                    var headers = httpResponseMessage.Headers.ToList();
+                    AddHeader(headers);
+
+                    byte[] contentBuffer = httpResponseMessage.Content.ReadAsByteArrayAsync().Result;
+                    response.ResponseData = contentBuffer;
+                    response.ContentType = httpResponseMessage.Content.Headers.ContentType?.ToString();
+                    AddHeader(httpResponseMessage.Content.Headers.ToList());
+
+                    response.ResponseCode = (int)httpResponseMessage.StatusCode;
+                }
+            }
+
+            return response;
+
+            void AddHeader(List<KeyValuePair<string,IEnumerable<string>>> headers)
+            {
+                for (var i = 0; i < headers.Count; i++)
+                {
+                    var name = headers[i].Key;
+                    var value = headers[i].Value;
+
+                    if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                               || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
+                               || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
+                               || name.Equals("Date", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    response.Headers.Add(name, string.Join(", ", value));
+
+                }
+            }
+        }
+
+        private WebResponse DoWebResponseWithHttpWebRequest(WebRequest request, string realUrl)
+        {
+            WebResponse response = new WebResponse();
+
+            System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
+            webRequest.Method = request.Method;
+
+            foreach (var kv in request.Headers)
+            {
+                if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.Host = kv.Value;
+                }
+                else if (kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.Referer = kv.Value;
+                }
+                else if (kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+                {
+                    //webRequest.KeepAlive = "keep-alive".Equals(kv.Value, StringComparison.OrdinalIgnoreCase);
+                }
+                else if (kv.Key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.UserAgent = kv.Value;
+                }
+                else if (kv.Key.Equals("Accept", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.Accept = kv.Value;
+                }
+                else if (kv.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.ContentType = kv.Value;
+                }
+                else if (kv.Key.Equals("If-Modified-Since", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.IfModifiedSince = DateTime.Parse(kv.Value);
+                }
+                else
+                {
+                    webRequest.Headers.Add(kv.Key, kv.Value);
+                }
+            }
+            webRequest.AllowAutoRedirect = false;
+            webRequest.KeepAlive = false;
+            webRequest.AllowWriteStreamBuffering = true;
+            webRequest.CookieContainer = new System.Net.CookieContainer();
+            var cookDomain = webRequest.Host.Split(':').First();
+            foreach (var kv in request.Cookies)
+            {
+                webRequest.CookieContainer.Add(new System.Net.Cookie
+                {
+                    Name = kv.Key,
+                    Value = WebUtility.UrlEncode(kv.Value),
+                    Domain = cookDomain,
+                    //Domain=new Uri(matchedMapper.TragetWebHost).Host,
+                    Path = "/"
+                });
+            }
+
+            if (request.TimeOut > 0)
+            {
+                webRequest.Timeout = request.TimeOut;
+            }
+
+
+            var buff = request.InputData;
+            if (buff != null && buff.Length > 0)
+            {
+                //byte[] buff = this.WebEncoding.GetBytes(data);
+                //webRequest.ContentType = "application/x-www-form-urlencoded;charset=UTF-8;";
+                //webRequest.ContentType = contentType;
+                webRequest.ContentLength = buff.Length;
+
+                using (Stream requestStream = webRequest.GetRequestStream())
+                {
+                    requestStream.Write(buff, 0, buff.Length);
+                }
+            }
+            else
+            {
+                webRequest.ContentLength = 0;
+                //using (Stream requestStream = webRequest.GetRequestStream())
+                //{
+                //    requestStream.Write(new byte[0], 0, 0);
+                //}
+            }
+            Console.WriteLine(webRequest.RequestUri.ToString());
+
+            System.Net.HttpWebResponse webResponse = null;
+            try
+            {
+                webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
+
+            }
+            catch (System.Net.WebException ex)
+            {
+                webResponse = (System.Net.HttpWebResponse)ex.Response;
+                if (webResponse == null)
+                {
+                    throw;
+                }
+            }
+            finally
+            {
+                try
+                {
+                    if (webResponse != null)
+                    {
+                        response.Headers = new Dictionary<string, string>();
+
+                        for (var i = 0; i < webResponse.Headers.Count; i++)
+                        {
+                            var name = webResponse.Headers.GetKey(i);
+
+                            if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                                || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
+                                || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
+                                || name.Equals("Date", StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+                            var value = webResponse.Headers.Get(i);
+                            response.Headers.Add(name, value);
+                        }
+
+                        byte[] contentBuffer = null;
+                        using (MemoryStream ms = new MemoryStream())
+                        {
+                            using (Stream s = webResponse.GetResponseStream())
+                            {
+                                byte[] buffer = new byte[2048];
+                                int len = 0;
+                                while ((len = s.Read(buffer, 0, 1024)) > 0)
+                                {
+                                    ms.Write(buffer, 0, len);
+                                }
+                            }
+
+                            contentBuffer = ms.ToArray();
+
+                            response.ResponseData = contentBuffer;
+                        }
+
+                        response.ResponseCode = (int)webResponse.StatusCode;
+                        response.ContentType = webResponse.ContentType;
+                    }
+                }
+                finally
+                {
+                    if (webResponse != null)
+                    {
+                        webResponse.Close();
+                    }
+                }
+            }
+            return response;
+        }
+
         private object DoWebResponse(WebRequest request)
         {
             WebResponse response = new WebResponse();
@@ -283,216 +540,14 @@ namespace LJC.FrameWork.SOA
                     virUrl = virUrl.Substring(matchedMapper.MappingRoot.Length);
                 }
 
-                //using (HttpRequestMessage httpRequestMessage = new HttpRequestMessage())
-                //{
-                //    httpRequestMessage.Method = new HttpMethod(request.Method);
-                //    httpRequestMessage.RequestUri = new Uri(matchedMapper.TragetWebHost.TrimEnd('/') + '/' + virUrl.TrimStart('/'));
-                //    httpRequestMessage.Content = new ByteArrayContent(request.InputData);
-                //    foreach(var kv in request.Headers)
-                //    {
-                //        httpRequestMessage.Headers.Add(kv.Key, kv.Value);
-                //    }
-
-                //    using (var client = new HttpClient())
-                //    {
-                //        using (var httpResponseMessage = client.SendAsync(httpRequestMessage).Result)
-                //        {
-                //            response.Headers = new Dictionary<string, string>();
-                //            var headers = httpResponseMessage.Headers.ToList();
-                //            for (var i = 0; i < headers.Count; i++)
-                //            {
-                //                var name = headers[i].Key;
-                //                var value = headers[i].Value;
-
-                //                response.Headers.Add(name,string.Join(", ", value));
-                //            }
-
-                //            byte[] contentBuffer = httpResponseMessage.Content.ReadAsByteArrayAsync().Result;
-                //            response.ResponseData = contentBuffer;
-
-                //            response.ResponseCode = (int)httpResponseMessage.StatusCode;
-                //            //response.ContentType = 
-                //        }
-                //    }
-                //}
-
                 var realUrl = matchedMapper.TragetWebHost;
                 if (!string.IsNullOrWhiteSpace(virUrl))
                 {
                     realUrl = realUrl.TrimEnd('/') + '/' + virUrl.TrimStart('/');
                 }
-                System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
-                webRequest.Method = request.Method;
 
-                foreach (var kv in request.Headers)
-                {
-                    if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    if (kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
-                    {
-                        webRequest.Host = kv.Value;
-                    }
-                    else if (kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase))
-                    {
-                        webRequest.Referer = kv.Value;
-                    }
-                    else if (kv.Key.Equals("Expect", StringComparison.OrdinalIgnoreCase))
-                    {
-                        webRequest.Expect = kv.Value;
-                    }
-                    else if (kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
-                    {
-                        //webRequest.KeepAlive = "keep-alive".Equals(kv.Value, StringComparison.OrdinalIgnoreCase);
-                    }
-                    else if (kv.Key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
-                    {
-                        webRequest.UserAgent = kv.Value;
-                    }
-                    else if (kv.Key.Equals("Accept", StringComparison.OrdinalIgnoreCase))
-                    {
-                        webRequest.Accept = kv.Value;
-                    }
-                    else if (kv.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
-                    {
-                        webRequest.ContentType = kv.Value;
-                    }
-                    else if (kv.Key.Equals("If-Modified-Since", StringComparison.OrdinalIgnoreCase))
-                    {
-                        webRequest.IfModifiedSince = DateTime.Parse(kv.Value);
-                    }
-                    else
-                    {
-                        webRequest.Headers.Add(kv.Key, kv.Value);
-                    }
-                }
-                webRequest.AllowAutoRedirect = false;
-                webRequest.KeepAlive = false;
-                webRequest.AllowWriteStreamBuffering = true;
-                webRequest.CookieContainer = new System.Net.CookieContainer();
-                foreach (var kv in request.Cookies)
-                {
-                    webRequest.CookieContainer.Add(new System.Net.Cookie
-                    {
-                        Name = kv.Key,
-                        Value = WebUtility.UrlEncode(kv.Value),
-                        Domain = webRequest.Host.Split(':').First(),
-                        //Domain=new Uri(matchedMapper.TragetWebHost).Host,
-                        Path = "/"
-                    });
-                }
-
-                if (request.TimeOut > 0)
-                {
-                    webRequest.Timeout = request.TimeOut;
-                }
-
-
-                var buff = request.InputData;
-                if (buff != null && buff.Length > 0)
-                {
-                    //byte[] buff = this.WebEncoding.GetBytes(data);
-                    //webRequest.ContentType = "application/x-www-form-urlencoded;charset=UTF-8;";
-                    //webRequest.ContentType = contentType;
-                    webRequest.ContentLength = buff.Length;
-
-                    using (Stream requestStream = webRequest.GetRequestStream())
-                    {
-                        requestStream.Write(buff, 0, buff.Length);
-                    }
-                }
-                else
-                {
-                    webRequest.ContentLength = 0;
-                    //using (Stream requestStream = webRequest.GetRequestStream())
-                    //{
-                    //    requestStream.Write(new byte[0], 0, 0);
-                    //}
-                }
-                Console.WriteLine(webRequest.RequestUri.ToString());
-
-                System.Net.HttpWebResponse webResponse = null;
-                try
-                {
-                    webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
-
-                }
-                catch (System.Net.WebException ex)
-                {
-                    webResponse = (System.Net.HttpWebResponse)ex.Response;
-                    if (webResponse == null)
-                    {
-                        throw;
-                    }
-                }
-                finally
-                {
-                    try
-                    {
-                        if (webResponse != null)
-                        {
-                            response.Headers = new Dictionary<string, string>();
-
-                            for (var i = 0; i < webResponse.Headers.Count; i++)
-                            {
-                                var name = webResponse.Headers.GetKey(i);
-
-                                if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
-                                    || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
-                                    || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
-                                    || name.Equals("Date", StringComparison.OrdinalIgnoreCase)
-                                    || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    continue;
-                                }
-                                var value = webResponse.Headers.Get(i);
-                                response.Headers.Add(name, value);
-                            }
-
-                            byte[] contentBuffer = null;
-                            using (MemoryStream ms = new MemoryStream())
-                            {
-                                using (Stream s = webResponse.GetResponseStream())
-                                {
-                                    byte[] buffer = new byte[2048];
-                                    int len = 0;
-                                    while ((len = s.Read(buffer, 0, 1024)) > 0)
-                                    {
-                                        ms.Write(buffer, 0, len);
-                                    }
-                                }
-
-                                contentBuffer = ms.ToArray();
-
-                                response.ResponseData = contentBuffer;
-                            }
-
-                            response.ResponseCode = (int)webResponse.StatusCode;
-                            response.ContentType = webResponse.ContentType;
-
-                            //response.Cookies = new Dictionary<string, string>();
-                            //if (webResponse.Cookies.Count > 0)
-                            //{
-
-                            //    for (int i = 0; i < webResponse.Cookies.Count; i++)
-                            //    {
-                            //        response.Cookies.Add(webResponse.Cookies[i].Name, webResponse.Cookies[i].Value);
-                            //    }
-                            //}
-                        }
-                    }
-                    finally
-                    {
-                        if (webResponse != null)
-                        {
-                            webResponse.Close();
-                        }
-                    }
-                }
+                response = DoWebResponseWithHttpClient(request, realUrl);
             }
-
 
             return response;
         }

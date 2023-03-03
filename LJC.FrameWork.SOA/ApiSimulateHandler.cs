@@ -45,8 +45,10 @@ namespace LJC.FrameWork.SOA
             {
                 response.Header = simulateResponse.Headers??new Dictionary<string, string>();
                 response.RawContent = simulateResponse.ResponseData;
-                
-                response.ContentType = simulateResponse.ContentType;
+                if (!string.IsNullOrWhiteSpace(simulateResponse.ContentType))
+                {
+                    response.ContentType = simulateResponse.ContentType;
+                }
                 response.ReturnCode = simulateResponse.ResponseCode;
                 response.Url = simulateResponse.Url;
 
