@@ -19,16 +19,19 @@ namespace LJC.FrameWork.Comm
         /// </summary>
         /// <param name="address">地址，大小写没关系</param>
         /// <returns></returns>
-        public static HttpClient GetHttpClient(string address)
+        public static HttpClient GetHttpClient(string address, bool allowAutoRedirect = true)
         {
             var uri = new Uri(address);
 
-            var host = uri.Host.ToLower();
-            if(httpClients.TryGetValue(host,out HttpClient httpClient))
+            var host = uri.Host.ToLower() + "," + allowAutoRedirect;
+            if (httpClients.TryGetValue(host, out HttpClient httpClient))
             {
                 return httpClient;
             }
-            var newClient = new HttpClient();
+            var newClient = new HttpClient(new HttpClientHandler
+            {
+                AllowAutoRedirect = allowAutoRedirect
+            });
             if (httpClients.TryAdd(host, newClient))
             {
                 return newClient;

@@ -272,8 +272,8 @@ namespace LJC.FrameWork.SOA
         private WebResponse DoWebResponseWithHttpClient(WebRequest request, string realUrl)
         {
             WebResponse response = new WebResponse();
-            var client = HttpClientFactory.GetHttpClient(realUrl);
-
+            var client = HttpClientFactory.GetHttpClient(realUrl,false);
+            
             using (HttpRequestMessage httpRequestMessage = new HttpRequestMessage())
             {
                 httpRequestMessage.Method = new HttpMethod(request.Method);
@@ -351,7 +351,8 @@ namespace LJC.FrameWork.SOA
                     if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
                                || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
                                || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
-                               || name.Equals("Date", StringComparison.OrdinalIgnoreCase))
+                               || name.Equals("Date", StringComparison.OrdinalIgnoreCase)
+                               || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
@@ -384,9 +385,17 @@ namespace LJC.FrameWork.SOA
                 {
                     webRequest.Referer = kv.Value;
                 }
+                else if (kv.Key.Equals("Expect", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.Expect = kv.Value;
+                }
                 else if (kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
                 {
                     //webRequest.KeepAlive = "keep-alive".Equals(kv.Value, StringComparison.OrdinalIgnoreCase);
+                }
+                else if (kv.Key.Equals("Proxy-Connection", StringComparison.OrdinalIgnoreCase))
+                {
+                    
                 }
                 else if (kv.Key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
                 {
@@ -484,7 +493,8 @@ namespace LJC.FrameWork.SOA
                             if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
                                 || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
                                 || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
-                                || name.Equals("Date", StringComparison.OrdinalIgnoreCase))
+                                || name.Equals("Date", StringComparison.OrdinalIgnoreCase)
+                                || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
                             {
                                 continue;
                             }
@@ -547,6 +557,7 @@ namespace LJC.FrameWork.SOA
                 }
 
                 response = DoWebResponseWithHttpClient(request, realUrl);
+                //response = DoWebResponseWithHttpWebRequest(request, realUrl);
             }
 
             return response;
