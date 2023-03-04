@@ -90,7 +90,7 @@ namespace LJC.FrameWork.Comm
                     case ObjTextReaderWriterEncodeType.entitybufex:
                     case ObjTextReaderWriterEncodeType.entitybuf:
                         {
-                            return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte,false);
+                            return LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<T>(contentbyte);
                         }
                     case ObjTextReaderWriterEncodeType.entitybuf2:
                         {
