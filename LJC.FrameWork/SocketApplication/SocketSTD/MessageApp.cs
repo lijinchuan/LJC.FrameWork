@@ -474,6 +474,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
                 catch (Exception e)
                 {
                     OnError(e);
+                    Thread.Sleep(1000);
                 }
             }
             try
