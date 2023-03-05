@@ -205,13 +205,13 @@ namespace LJC.FrameWork.Comm
         /// 取上网代理
         /// </summary>
         /// <returns></returns>
-        private NetworkCredential GetCredential()
+        public static NetworkCredential GetCredential()
         {
             string user = ConfigHelper.AppConfig("NetWorkUsername");
             string pwd = ConfigHelper.AppConfig("NetWorkPwd");
             string domain = ConfigHelper.AppConfig("NetWorkDomain");
 
-            if (user != string.Empty)
+            if (!string.IsNullOrWhiteSpace(domain))
             {
                 return new NetworkCredential(user, pwd, domain);
             }

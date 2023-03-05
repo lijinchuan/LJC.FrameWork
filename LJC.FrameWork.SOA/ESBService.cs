@@ -21,6 +21,16 @@ namespace LJC.FrameWork.SOA
         static ESBService()
         {
             ThreadPoolHelper.CheckSetMinThreads(100, 100);
+
+            System.Net.ServicePointManager.Expect100Continue = true;
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls | (System.Net.SecurityProtocolType)768 | (System.Net.SecurityProtocolType)3072 | System.Net.SecurityProtocolType.Ssl3;
+            System.Net.ServicePointManager.ServerCertificateValidationCallback = new System.Net.Security.RemoteCertificateValidationCallback(CheckValidationResult);
+
+        }
+
+        private static bool CheckValidationResult(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors errors)
+        {
+            return true;
         }
 
         private const int Func_WebRequest = -100;
@@ -293,7 +303,8 @@ namespace LJC.FrameWork.SOA
                 foreach (var kv in request.Headers)
                 {
                     if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
-                        || kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+                        || kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase)
+                        || kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
@@ -366,22 +377,22 @@ namespace LJC.FrameWork.SOA
         private WebResponse DoWebResponseWithHttpWebRequest(WebRequest request, string realUrl)
         {
             WebResponse response = new WebResponse();
-
             System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
             webRequest.Method = request.Method;
 
+            System.Net.NetworkCredential credential = HttpRequestEx.GetCredential();
+            if (credential != null)
+                webRequest.Proxy.Credentials = credential;
+
             foreach (var kv in request.Headers)
             {
-                if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                    || kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
-                if (kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
-                {
-                    webRequest.Host = kv.Value;
-                }
-                else if (kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase))
+                if (kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase))
                 {
                     webRequest.Referer = kv.Value;
                 }
@@ -556,8 +567,15 @@ namespace LJC.FrameWork.SOA
                     realUrl = realUrl.TrimEnd('/') + '/' + virUrl.TrimStart('/');
                 }
 
-                response = DoWebResponseWithHttpClient(request, realUrl);
-                //response = DoWebResponseWithHttpWebRequest(request, realUrl);
+                if (realUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase)
+                    || HttpRequestEx.GetCredential() != null)
+                {
+                    response = DoWebResponseWithHttpWebRequest(request, realUrl);
+                }
+                else
+                {
+                    response = DoWebResponseWithHttpClient(request, realUrl);
+                }
             }
 
             return response;

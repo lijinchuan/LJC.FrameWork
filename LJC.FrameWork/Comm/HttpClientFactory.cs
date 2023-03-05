@@ -30,7 +30,7 @@ namespace LJC.FrameWork.Comm
             }
             var newClient = new HttpClient(new HttpClientHandler
             {
-                AllowAutoRedirect = allowAutoRedirect
+                AllowAutoRedirect = allowAutoRedirect,
             });
             if (httpClients.TryAdd(host, newClient))
             {
