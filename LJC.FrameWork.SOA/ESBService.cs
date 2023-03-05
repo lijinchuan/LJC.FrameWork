@@ -314,7 +314,7 @@ namespace LJC.FrameWork.SOA
                         httpRequestMessage.Content.Headers.Add(kv.Key, kv.Value);
                         continue;
                     }
-                    httpRequestMessage.Headers.Add(kv.Key, kv.Value);
+                    httpRequestMessage.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
                 }
 
                 if (request.Cookies?.Any() == true)
