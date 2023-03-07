@@ -765,19 +765,8 @@ namespace LJC.FrameWork.SOA
 
         public void StartRedirectService()
         {
-            var localhost = System.Net.Dns.GetHostName();
-            var addrs = System.Net.Dns.GetHostAddresses(localhost);
-            List<System.Net.IPAddress> bindips = new List<System.Net.IPAddress>();
-            if (addrs != null && addrs.Length > 0)
-            {
-                foreach (var addr in addrs)
-                {
-                    if (addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                    {
-                        bindips.Add(addr);
-                    }
-                }
-            }
+            var addrs = NetworkHelper.GetActiveIpV4s(true);
+            var bindips = NetworkHelper.GetActiveIpV4s();
 
             if (addrs.Length > 0)
             {

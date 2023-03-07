@@ -826,7 +826,7 @@ namespace Test2
         }
         static void Main(string[] args)
         {
-
+            Dns.GetHostName();
             TestStockSpell();
 
             Console.Read();

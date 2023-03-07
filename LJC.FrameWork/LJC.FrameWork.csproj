@@ -221,6 +221,7 @@
     <Compile Include="Comm\MemCach.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Comm\NetworkHelper.cs" />
     <Compile Include="Comm\ProcessTraceUtil.cs" />
     <Compile Include="Comm\PropertyInfoEx.cs" />
     <Compile Include="Comm\RandomHelper.cs" />
