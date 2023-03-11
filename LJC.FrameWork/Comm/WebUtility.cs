@@ -28,7 +28,7 @@ namespace LJC.FrameWork.Comm
             return System.Web.HttpUtility.HtmlDecode(content);
         }
 
-        public static string UrlEncode(string content,Encoding encode)
+        public static string UrlEncode(string content, Encoding encode)
         {
 
             return System.Web.HttpUtility.UrlEncode(encode.GetString(Encoding.Default.GetBytes(content)));
@@ -102,6 +102,31 @@ namespace LJC.FrameWork.Comm
             urlbase64 = urlbase64.Replace("~", "=");
 
             return urlbase64;
+        }
+
+        public static void SetCredential(this WebRequest webRequest,string netWorkDomain,string netWorkUsername,string netWorkPwd)
+        {
+            if (netWorkDomain != string.Empty)
+            {
+                if (netWorkDomain.StartsWith("https:", StringComparison.OrdinalIgnoreCase)
+                    || netWorkDomain.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var webProxy = new WebProxy
+                    {
+                        Address = new Uri(netWorkDomain),
+                        Credentials = new NetworkCredential
+                        {
+                            UserName = netWorkUsername,
+                            Password = netWorkPwd
+                        }
+
+                    };
+
+                    webRequest.Proxy = webProxy;
+                }
+
+                webRequest.Proxy.Credentials = new NetworkCredential(netWorkUsername, netWorkPwd, netWorkDomain);
+            }
         }
     }
 }

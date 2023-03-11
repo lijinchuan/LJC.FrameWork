@@ -288,6 +288,8 @@ namespace LJC.FrameWork.SOA
             {
                 httpRequestMessage.Method = new HttpMethod(request.Method);
                 httpRequestMessage.RequestUri = new Uri(realUrl);
+
+                
                 
                 if (request.InputData?.Length > 0)
                 {
@@ -335,7 +337,7 @@ namespace LJC.FrameWork.SOA
                     }
                     httpRequestMessage.Headers.Add("Cookie", cookieContainer.GetCookieHeader(httpRequestMessage.RequestUri));
                 }
-
+                
                 using (var httpResponseMessage = client.SendAsync(httpRequestMessage).Result)
                 {
                     response.Headers = new Dictionary<string, string>();
@@ -375,15 +377,19 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        private WebResponse DoWebResponseWithHttpWebRequest(WebRequest request, string realUrl)
+        private WebResponse DoWebResponseWithHttpWebRequest(WebRequest request, string realUrl,WebProxy proxy)
         {
             WebResponse response = new WebResponse();
             System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
             webRequest.Method = request.Method;
 
-            System.Net.NetworkCredential credential = HttpRequestEx.GetCredential();
-            if (credential != null)
-                webRequest.Proxy.Credentials = credential;
+            //System.Net.NetworkCredential credential = HttpRequestEx.GetCredential();
+            //if (credential != null)
+            //    webRequest.Proxy.Credentials = credential;
+            if (proxy != null)
+            {
+                webRequest.SetCredential(proxy.Address, proxy.UserName, proxy.UserPassWord);
+            }
 
             foreach (var kv in request.Headers)
             {
@@ -569,10 +575,17 @@ namespace LJC.FrameWork.SOA
                     realUrl = realUrl.TrimEnd('/') + '/' + virUrl.TrimStart('/');
                 }
 
-                if (realUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase)
-                    || HttpRequestEx.GetCredential() != null)
+                //代理
+                WebProxy proxy = null;
+                if (!string.IsNullOrEmpty(matchedMapper.UseProxyName))
                 {
-                    response = DoWebResponseWithHttpWebRequest(request, realUrl);
+                    proxy = ServiceConfig.ReadConfig().WebProxies?.FirstOrDefault(p => p.Name.Equals(matchedMapper.UseProxyName, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (realUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase)
+                    || proxy != null)
+                {
+                    response = DoWebResponseWithHttpWebRequest(request, realUrl,proxy);
                 }
                 else
                 {

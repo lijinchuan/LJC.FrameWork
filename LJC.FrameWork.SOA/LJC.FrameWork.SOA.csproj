@@ -91,6 +91,7 @@
     <Compile Include="SOAServerEchoResponse.cs" />
     <Compile Include="SOAServerResponse.cs" />
     <Compile Include="WebMapper.cs" />
+    <Compile Include="WebProxy.cs" />
     <Compile Include="WebTransferSvcHelper.cs" />
   </ItemGroup>
   <ItemGroup>

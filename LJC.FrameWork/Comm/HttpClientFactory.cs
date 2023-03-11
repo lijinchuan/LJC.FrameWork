@@ -22,7 +22,7 @@ namespace LJC.FrameWork.Comm
         public static HttpClient GetHttpClient(string address, bool allowAutoRedirect = true)
         {
             var uri = new Uri(address);
-
+            
             var host = uri.Host.ToLower() + "," + allowAutoRedirect;
             if (httpClients.TryGetValue(host, out HttpClient httpClient))
             {
@@ -31,6 +31,7 @@ namespace LJC.FrameWork.Comm
             var newClient = new HttpClient(new HttpClientHandler
             {
                 AllowAutoRedirect = allowAutoRedirect,
+                //UseProxy=false
             });
             if (httpClients.TryAdd(host, newClient))
             {

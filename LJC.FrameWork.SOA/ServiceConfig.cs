@@ -22,6 +22,12 @@ namespace LJC.FrameWork.SOA
             set;
         }
 
+        public List<WebProxy> WebProxies
+        {
+            get;
+            set;
+        }
+
         private static ServiceConfig _config = null;
         public static ServiceConfig ReadConfig()
         {
@@ -52,10 +58,10 @@ namespace LJC.FrameWork.SOA
             return _config;
         }
 
-        public static void WriteConfig(List<WebMapper> webMappers)
+        public static void WriteConfig(ServiceConfig config,List<WebMapper> webMappers,List<WebProxy> webProxies)
         {
-            ServiceConfig config = new ServiceConfig();
             config.WebMappers = webMappers;
+            config.WebProxies = webProxies;
             LJC.FrameWork.Comm.SerializerHelper.SerializerToXML(config, configfile);
         }
     }

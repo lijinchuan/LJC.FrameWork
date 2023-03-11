@@ -33,5 +33,14 @@ namespace LJC.FrameWork.SOA
             get;
             set;
         }
+
+        /// <summary>
+        /// 使用代理名称
+        /// </summary>
+        public string UseProxyName
+        {
+            get;
+            set;
+        }
     }
 }
