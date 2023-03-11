@@ -22,7 +22,7 @@ namespace LJC.FrameWork.SOA
         {
             ThreadPoolHelper.CheckSetMinThreads(100, 100);
 
-            System.Net.ServicePointManager.Expect100Continue = true;
+            //System.Net.ServicePointManager.Expect100Continue = false;
             System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls | (System.Net.SecurityProtocolType)768 | (System.Net.SecurityProtocolType)3072 | System.Net.SecurityProtocolType.Ssl3;
             System.Net.ServicePointManager.ServerCertificateValidationCallback = new System.Net.Security.RemoteCertificateValidationCallback(CheckValidationResult);
 
@@ -304,7 +304,8 @@ namespace LJC.FrameWork.SOA
                 {
                     if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
                         || kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase)
-                        || kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
+                        || kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase)
+                        || kv.Key.Equals("Expect", StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
@@ -387,9 +388,10 @@ namespace LJC.FrameWork.SOA
             foreach (var kv in request.Headers)
             {
                 if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
-                    || kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase))
+                    || kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase)
+                    || kv.Key.Equals("Expect", StringComparison.OrdinalIgnoreCase))
                 {
-                    continue;
+                    continue; 
                 }
 
                 if (kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase))
