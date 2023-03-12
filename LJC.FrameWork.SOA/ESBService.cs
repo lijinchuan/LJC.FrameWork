@@ -603,6 +603,21 @@ namespace LJC.FrameWork.SOA
                 }
             }
 
+            if (!string.IsNullOrEmpty(matchedMapper.MappingRoot))
+            {
+                if (response.Headers?.Any() == true)
+                {
+                    foreach (var head in response.Headers)
+                    {
+                        if (head.Key.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase))
+                        {
+                            response.Headers[head.Key] = Regex.Replace(response.Headers[head.Key], @"Path=[^;]+", "Path=/" + matchedMapper.MappingRoot.TrimStart('/'), RegexOptions.IgnoreCase);
+                            break;
+                        }
+                    }
+                }
+            }
+
             return response;
         }
 
