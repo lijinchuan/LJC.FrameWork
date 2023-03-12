@@ -591,8 +591,8 @@ namespace LJC.FrameWork.SOA
 
                 if (realUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase)
                     || proxy != null
-                    || request.Cookies?.Any() == true
-                    || request.Headers?.Keys.Any(p=>p.Equals("Cookie",StringComparison.OrdinalIgnoreCase)) == true
+                    //|| request.Cookies?.Any() == true
+                    //|| request.Headers?.Keys.Any(p=>p.Equals("Cookie",StringComparison.OrdinalIgnoreCase)) == true
                     )
                 {
                     response = DoWebResponseWithHttpWebRequest(request, realUrl, proxy);
