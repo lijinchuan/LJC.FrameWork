@@ -284,13 +284,8 @@ namespace LJC.FrameWork.SOA
             WebResponse response = new WebResponse();
             var client = HttpClientFactory.GetHttpClient(realUrl,false);
             
-            using (HttpRequestMessage httpRequestMessage = new HttpRequestMessage())
+            using (HttpRequestMessage httpRequestMessage = new HttpRequestMessage(new HttpMethod(request.Method), new Uri(realUrl)))
             {
-                httpRequestMessage.Method = new HttpMethod(request.Method);
-                httpRequestMessage.RequestUri = new Uri(realUrl);
-
-                
-                
                 if (request.InputData?.Length > 0)
                 {
                     httpRequestMessage.Content = new ByteArrayContent(request.InputData);
@@ -326,14 +321,15 @@ namespace LJC.FrameWork.SOA
                     var domin = httpRequestMessage.RequestUri.Host.Split(':').First();
                     foreach (var cookie in request.Cookies)
                     {
-                        cookieContainer.Add(new System.Net.Cookie(cookie.Key, WebUtility.UrlEncode(cookie.Value)));
-                        //{
-                        //    Name = cookie.Key,
-                        //    Value = WebUtility.UrlEncode(cookie.Value),
-                        //    Domain = domin,
-                        //    //Domain=new Uri(matchedMapper.TragetWebHost).Host,
-                        //    Path = "/"
-                        //});
+                        //cookieContainer.Add(new System.Net.Cookie(cookie.Key, WebUtility.UrlEncode(cookie.Value)));
+                        cookieContainer.Add(new System.Net.Cookie
+                        {
+                            Name = cookie.Key,
+                            Value = WebUtility.UrlEncode(cookie.Value),
+                            Domain = domin,
+                            //Domain=new Uri(matchedMapper.TragetWebHost).Host,
+                            Path = "/"
+                        });
                     }
                     httpRequestMessage.Headers.Add("Cookie", cookieContainer.GetCookieHeader(httpRequestMessage.RequestUri));
                 }
@@ -371,7 +367,7 @@ namespace LJC.FrameWork.SOA
                         continue;
                     }
 
-                    var value = string.Join(", ", values);
+                    var value = string.Join(",", values);
                     if (name.Equals("Location", StringComparison.OrdinalIgnoreCase))
                     {
                         value = WebTransferSvcHelper.RelaceLocation(value, request.Host, realUrl);
@@ -595,8 +591,8 @@ namespace LJC.FrameWork.SOA
 
                 if (realUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase)
                     || proxy != null
-                    //|| request.Cookies?.Any() == true
-                    //|| request.Headers?.Keys.Any(p=>p.Equals("Cookie",StringComparison.OrdinalIgnoreCase)) == true
+                    || request.Cookies?.Any() == true
+                    || request.Headers?.Keys.Any(p=>p.Equals("Cookie",StringComparison.OrdinalIgnoreCase)) == true
                     )
                 {
                     response = DoWebResponseWithHttpWebRequest(request, realUrl, proxy);
