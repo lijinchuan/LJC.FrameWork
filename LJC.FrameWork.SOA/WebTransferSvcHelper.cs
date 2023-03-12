@@ -55,5 +55,16 @@ namespace LJC.FrameWork.SOA
                 return false;
             }
         }
+
+        public static string RelaceLocation(string location,string requestHost,string realUrl)
+        {
+            var targetHost = new Uri(realUrl).Host;
+            var tranferHost = requestHost;
+            if (location.Contains(targetHost))
+            {
+                return location.Replace(targetHost, tranferHost);
+            }
+            return location;
+        }
     }
 }

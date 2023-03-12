@@ -15,7 +15,7 @@ namespace LJC.FrameWork.Comm
         private static ConcurrentDictionary<string, HttpClient> httpClients = new ConcurrentDictionary<string, HttpClient>();
 
         /// <summary>
-        /// 获取一个httpClient实例，不要释放它
+        /// 获取一个httpClient实例，不要释放它,注意httpClient不是线程安全的
         /// </summary>
         /// <param name="address">地址，大小写没关系</param>
         /// <returns></returns>
@@ -31,6 +31,7 @@ namespace LJC.FrameWork.Comm
             var newClient = new HttpClient(new HttpClientHandler
             {
                 AllowAutoRedirect = allowAutoRedirect,
+                UseCookies = false,
                 //UseProxy=false
             });
             if (httpClients.TryAdd(host, newClient))

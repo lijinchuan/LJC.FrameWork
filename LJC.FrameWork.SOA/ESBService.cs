@@ -326,14 +326,14 @@ namespace LJC.FrameWork.SOA
                     var domin = httpRequestMessage.RequestUri.Host.Split(':').First();
                     foreach (var cookie in request.Cookies)
                     {
-                        cookieContainer.Add(new System.Net.Cookie
-                        {
-                            Name = cookie.Key,
-                            Value = WebUtility.UrlEncode(cookie.Value),
-                            Domain = domin,
-                            //Domain=new Uri(matchedMapper.TragetWebHost).Host,
-                            Path = "/"
-                        });
+                        cookieContainer.Add(new System.Net.Cookie(cookie.Key, WebUtility.UrlEncode(cookie.Value)));
+                        //{
+                        //    Name = cookie.Key,
+                        //    Value = WebUtility.UrlEncode(cookie.Value),
+                        //    Domain = domin,
+                        //    //Domain=new Uri(matchedMapper.TragetWebHost).Host,
+                        //    Path = "/"
+                        //});
                     }
                     httpRequestMessage.Headers.Add("Cookie", cookieContainer.GetCookieHeader(httpRequestMessage.RequestUri));
                 }
@@ -360,7 +360,7 @@ namespace LJC.FrameWork.SOA
                 for (var i = 0; i < headers.Count; i++)
                 {
                     var name = headers[i].Key;
-                    var value = headers[i].Value;
+                    var values = headers[i].Value;
 
                     if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
                                || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
@@ -371,7 +371,13 @@ namespace LJC.FrameWork.SOA
                         continue;
                     }
 
-                    response.Headers.Add(name, string.Join(", ", value));
+                    var value = string.Join(", ", values);
+                    if (name.Equals("Location", StringComparison.OrdinalIgnoreCase))
+                    {
+                        value = WebTransferSvcHelper.RelaceLocation(value, request.Host, realUrl);
+                    }
+
+                    response.Headers.Add(name, value);
 
                 }
             }
@@ -517,7 +523,12 @@ namespace LJC.FrameWork.SOA
                             {
                                 continue;
                             }
+
                             var value = webResponse.Headers.Get(i);
+                            if (name.Equals("Location", StringComparison.OrdinalIgnoreCase))
+                            {
+                                value = WebTransferSvcHelper.RelaceLocation(value, request.Host, realUrl);
+                            }
                             response.Headers.Add(name, value);
                         }
 
@@ -583,9 +594,12 @@ namespace LJC.FrameWork.SOA
                 }
 
                 if (realUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase)
-                    || proxy != null)
+                    || proxy != null
+                    //|| request.Cookies?.Any() == true
+                    //|| request.Headers?.Keys.Any(p=>p.Equals("Cookie",StringComparison.OrdinalIgnoreCase)) == true
+                    )
                 {
-                    response = DoWebResponseWithHttpWebRequest(request, realUrl,proxy);
+                    response = DoWebResponseWithHttpWebRequest(request, realUrl, proxy);
                 }
                 else
                 {
