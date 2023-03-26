@@ -59,8 +59,15 @@ namespace LJC.FrameWork.SOA
         public static string RelaceLocation(string location,string requestHost,string realUrl)
         {
             var targetHost = new Uri(realUrl).Host;
+            var port = new Uri(realUrl).Port;
+            var targetHostAndPort = targetHost + ":" + port;
+
             var tranferHost = requestHost;
-            if (location.Contains(targetHost))
+            if (location.Contains(targetHostAndPort))
+            {
+                return location.Replace(targetHostAndPort, tranferHost);
+            }
+            else if (location.Contains(targetHost))
             {
                 return location.Replace(targetHost, tranferHost);
             }
