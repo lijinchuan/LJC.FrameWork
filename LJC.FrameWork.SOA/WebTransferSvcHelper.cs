@@ -49,7 +49,7 @@ namespace LJC.FrameWork.SOA
                     {
                         mappingRoot += "/";
                     }
-                    return (url+"/").StartsWith(mappingRoot, StringComparison.OrdinalIgnoreCase);
+                    return (url.Split('?').First()+"/").StartsWith(mappingRoot, StringComparison.OrdinalIgnoreCase);
                 }
 
                 return false;
