@@ -32,6 +32,15 @@ namespace LJC.FrameWork.SOA
                 url += "/";
             }
 
+            var ipHeader = "X-Forwarded-For";
+            if (request.Header.ContainsKey(ipHeader))
+            {
+                request.Header[ipHeader] = request.Session.User.ToString() + "," + request.Header[ipHeader];
+            }
+            else
+            {
+                request.Header.Add(ipHeader, request.Session.User.ToString());
+            }
             var simulateResponse = SimulateServerManager.TransferRequest(new Contract.WebRequest
             {
                 Host = request.Host,
