@@ -42,5 +42,14 @@ namespace LJC.FrameWork.SOA
             get;
             set;
         }
+
+        /// <summary>
+        /// 不改写cookie
+        /// </summary>
+        public bool NoRewirteCookie
+        {
+            get;
+            set;
+        }
     }
 }

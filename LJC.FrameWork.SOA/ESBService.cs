@@ -315,7 +315,7 @@ namespace LJC.FrameWork.SOA
                     httpRequestMessage.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
                 }
 
-                if (request.Cookies?.Any() == true)
+                if (request.Cookies?.Any() == true && !request.Headers.Any(p => "Cookie".Equals(p.Key, StringComparison.OrdinalIgnoreCase)))
                 {
                     System.Net.CookieContainer cookieContainer = new System.Net.CookieContainer();
                     var domin = httpRequestMessage.RequestUri.Host.Split(':').First();
@@ -442,18 +442,22 @@ namespace LJC.FrameWork.SOA
             webRequest.AllowAutoRedirect = false;
             webRequest.KeepAlive = false;
             webRequest.AllowWriteStreamBuffering = true;
-            webRequest.CookieContainer = new System.Net.CookieContainer();
-            var cookDomain = webRequest.Host.Split(':').First();
-            foreach (var kv in request.Cookies)
+
+            if (!webRequest.Headers.AllKeys.Any(p => "Cookie".Equals(p, StringComparison.OrdinalIgnoreCase)))
             {
-                webRequest.CookieContainer.Add(new System.Net.Cookie
+                webRequest.CookieContainer = new System.Net.CookieContainer();
+                var cookDomain = webRequest.Host.Split(':').First();
+                foreach (var kv in request.Cookies)
                 {
-                    Name = kv.Key,
-                    Value = WebUtility.UrlEncode(kv.Value),
-                    Domain = cookDomain,
-                    //Domain=new Uri(matchedMapper.TragetWebHost).Host,
-                    Path = "/"
-                });
+                    webRequest.CookieContainer.Add(new System.Net.Cookie
+                    {
+                        Name = kv.Key,
+                        Value = WebUtility.UrlEncode(kv.Value),
+                        Domain = cookDomain,
+                        //Domain=new Uri(matchedMapper.TragetWebHost).Host,
+                        Path = "/"
+                    });
+                }
             }
 
             if (request.TimeOut > 0)
@@ -611,7 +615,10 @@ namespace LJC.FrameWork.SOA
                     {
                         if (head.Key.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase))
                         {
-                            response.Headers[head.Key] = Regex.Replace(response.Headers[head.Key], @"Path=[^;]+", "Path=/" + matchedMapper.MappingRoot.TrimStart('/'), RegexOptions.IgnoreCase);
+                            if (!matchedMapper.NoRewirteCookie)
+                            {
+                                response.Headers[head.Key] = Regex.Replace(response.Headers[head.Key], @"Path=[^;]+", "Path=/" + matchedMapper.MappingRoot.TrimStart('/'), RegexOptions.IgnoreCase);
+                            }
                             break;
                         }
                     }
