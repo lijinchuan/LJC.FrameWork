@@ -178,13 +178,14 @@ namespace LJC.FrameWork.Net.HTTP.Server
             string sessid;
             if (data.req.Cookies.TryGetValue("_sessid", out sessid))
                 data.req.Session = (Session)sessions[sessid];
+
             bool closed = Process(ci, data.req);
             data.state = closed ? ClientState.Closed : ClientState.Header;
             data.read = 0;
             HttpRequest oldreq = data.req;
             data.req = new HttpRequest(); // Once processed, the connection will be used for a new request
             data.req.Session = oldreq.Session; // ... but session is persisted
-            //data.req.From = ((IPEndPoint)ci.Socket.RemoteEndPoint).Address;
+            data.req.From = ((IPEndPoint)ci.Socket.RemoteEndPoint).Address;
         }
 
         void ClientReadBytes(ClientInfo ci, byte[] bytes, int len)

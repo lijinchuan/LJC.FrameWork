@@ -35,11 +35,11 @@ namespace LJC.FrameWork.SOA
             var ipHeader = "X-Forwarded-For";
             if (request.Header.ContainsKey(ipHeader))
             {
-                request.Header[ipHeader] = request.Session.User.ToString() + "," + request.Header[ipHeader];
+                request.Header[ipHeader] = request.From.ToString() + "," + request.Header[ipHeader];
             }
             else
             {
-                request.Header.Add(ipHeader, request.Session.User.ToString());
+                request.Header.Add(ipHeader, request.From.ToString());
             }
             var simulateResponse = SimulateServerManager.TransferRequest(new Contract.WebRequest
             {
