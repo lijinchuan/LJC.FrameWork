@@ -810,6 +810,28 @@ namespace LJC.FrameWork.SOA
         private ESBRedirectService RedirectTcpServiceServer = null;
         private ESBUDPService RedirectUpdServiceServer = null;
 
+        private bool CheckIpIsChange(System.Net.IPAddress[] newIps)
+        {
+            if (RedirectTcpServiceServer == null)
+            {
+                return false;
+            }
+            var binds = RedirectTcpServiceServer.GetBindIps();
+            if (binds.Length != newIps.Length)
+            {
+                return true;
+            }
+
+            foreach (var ip in newIps)
+            {
+                if (binds.Any(q => q == ip.ToString()))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public void StartRedirectService()
         {
             var addrs = NetworkHelper.GetActiveIpV4s(true);
@@ -818,13 +840,20 @@ namespace LJC.FrameWork.SOA
             if (addrs.Length > 0)
             {
                 int iport = 0;
-                if (SupportTcpServiceRidrect&& RedirectTcpServiceServer == null)
+                var ipIsChanged = CheckIpIsChange(bindips);
+                LogHelper.Instance.Info("IP是否改变：" + ipIsChanged);
+                if (SupportTcpServiceRidrect && (RedirectTcpServiceServer == null || ipIsChanged))
                 {
                     int trytimes = 0;
                     while (true)
                     {
                         try
                         {
+                            if (RedirectTcpServiceServer != null)
+                            {
+                                RedirectTcpServiceServer.Dispose();
+                            }
+
                             iport = SocketApplicationComm.GetIdelTcpPort();
 
                             RedirectTcpServiceServer = new ESBRedirectService(ServiceNo, bindips.Select(p => p.ToString()).ToArray(), iport);
@@ -844,15 +873,19 @@ namespace LJC.FrameWork.SOA
                     }
                 }
 
-                if (SupportUDPServiceRedirect && this.RedirectUpdServiceServer == null)
+                if (SupportUDPServiceRedirect && (this.RedirectUpdServiceServer == null||ipIsChanged))
                 {
                     int trytimes = 0;
                     while (true)
                     {
                         try
                         {
-                            iport = SocketApplicationComm.GetIdelUdpPort(iport);
+                            if (RedirectUpdServiceServer != null)
+                            {
+                                RedirectUpdServiceServer.Dispose();
+                            }
 
+                            iport = SocketApplicationComm.GetIdelUdpPort(iport);
                             RedirectUpdServiceServer = new ESBUDPService(ServiceNo, bindips.Select(p => p.ToString()).ToArray(), iport);
                             RedirectUpdServiceServer.DoResponseAction = DoResponse;
                             RedirectUpdServiceServer.StartServer();

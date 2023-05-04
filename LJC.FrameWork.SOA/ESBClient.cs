@@ -291,10 +291,15 @@ namespace LJC.FrameWork.SOA
                                                 if (ex is System.Net.WebException
                                                 ||ex is System.Net.Sockets.SocketException)
                                                 {
-                                                    //client.Dispose();
+                                                    client.Dispose();
                                                     lock (_esbUdpClientDic)
                                                     {
-                                                        _esbUdpClientDic.Remove(serviceId);
+                                                        if (_esbUdpClientDic.TryGetValue(serviceId, out List<ESBUdpClient> oldList)
+                                                                   && oldList.Any(q => q == client))
+                                                        {
+                                                            _esbUdpClientDic.Remove(serviceId);
+                                                            LogHelper.Instance.Debug("移除UDP直连服务:" + serviceId);
+                                                        }
                                                     }
                                                 }
                                             };
@@ -356,7 +361,11 @@ namespace LJC.FrameWork.SOA
                                                      client.Dispose();
                                                      lock (_esbClientDicManager)
                                                      {
-                                                         _esbClientDicManager.Remove(serviceId);
+                                                         if (_esbClientDicManager.TryGetValue(serviceId, out List<ESBClientPoolManager> oldList)
+                                                                   && oldList.Any(p => p.EnumClients().Any(q => q == client)))
+                                                         {
+                                                             _esbClientDicManager.Remove(serviceId);
+                                                         }
                                                      }
                                                  }
                                              };
@@ -390,7 +399,13 @@ namespace LJC.FrameWork.SOA
                                                                 }
                                                                 lock (_esbClientDicManager)
                                                                 {
-                                                                    _esbClientDicManager.Remove(serviceId);
+                                                                    if (_esbClientDicManager.TryGetValue(serviceId, out List<ESBClientPoolManager> oldList)
+                                                                    && oldList.Any(p => p.EnumClients().Any(q => q == newclient)))
+                                                                    {
+                                                                        _esbClientDicManager.Remove(serviceId);
+
+                                                                        LogHelper.Instance.Debug("移除TCP直连服务:" + serviceId);
+                                                                    }
                                                                 }
                                                             }
                                                         };
