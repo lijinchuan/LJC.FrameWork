@@ -18,9 +18,16 @@ namespace LJC.FrameWork.SOA
         }
 
 
-        public string[] GetBindIps()
+        public string[] BindIps
         {
-            return this._bindingips;
+            get
+            {
+                return _bindingips;
+            }
+            internal set
+            {
+                _bindingips = value;
+            }
         }
 
         public int GetBindUdpPort()

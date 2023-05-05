@@ -21,9 +21,16 @@ namespace LJC.FrameWork.SOA
             _serviceNo = serviceNo;
         }
 
-        public string[] GetBindIps()
+        public string[] BindIps
         {
-            return this.bindIpArray;
+            get
+            {
+                return bindIpArray;
+            }
+            set
+            {
+                bindIpArray = value;
+            }
         }
 
         public int GetBindTcpPort()

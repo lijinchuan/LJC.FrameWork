@@ -665,12 +665,12 @@ namespace LJC.FrameWork.SOA
             req.ServiceNo = this.ServiceNo;
             if (SupportTcpServiceRidrect)
             {
-                req.RedirectTcpIps = RedirectTcpServiceServer.GetBindIps();
+                req.RedirectTcpIps = RedirectTcpServiceServer.BindIps;
                 req.RedirectTcpPort = RedirectTcpServiceServer.GetBindTcpPort();
             }
             if (SupportUDPServiceRedirect)
             {
-                req.RedirectUdpIps = RedirectUpdServiceServer.GetBindIps();
+                req.RedirectUdpIps = RedirectUpdServiceServer.BindIps;
                 req.RedirectUdpPort = RedirectUpdServiceServer.GetBindUdpPort();
             }
 
@@ -816,7 +816,7 @@ namespace LJC.FrameWork.SOA
             {
                 return false;
             }
-            var binds = RedirectTcpServiceServer.GetBindIps();
+            var binds = RedirectTcpServiceServer.BindIps;
             if (binds.Length != newIps.Length)
             {
                 return true;
@@ -841,8 +841,8 @@ namespace LJC.FrameWork.SOA
             {
                 int iport = 0;
                 var ipIsChanged = CheckIpIsChange(bindips);
-                LogHelper.Instance.Info("IP是否改变：" + ipIsChanged);
-                if (SupportTcpServiceRidrect && (RedirectTcpServiceServer == null || ipIsChanged))
+
+                if (SupportTcpServiceRidrect && RedirectTcpServiceServer == null)
                 {
                     int trytimes = 0;
                     while (true)
@@ -872,19 +872,19 @@ namespace LJC.FrameWork.SOA
                         }
                     }
                 }
+                else if (SupportTcpServiceRidrect && RedirectTcpServiceServer != null && ipIsChanged)
+                {
+                    RedirectTcpServiceServer.BindIps = bindips.Select(p => p.ToString()).ToArray();
+                    LogHelper.Instance.Info("IP改变：" + ipIsChanged);
+                }
 
-                if (SupportUDPServiceRedirect && (this.RedirectUpdServiceServer == null||ipIsChanged))
+                if (SupportUDPServiceRedirect && RedirectUpdServiceServer == null)
                 {
                     int trytimes = 0;
                     while (true)
                     {
                         try
                         {
-                            if (RedirectUpdServiceServer != null)
-                            {
-                                RedirectUpdServiceServer.Dispose();
-                            }
-
                             iport = SocketApplicationComm.GetIdelUdpPort(iport);
                             RedirectUpdServiceServer = new ESBUDPService(ServiceNo, bindips.Select(p => p.ToString()).ToArray(), iport);
                             RedirectUpdServiceServer.DoResponseAction = DoResponse;
@@ -901,6 +901,10 @@ namespace LJC.FrameWork.SOA
                             }
                         }
                     }
+                }
+                else if (SupportUDPServiceRedirect && RedirectUpdServiceServer != null && ipIsChanged)
+                {
+                    RedirectUpdServiceServer.BindIps = bindips.Select(p => p.ToString()).ToArray();
                 }
             }
         }
