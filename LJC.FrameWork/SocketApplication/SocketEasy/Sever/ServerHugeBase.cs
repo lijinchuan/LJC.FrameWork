@@ -303,14 +303,22 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
             _connectSocketDic.TryAdd(appSocket.SessionID, appSocket);
 
-            if (!socket.ReceiveAsync(socketAsyncEventArgs))
+            try
             {
-                //Session old;
-                //_connectSocketDic.TryRemove(appSocket.SessionID, out old);
-                //RealseSocketAsyncEventArgs(socketAsyncEventArgs);
+                if (!socket.ReceiveAsync(socketAsyncEventArgs))
+                {
+                    //Session old;
+                    //_connectSocketDic.TryRemove(appSocket.SessionID, out old);
+                    //RealseSocketAsyncEventArgs(socketAsyncEventArgs);
 
-                LogManager.LogHelper.Instance.Debug(socket.Handle + "同步完成，手动处理");
+                    LogHelper.Instance.Debug(socket.Handle + "同步完成，手动处理");
 
+                    SocketAsyncEventArgs_Completed(null, e);
+                }
+            }
+            catch(Exception ex)
+            {
+                LogHelper.Instance.Error(socket.Handle + "同步异常完成",ex);
                 SocketAsyncEventArgs_Completed(null, e);
             }
         }
@@ -375,7 +383,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                         var dataLen = BitConverter.ToInt32(e.Buffer, offset);
 
-                        if (SocketApplication.SocketApplicationEnvironment.TraceSocketDataBag)
+                        if (SocketApplicationEnvironment.TraceSocketDataBag)
                         {
                             LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "准备接收数据:长度" + dataLen, null);
                         }
