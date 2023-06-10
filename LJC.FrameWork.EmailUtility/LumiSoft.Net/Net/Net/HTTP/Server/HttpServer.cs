@@ -105,7 +105,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
             // First line: METHOD /path/url HTTP/version
             string[] firstline = lines[0].Split(' ');
             if (firstline.Length != 3) { SendResponse(ci, data.req, new HttpResponse(400, "Incorrect first header line " + lines[0]), true); return; }
-            if (firstline[2].Substring(0, 4) != "HTTP") { SendResponse(ci, data.req, new HttpResponse(400, "Unknown protocol " + firstline[2]), true); return; }
+            if (firstline[2].Length < 4 || firstline[2].Substring(0, 4) != "HTTP") { SendResponse(ci, data.req, new HttpResponse(400, "Unknown protocol " + firstline[2]), true); return; }
             data.req.Method = firstline[0];
             data.req.Url = firstline[1];
             data.req.HttpVersion = firstline[2].Substring(5);
