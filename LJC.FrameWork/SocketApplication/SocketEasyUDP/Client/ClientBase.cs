@@ -32,6 +32,22 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             _serverPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(host), port);
         }
 
+        public string Ip
+        {
+            get
+            {
+                return _serverPoint.Address.ToString();
+            }
+        }
+
+        public int Port
+        {
+            get
+            {
+                return _serverPoint.Port;
+            }
+        }
+
         public bool SetMTU(ushort mtu)
         {
             if (mtu < MTU_MIN)

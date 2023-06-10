@@ -257,22 +257,43 @@ namespace LJC.FrameWork.SOA
                         _esbUdpClientDic.Add(serviceId, null);
                     }
                 }
-
+                LogHelper.Instance.Debug("takecleint" + serviceId+ "takecleint:"+ takecleint);
                 if (takecleint)
                 {
                     new Action(() =>
                     {
-                        var svcClient = ESBClientPoolManager.FindService(serviceId);
-                        if (svcClient == null)
+                        GetRegisterServiceInfoResponse respserviceinfo = null;
+                        try
                         {
+                            var svcClient = ESBClientPoolManager.FindService(serviceId);
+                            if (svcClient == null)
+                            {
+                                throw new Exception("无可用客户端，服务号:" + serviceId);
+                            }
+
+                            respserviceinfo = svcClient.DoRequest<GetRegisterServiceInfoResponse>(Consts.ESBServerServiceNo, Consts.FunNo_GetRegisterServiceInfo, new GetRegisterServiceInfoRequest
+                            {
+                                ServiceNo = serviceId
+                            });
+
+                            LogHelper.Instance.Debug("获取服务信息");
+                        }
+                        catch(Exception ex)
+                        {
+                            LogHelper.Instance.Error("获取服务信息出错",ex);
+
+                            lock (_esbUdpClientDic)
+                            {
+                                _esbUdpClientDic.Remove(serviceId);
+                            }
+                            lock (_esbClientDicManager)
+                            {
+                                _esbClientDicManager.Remove(serviceId);
+                            }
+
                             return;
                         }
                         
-                        var respserviceinfo = svcClient.DoRequest<GetRegisterServiceInfoResponse>(Consts.ESBServerServiceNo, Consts.FunNo_GetRegisterServiceInfo, new GetRegisterServiceInfoRequest
-                        {
-                            ServiceNo = serviceId
-                        });
-
                         if (respserviceinfo.Infos != null && respserviceinfo.Infos.Length > 0)
                         {
                             List<ESBClientPoolManager> poollist = new List<ESBClientPoolManager>();
@@ -344,36 +365,52 @@ namespace LJC.FrameWork.SOA
                                     }
                                 }
 
-                                if (udppoollist.Count==0&& info.RedirectTcpIps != null)
+                                if (udppoollist.Count==0&& info.RedirectTcpIps != null&& info.RedirectTcpIps.Any())
                                 {
+                                    LogHelper.Instance.Debug("RedirectTcpIps不为空:"+string.Join("、",info.RedirectTcpIps));
                                     foreach (var ip in info.RedirectTcpIps.OrderBy(p => OrderIp(p)))
                                     {
                                         try
                                         {
                                             var client = new ESBClient(ip, info.RedirectTcpPort, false);
-                                            client.Error += (ex) =>
-                                             {
-                                                 if (ex is System.Net.WebException
-                                                 || ex is System.Net.Sockets.SocketException
-                                                 || !client.socketClient.Connected)
-                                                 {
-                                                     client.CloseClient();
-                                                     client.Dispose();
-                                                     lock (_esbClientDicManager)
-                                                     {
-                                                         if (_esbClientDicManager.TryGetValue(serviceId, out List<ESBClientPoolManager> oldList)
-                                                                   && oldList.Any(p => p.EnumClients().Any(q => q == client)))
-                                                         {
-                                                             _esbClientDicManager.Remove(serviceId);
-                                                         }
-                                                     }
-                                                 }
-                                             };
+                                            LogHelper.Instance.Debug("使用:" + ip);
                                             if (client.StartSession())
                                             {
+                                                LogHelper.Instance.Debug("StartSession 成功");
                                                 var resp = client.DoRedirectRequest<Contract.QueryServiceNoResponse>((int)SOAMessageType.QueryServiceNo, null);
                                                 if (resp.ServiceNo == serviceId)
                                                 {
+                                                    LogHelper.Instance.Debug("验证成功");
+                                                    client.Error += (ex) =>
+                                                    {
+                                                        if (ex is System.Net.WebException
+                                                        || ex is System.Net.Sockets.SocketException
+                                                        || !client.socketClient.Connected)
+                                                        {
+                                                            client.CloseClient();
+                                                            client.Dispose();
+                                                            lock (_esbClientDicManager)
+                                                            {
+                                                                if (_esbClientDicManager.TryGetValue(serviceId, out List<ESBClientPoolManager> oldList)
+                                                                          && oldList.Any(p => p.EnumClients().Any(q => q == client)))
+                                                                {
+                                                                    LogHelper.Instance.Debug("移除TCP直连服务:" + serviceId);
+                                                                    _esbClientDicManager.Remove(serviceId);
+
+                                                                    if (_esbUdpClientDic.TryGetValue(serviceId, out List<ESBUdpClient> clientList) && clientList == null)
+                                                                    {
+                                                                        lock (_esbUdpClientDic)
+                                                                        {
+                                                                            _esbUdpClientDic.Remove(serviceId);
+                                                                            LogHelper.Instance.Debug("移除UDP直连服务,使TCP重连:" + serviceId);
+                                                                        }
+                                                                    }
+
+                                                                }
+                                                            }
+                                                        }
+                                                    };
+
                                                     poollist.Add(new ESBClientPoolManager(0, (idx) =>
                                                     {
                                                         if (idx == 0)
@@ -396,16 +433,6 @@ namespace LJC.FrameWork.SOA
                                                                 catch
                                                                 {
 
-                                                                }
-                                                                lock (_esbClientDicManager)
-                                                                {
-                                                                    if (_esbClientDicManager.TryGetValue(serviceId, out List<ESBClientPoolManager> oldList)
-                                                                    && oldList.Any(p => p.EnumClients().Any(q => q == newclient)))
-                                                                    {
-                                                                        _esbClientDicManager.Remove(serviceId);
-
-                                                                        LogHelper.Instance.Debug("移除TCP直连服务:" + serviceId);
-                                                                    }
                                                                 }
                                                             }
                                                         };
@@ -443,6 +470,21 @@ namespace LJC.FrameWork.SOA
                                     _esbClientDicManager[serviceId] = poollist;
                                 }
                             }
+                            else if (udppoollist.Count == 0 && respserviceinfo.Infos?.Any(p => p.RedirectTcpIps?.Any() == true) == true)
+                            {
+                                lock (_esbUdpClientDic)
+                                {
+                                    _esbUdpClientDic.Remove(serviceId);
+                                    LogHelper.Instance.Debug("移除UDP直连服务,使TCP重连:" + serviceId);
+                                }
+                                if (_esbClientDicManager.TryGetValue(serviceId, out List<ESBClientPoolManager> mans) && mans == null)
+                                {
+                                    lock (_esbClientDicManager)
+                                    {
+                                        _esbClientDicManager.Remove(serviceId);
+                                    }
+                                }
+                            }
                         }
                     }).BeginInvoke(null, null);
                 }
@@ -450,7 +492,12 @@ namespace LJC.FrameWork.SOA
 
             if (udpclientlist != null && udpclientlist.Count > 0)
             {
-                return udpclientlist.First().DoRequest<T>(serviceId,functionId, param);
+                DateTime start = DateTime.Now;
+                var client = udpclientlist.First();
+                var ret = client.DoRequest<T>(serviceId, functionId, param);
+                LogHelper.Instance.Debug("服务" + serviceId + ",功能：" + functionId + ",UDP直连" + client.Ip + ":" + client.Port + ",耗时" + DateTime.Now.Subtract(start).TotalMilliseconds);
+
+                return ret;
             }
             else
             {
@@ -458,16 +505,26 @@ namespace LJC.FrameWork.SOA
                 if (_esbClientDicManager.TryGetValue(serviceId, out poolmanagerlist) && poolmanagerlist != null && poolmanagerlist.Count > 0)
                 {
                     //Console.WriteLine("直连了");
+                    DateTime start = DateTime.Now;
                     var poolmanager = poolmanagerlist.Count == 1 ? poolmanagerlist[0]
                     : poolmanagerlist[new Random().Next(0, poolmanagerlist.Count)];
 
-                    var client=poolmanager.RandClient();
-                    //LogHelper.Instance.Debug("功能"+serviceId+"直连" + client.ipString + ":" + client.ipPort);
-                    return client.DoRedirectRequest<T>(serviceId,functionId, param);
+                    var client = poolmanager.RandClient();
+
+                    var ret = client.DoRedirectRequest<T>(serviceId, functionId, param);
+
+                    LogHelper.Instance.Debug("服务" + serviceId + ",功能：" + functionId + ",直连" + client.ipString + ":" + client.ipPort + ",耗时" + DateTime.Now.Subtract(start).TotalMilliseconds);
+
+                    return ret;
                 }
                 else
                 {
-                    return DoSOARequest<T>(serviceId, functionId, param);
+                    DateTime start = DateTime.Now;
+                    var ret = DoSOARequest<T>(serviceId, functionId, param);
+
+                    LogHelper.Instance.Debug("服务" + serviceId + ",功能：" + functionId + ",非直连耗时:" + DateTime.Now.Subtract(start).TotalMilliseconds);
+
+                    return ret;
                 }
             }
         }

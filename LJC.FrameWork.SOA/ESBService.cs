@@ -824,7 +824,7 @@ namespace LJC.FrameWork.SOA
 
             foreach (var ip in newIps)
             {
-                if (binds.Any(q => q == ip.ToString()))
+                if (!binds.Any(q => q == ip.ToString()))
                 {
                     return true;
                 }
@@ -875,7 +875,7 @@ namespace LJC.FrameWork.SOA
                 else if (SupportTcpServiceRidrect && RedirectTcpServiceServer != null && ipIsChanged)
                 {
                     RedirectTcpServiceServer.BindIps = bindips.Select(p => p.ToString()).ToArray();
-                    LogHelper.Instance.Info("IP改变：" + ipIsChanged);
+                    LogHelper.Instance.Info("IP改变：" + ipIsChanged+","+string.Join("、",RedirectTcpServiceServer.BindIps));
                 }
 
                 if (SupportUDPServiceRedirect && RedirectUpdServiceServer == null)
