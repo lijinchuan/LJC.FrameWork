@@ -238,6 +238,9 @@
     <Compile Include="Comm\StringHelper.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Comm\SubSearchResult.cs" />
+    <Compile Include="Comm\SubSearchResultItem.cs" />
+    <Compile Include="Comm\SubSearchSourceItem.cs" />
     <Compile Include="Comm\TaskHelper.cs" />
     <Compile Include="Comm\TextReaderWriter\LocalFileQueue.cs" />
     <Compile Include="Comm\TextReaderWriter\LocalFileQueueCfg.cs" />

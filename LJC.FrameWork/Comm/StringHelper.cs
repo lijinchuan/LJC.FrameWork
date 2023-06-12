@@ -816,5 +816,307 @@ namespace LJC.FrameWork.Comm
 
             return str.Substring(startIndex, Math.Min(strlen - startIndex, len));
         }
+
+        #region 高级搜索
+
+        private static bool CheckHasNext(string source, int findStart, string searchWord, int wordStart)
+        {
+            var hasNext = true;
+            for (var j = wordStart; j < searchWord.Length; j++)
+            {
+                var w = searchWord[j];
+                findStart = source.IndexOf(w, findStart) + 1;
+                if (findStart == 0)
+                {
+                    hasNext = false;
+                    break;
+                }
+            }
+
+            return hasNext;
+        }
+
+        /// <summary>
+        /// 最佳子搜索方法
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="pos1"></param>
+        /// <param name="searchWord"></param>
+        /// <param name="pos2"></param>
+        /// <returns></returns>
+        private static SubSearchResult BestSubSearch2(string source, int pos1, string searchWord, int pos2)
+        {
+            int p1 = 0, a = pos1, l1 = source.Length, l2 = searchWord.Length, p2 = 0, b = pos2;
+            if (p1 + a >= l1 || p2 + b >= l2 || l1 < l2)
+            {
+                return null;
+            }
+
+            var subItems = new List<SubSearchResultItem>();
+
+            SubSearchResultItem best = null;
+
+            while (p1 + a < l1 && p2 + b < l2 && source[p1 + a] != searchWord[p2 + b])
+            {
+                a++;
+            }
+            int k = 0;
+            Queue<int> stack = new Queue<int>();
+            while (p1 + a + k < l1 && p2 + b + k < l2 && source[p1 + a + k] == searchWord[p2 + b + k])
+            {
+                if (k > 0 && source[p1 + a + k] == searchWord[p2 + b])
+                {
+                    stack.Enqueue(p1 + a + k);
+                }
+                k++;
+            }
+
+            if (k == 0)
+            {
+                return null;
+            }
+
+            if (pos2 + k < l2)
+            {
+                var findStart = p1 + a + k;
+                var hasNext = CheckHasNext(source, findStart, searchWord, pos2 + k);
+
+                if (hasNext)
+                {
+                    //nextSearch = BestSubSearch(source, p1 + a + k, searchWord, pos2 + k)?.SubSearchResultItems;
+                    best = new SubSearchResultItem
+                    {
+                        StartPos = p1 + a,
+                        Len = k,
+                        SubWord = source.Substring(p1 + a, k),
+                        WordStartPos = pos2
+                    };
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                best = new SubSearchResultItem
+                {
+                    StartPos = p1 + a,
+                    Len = k,
+                    SubWord = source.Substring(p1 + a, k),
+                    WordStartPos = pos2
+                };
+            }
+
+            while (stack.Count > 0)
+            {
+                var nextPos = stack.Dequeue();
+                var mlen = 0;
+                for (var n = nextPos; n < l1;)
+                {
+                    for (var m = pos2; m < l2; m++)
+                    {
+                        if (n >= l1 || source[n] != searchWord[m])
+                        {
+                            break;
+                        }
+                        mlen++;
+                        n++;
+                    }
+                    break;
+                }
+                if (mlen > best.Len && CheckHasNext(source, nextPos + mlen, searchWord, pos2 + mlen))
+                {
+                    best = new SubSearchResultItem
+                    {
+                        Len = mlen,
+                        StartPos = nextPos,
+                        WordStartPos = mlen,
+                        SubWord = source.Substring(nextPos, mlen)
+                    };
+                }
+            }
+
+            if (best == null || p1 + a + k + best.Len < l1)
+            {
+                var searchResult2 = BestSubSearch2(source, p1 + a + k, searchWord, pos2)?.SubSearchResultItems;
+                var re = searchResult2?.FirstOrDefault();
+                if (re != null && (best == null || re.Len > best.Len))
+                {
+                    best = re;
+                }
+            }
+
+            if (best != null)
+            {
+                var result = new SubSearchResult();
+                subItems.Add(best);
+                result.StartPos = subItems.First().StartPos;
+                result.EndLeftLen = source.Length - subItems.Last().Len - subItems.Last().StartPos;
+                result.SubSearchResultItems = subItems;
+
+                return result;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 最佳子搜索方法
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="pos1"></param>
+        /// <param name="searchWord"></param>
+        /// <param name="pos2"></param>
+        /// <returns></returns>
+        public static SubSearchResult BestSubSearch(string source, int pos1, string searchWord, int pos2)
+        {
+            var result = new SubSearchResult();
+
+            var subItems = new List<SubSearchResultItem>();
+
+            while (true)
+            {
+                var subResult = BestSubSearch2(source, pos1, searchWord, pos2);
+                if (subResult != null && subResult.SubSearchResultItems.Any())
+                {
+                    var item = subResult.SubSearchResultItems.First();
+                    subItems.Add(item);
+                    pos1 = item.StartPos + item.Len;
+                    pos2 = item.WordStartPos + item.Len;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (!subItems.Any())
+            {
+                return null;
+            }
+
+            result.StartPos = subItems.First().StartPos;
+            result.EndLeftLen = source.Length - subItems.Last().Len - subItems.Last().StartPos;
+            result.SubSearchResultItems = subItems;
+
+            return result;
+        }
+
+        /// <summary>
+        /// 子搜索方法
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="searchWord"></param>
+        /// <returns></returns>
+        public static SubSearchResult SubSearch(string source, string searchWord)
+        {
+            var subItems = new List<SubSearchResultItem>();
+
+            var idx = source.IndexOf(searchWord);
+            if (idx != -1)
+            {
+                subItems.Add(new SubSearchResultItem
+                {
+                    StartPos = idx,
+                    Len = searchWord.Length,
+                    SubWord = searchWord
+                });
+            }
+            else
+            {
+                int p1 = 0, l1 = source.Length, l2 = searchWord.Length, p2 = 0;
+                while (true)
+                {
+                    int a = 0, b = 0, l = 0;
+                    while (p1 + a < l1 && p2 + b < l2 && source[p1 + a] != searchWord[p2 + b])
+                    {
+                        a++;
+                    }
+                    while (p1 + a + l < l1 && p2 + b + l < l2 && source[p1 + a + l] == searchWord[p2 + b + l])
+                    {
+                        l++;
+                    }
+                    if (p2 + b + l == searchWord.Length)
+                    {
+                        subItems.Add(new SubSearchResultItem
+                        {
+                            Len = l,
+                            StartPos = p1 + a,
+                            SubWord = source.Substring(p1 + a, l)
+                        });
+                        break;
+                    }
+                    else if (p1 + a + l == source.Length)
+                    {
+                        //fail
+                        subItems.Clear();
+                        break;
+                    }
+                    else
+                    {
+                        subItems.Add(new SubSearchResultItem
+                        {
+                            Len = l,
+                            StartPos = p1 + a,
+                            SubWord = source.Substring(p1 + a, l)
+                        });
+                        p1 = p1 + a + l;
+                        p2 = p2 + b + l;
+                    }
+                }
+
+            }
+
+            if (subItems.Any())
+            {
+                return new SubSearchResult
+                {
+                    StartPos = subItems.First().StartPos,
+                    EndLeftLen = source.Length - subItems.Last().Len - subItems.Last().StartPos,
+                    SubSearchResultItems = subItems
+                };
+            }
+
+            return null;
+        }
+
+        public static IEnumerable<object> SubSearch(IEnumerable<SubSearchSourceItem> source, string searchWord, int maxSplit = 2, int takes = 10000)
+        {
+            List<SubSearchResult> subSearchResults = new List<SubSearchResult>();
+
+            foreach (var item in source)
+            {
+                var re = BestSubSearch(item.Source, 0, searchWord, 0);
+                if (re != null && re.SubSearchResultItems.Count <= maxSplit)
+                {
+                    re.Tag = item.Tag;
+                    subSearchResults.Add(re);
+                }
+            }
+
+            var results = subSearchResults.OrderBy(p => p.SubSearchResultItems.Count)
+                .ThenBy(p => p.StartPos).ThenBy(p =>
+                {
+                    if (p.SubSearchResultItems.Count == 1)
+                    {
+                        return 0;
+                    }
+                    return p.SubSearchResultItems[1].StartPos - p.SubSearchResultItems[0].StartPos - p.SubSearchResultItems[0].Len;
+                }).ThenBy(p => p.EndLeftLen)
+                .ThenByDescending(p => p.SubSearchResultItems.First().Len)
+                .ThenByDescending(p =>
+                {
+                    if (p.SubSearchResultItems.Count > 1)
+                    {
+                        return p.SubSearchResultItems[1].Len;
+                    }
+                    return int.MaxValue;
+                });
+
+            return results.Select(p => p.Tag).Distinct().Take(takes).ToList();
+        }
+
+        #endregion
     }
 }
