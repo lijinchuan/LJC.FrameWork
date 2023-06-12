@@ -131,7 +131,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         public void SendMessageNoSure(Message msg, EndPoint endpoint)
         {
-            var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
+            var bytes = EntityBuf.EntityBufCore.Serialize(msg);
             var segments = SplitBytes(bytes, _max_package_len).ToArray();
             for (var i = 0; i < segments.Length; i++)
             {
@@ -144,7 +144,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         {
             try
             {
-                var bytes = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(msg);
+                var bytes = EntityBuf.EntityBufCore.Serialize(msg);
                 var segments = SplitBytes(bytes, _max_package_len).ToArray();
                 var bagid = GetBagId(segments.First());
                 int[] sended = segments.Select(p => 0).ToArray();
@@ -167,7 +167,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
                             sended[i] = 1;
                         }
                         Console.WriteLine("等待信号");
-                        _sendmsgflag.Wait(1000);
+                        _sendmsgflag.Wait(300);
                         if (!_sendmsgflag.IsTimeOut)
                         {
                             LogManager.LogHelper.Instance.Info("发消息:" + bagid + "成功");
@@ -220,6 +220,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
             //var buffer = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(echo);
             var buffer = BitConverter.GetBytes(bagid);
             _udpClient.Send(buffer, buffer.Length);
+
         }
 
         public void StartClient()
@@ -343,48 +344,55 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 
         private void OnMessage(byte[] data)
         {
-            System.Threading.ThreadPool.QueueUserWorkItem(new System.Threading.WaitCallback((o) =>
+            ThreadPool.QueueUserWorkItem(new WaitCallback((o) =>
             {
-                var margebytes = MargeBag(data,null);
-                if (margebytes != null)
+                try
                 {
-                    var bagid = GetBagId(data);
-                    SendEcho(bagid);
-                    if (data.Length >= margebytes.Length)
+                    var margebytes = MargeBag(data, null);
+                    if (margebytes != null)
                     {
-                        var message = LJC.FrameWork.EntityBuf.EntityBufCore.DeSerialize<Message>(margebytes);
-                        DispatchMessage(message);
-                    }
-                    else
-                    {
-                        //发送管道通知
-                        PipelineManualResetEventSlim slim = null;
-                        //通知管道
-                        if (_pipelineSlimDic.TryGetValue(bagid, out slim))
+                        var bagid = GetBagId(data);
+                        SendEcho(bagid);
+                        if (data.Length >= margebytes.Length)
                         {
-                            slim.MsgBuffer = margebytes;
-                            slim.Set();
+                            var message = EntityBuf.EntityBufCore.DeSerialize<Message>(margebytes);
+                            DispatchMessage(message);
                         }
-                    }
-                }
-                else
-                {
-                    //创建管道
-                    var bagid = GetBagId(data);
-                    PipelineManualResetEventSlim slim = null;
-                    if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
-                    {
-                        lock (_pipelineSlimDic)
+                        else
                         {
-                            if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
+                            //发送管道通知
+                            PipelineManualResetEventSlim slim = null;
+                            //通知管道
+                            if (_pipelineSlimDic.TryGetValue(bagid, out slim))
                             {
-                                slim = new PipelineManualResetEventSlim();
-                                slim.BagId = bagid;
-                                _pipelineSlimDic.Add(bagid, slim);
-                                CreateMessagePipeline(slim, bagid);
+                                slim.MsgBuffer = margebytes;
+                                slim.Set();
                             }
                         }
                     }
+                    else
+                    {
+                        //创建管道
+                        var bagid = GetBagId(data);
+                        PipelineManualResetEventSlim slim = null;
+                        if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
+                        {
+                            lock (_pipelineSlimDic)
+                            {
+                                if (!_pipelineSlimDic.TryGetValue(bagid, out slim))
+                                {
+                                    slim = new PipelineManualResetEventSlim();
+                                    slim.BagId = bagid;
+                                    _pipelineSlimDic.Add(bagid, slim);
+                                    CreateMessagePipeline(slim, bagid);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    OnError(e);
                 }
             }));
         }
