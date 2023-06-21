@@ -276,7 +276,12 @@ namespace LJC.FrameWork.SOA
                                 ServiceNo = serviceId
                             });
 
-                            LogHelper.Instance.Debug("获取服务信息");
+                            LogHelper.Instance.Debug("获取服务信息："+ Comm.JsonUtil<object>.Serialize(respserviceinfo));
+
+                            if (!respserviceinfo.Infos.Any())
+                            {
+                                throw new Exception("服务" + serviceId + "没有服务提供方");
+                            }
                         }
                         catch(Exception ex)
                         {

@@ -333,7 +333,7 @@ namespace LJC.FrameWork.SOA
                     }
                 case Consts.FunNo_GetRegisterServiceInfo:
                     {
-                        var req=EntityBuf.EntityBufCore.DeSerialize<GetRegisterServiceInfoRequest>(param);
+                        var req= EntityBufCore.DeSerialize<GetRegisterServiceInfoRequest>(param);
                         GetRegisterServiceInfoResponse resp = new GetRegisterServiceInfoResponse();
 
                         resp.ServiceNo = req.ServiceNo;
