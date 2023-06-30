@@ -165,6 +165,7 @@
     <Compile Include="Comm\Coroutine\CoroutineWorker.cs" />
     <Compile Include="Comm\Coroutine\ICoroutineUnit.cs" />
     <Compile Include="Comm\CRC32.cs" />
+    <Compile Include="Comm\CronHelper.cs" />
     <Compile Include="Comm\DataHelper.cs">
       <SubType>Code</SubType>
     </Compile>
