@@ -94,74 +94,109 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
         void ClientRead(ClientInfo ci, string text)
         {
-            // Read header, if in right state
             ClientData data = (ClientData)ci.Data;
-            if (data.state != ClientState.Header) return; // already done; must be some text in content, which will be handled elsewhere
-            text = text.Substring(data.headerskip);
-            Console.WriteLine("Read header: " + text + " (skipping first " + data.headerskip + ")");
-            data.headerskip = 0;
-            string[] lines = text.Replace("\r\n", "\n").Split('\n');
-            data.req.HeaderText = text;
-            // First line: METHOD /path/url HTTP/version
-            string[] firstline = lines[0].Split(' ');
-            if (firstline.Length != 3) { SendResponse(ci, data.req, new HttpResponse(400, "Incorrect first header line " + lines[0]), true); return; }
-            if (firstline[2].Length < 4 || firstline[2].Substring(0, 4) != "HTTP") { SendResponse(ci, data.req, new HttpResponse(400, "Unknown protocol " + firstline[2]), true); return; }
-            data.req.Method = firstline[0];
-            data.req.Url = firstline[1];
-            data.req.HttpVersion = firstline[2].Substring(5);
-            int p;
-            for (int i = 1; i < lines.Length; i++)
+            int traceId = 0;
+            try
             {
-                p = lines[i].IndexOf(':');
-                if (p > 0) data.req.Header[lines[i].Substring(0, p)] = lines[i].Substring(p + 2);
-                else Console.WriteLine("Warning, incorrect header line " + lines[i]);
-            }
-            // If ? in URL, split out query information
-            p = firstline[1].IndexOf('?');
-            if (p > 0)
-            {
-                data.req.Page = data.req.Url.Substring(0, p);
-                data.req.QueryString = data.req.Url.Substring(p + 1);
-            }
-            else
-            {
-                data.req.Page = data.req.Url;
-                data.req.QueryString = "";
-            }
-
-            if (data.req.Page.IndexOf("..") >= 0) { SendResponse(ci, data.req, new HttpResponse(400, "Invalid path"), true); return; }
-
-            if (!data.req.Header.TryGetValue("Host", out data.req.Host)) { SendResponse(ci, data.req, new HttpResponse(400, "No Host specified"), true); return; }
-
-            string cookieHeader;
-            if (data.req.Header.TryGetValue("Cookie", out cookieHeader))
-            {
-                string[] cookies = cookieHeader.Split(';');
-                foreach (string cookie in cookies)
+                // Read header, if in right state
+                if (data.state != ClientState.Header) return; // already done; must be some text in content, which will be handled elsewhere
+                text = text.Substring(data.headerskip);
+                traceId = 1;
+                Console.WriteLine("Read header: " + text + " (skipping first " + data.headerskip + ")");
+                data.headerskip = 0;
+                string[] lines = text.Replace("\r\n", "\n").Split('\n');
+                data.req.HeaderText = text;
+                // First line: METHOD /path/url HTTP/version
+                string[] firstline = lines[0].Split(' ');
+                if (firstline.Length != 3) { SendResponse(ci, data.req, new HttpResponse(400, "Incorrect first header line " + lines[0]), true); return; }
+                if (firstline[2].Length < 4 || firstline[2].Substring(0, 4) != "HTTP")
                 {
-                    p = cookie.IndexOf('=');
+                    SendResponse(ci, data.req, new HttpResponse(400, "Unknown protocol " + firstline[2]), true);
+                    traceId = 2;
+                    return;
+                }
+                
+                data.req.Method = firstline[0];
+                data.req.Url = firstline[1];
+                data.req.HttpVersion = firstline[2].Substring(5);
+                traceId = 3;
+                int p;
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    p = lines[i].IndexOf(':');
                     if (p > 0)
                     {
-                        data.req.Cookies[cookie.Substring(0, p).Trim()] = cookie.Substring(p + 1);
+                        data.req.Header[lines[i].Substring(0, p)] = lines[i].Substring(p + 2);
+                        traceId = 4;
                     }
-                    else
+                    else Console.WriteLine("Warning, incorrect header line " + lines[i]);
+                }
+                // If ? in URL, split out query information
+                p = firstline[1].IndexOf('?');
+                if (p > 0)
+                {
+                    data.req.Page = data.req.Url.Substring(0, p);
+                    traceId = 5;
+                    data.req.QueryString = data.req.Url.Substring(p + 1);
+                    traceId = 6;
+                }
+                else
+                {
+                    data.req.Page = data.req.Url;
+                    data.req.QueryString = "";
+                }
+
+                if (data.req.Page.IndexOf("..") >= 0) { SendResponse(ci, data.req, new HttpResponse(400, "Invalid path"), true); return; }
+
+                if (!data.req.Header.TryGetValue("Host", out data.req.Host)) { SendResponse(ci, data.req, new HttpResponse(400, "No Host specified"), true); return; }
+
+                string cookieHeader;
+                if (data.req.Header.TryGetValue("Cookie", out cookieHeader))
+                {
+                    string[] cookies = cookieHeader.Split(';');
+                    foreach (string cookie in cookies)
                     {
-                        data.req.Cookies[cookie.Trim()] = "";
+                        p = cookie.IndexOf('=');
+                        if (p > 0)
+                        {
+                            data.req.Cookies[cookie.Substring(0, p).Trim()] = cookie.Substring(p + 1);
+                            traceId = 7;
+                        }
+                        else
+                        {
+                            data.req.Cookies[cookie.Trim()] = "";
+                        }
                     }
                 }
+
+                string contentLengthString;
+                if (data.req.Header.TryGetValue("Content-Length", out contentLengthString))
+                    data.req.ContentLength = Int32.Parse(contentLengthString);
+                else data.req.ContentLength = 0;
+
+                //if(data.req.ContentLength > 0){
+                data.state = ClientState.PreContent;
+                data.skip = text.Length + 4;
+                //} else DoProcess(ci);
+
+                //ClientReadBytes(ci, new byte[0], 0); // For content length 0 body
             }
-
-            string contentLengthString;
-            if (data.req.Header.TryGetValue("Content-Length", out contentLengthString))
-                data.req.ContentLength = Int32.Parse(contentLengthString);
-            else data.req.ContentLength = 0;
-
-            //if(data.req.ContentLength > 0){
-            data.state = ClientState.PreContent;
-            data.skip = text.Length + 4;
-            //} else DoProcess(ci);
-
-            //ClientReadBytes(ci, new byte[0], 0); // For content length 0 body
+            catch (Exception ex)
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine("traceId:" + traceId);
+                sb.AppendLine("text:" + text);
+                sb.AppendLine("data.headerskip:" + data.headerskip);
+                sb.AppendLine("data.req.Url:" + data.req.Url);
+                
+                if(data.req.Header.TryGetValue("Cookie", out string cookieHeader))
+                {
+                    sb.AppendLine("cookie:" + cookieHeader);
+                }
+                sb.AppendLine("出错信息:" + ex.ToString());
+                new System.Diagnostics.EventLog().WriteEntry(sb.ToString(), System.Diagnostics.EventLogEntryType.Error);
+                throw;
+            }
         }
 
         public string GetFilename(HttpRequest req)
