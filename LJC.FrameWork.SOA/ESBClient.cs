@@ -124,7 +124,7 @@ namespace LJC.FrameWork.SOA
                 var resp= message.GetMessageBody<SOAResponse>();
                 if (!resp.IsSuccess)
                 {
-                    BuzException = new Exception(resp.ErrMsg);
+                    var BuzException = new Exception(resp.ErrMsg);
                     //这里最好抛出错误来
                     throw BuzException;
                 }
@@ -135,7 +135,7 @@ namespace LJC.FrameWork.SOA
                 var resp = message.GetMessageBody<SOARedirectResponse>();
                 if (!resp.IsSuccess)
                 {
-                    BuzException = new Exception(resp.ErrMsg);
+                    var BuzException = new Exception(resp.ErrMsg);
                     //这里最好抛出错误来
                     throw BuzException;
                 }

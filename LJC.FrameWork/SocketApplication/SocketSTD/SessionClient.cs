@@ -11,7 +11,6 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 {
     public class SessionClient : SessionMessageApp
     {
-        protected Exception BuzException = null;
         private ConcurrentDictionary<string, AutoReSetEventResult> watingEvents;
 
         //private static readonly object LockObj = new object();
@@ -48,16 +47,15 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             using (AutoReSetEventResult autoResetEvent = new AutoReSetEventResult(reqID))
             {
                 watingEvents.TryAdd(reqID, autoResetEvent);
-                BuzException = null;
                 SendMessage(message);
                 //new Func<Message, bool>(SendMessage).BeginInvoke(message, null, null);
                 WaitHandle.WaitAny(new WaitHandle[] { autoResetEvent }, timeOut);
                 AutoReSetEventResult removedicitem = null;
                 watingEvents.TryRemove(reqID,out removedicitem);
 
-                if (BuzException != null)
+                if (autoResetEvent.DataException != null)
                 {
-                    throw BuzException;
+                    throw autoResetEvent.DataException;
                 }
 
                 if (autoResetEvent.IsTimeOut)
