@@ -137,7 +137,7 @@ namespace LJC.FrameWork.HttpApi
 
         public virtual bool Process(HttpServer server, HttpRequest request, HttpResponse response)
         {
-
+            response.Header.Add("Access-Control-Allow-Origin", "*");
             Exception lastexp = null;
 
             int retCode = 1;
