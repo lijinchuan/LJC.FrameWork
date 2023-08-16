@@ -201,7 +201,6 @@ namespace LJC.FrameWork.WebApi
                     {
                         context.Response.Charset = "utf-8";
                         context.Response.ContentType = "application/json";
-                        context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
                         using (StringWriter sw = new StringWriter())
                         {
                             using (JsonTextWriter writer = new JsonTextWriter(sw)

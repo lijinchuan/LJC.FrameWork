@@ -142,6 +142,14 @@ namespace LJC.FrameWork.WebApi
         {
             try
             {
+                try
+                {
+                    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                }
+                catch
+                {
+
+                }
                 var methed = url.Substring(url.LastIndexOf('/') + 1).ToLower();
 
                 if ("json".Equals(methed))

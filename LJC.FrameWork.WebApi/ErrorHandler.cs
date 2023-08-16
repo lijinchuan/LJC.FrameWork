@@ -28,7 +28,6 @@ namespace LJC.FrameWork.WebApi
                 ResultCode=0,
                 ResultMessage=_ex.Message
             };
-
             context.Response.Write(LJC.FrameWork.Comm.JsonHelper.ToJson(result));
         }
     }
