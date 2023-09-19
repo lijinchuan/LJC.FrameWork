@@ -115,7 +115,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
                     traceId = 2;
                     return;
                 }
-                
+
                 data.req.Method = firstline[0];
                 data.req.Url = firstline[1];
                 data.req.HttpVersion = firstline[2].Substring(5);
@@ -188,13 +188,21 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 sb.AppendLine("text:" + text);
                 sb.AppendLine("data.headerskip:" + data.headerskip);
                 sb.AppendLine("data.req.Url:" + data.req.Url);
-                
-                if(data.req.Header.TryGetValue("Cookie", out string cookieHeader))
+
+                if (data.req.Header.TryGetValue("Cookie", out string cookieHeader))
                 {
                     sb.AppendLine("cookie:" + cookieHeader);
                 }
                 sb.AppendLine("出错信息:" + ex.ToString());
-                new System.Diagnostics.EventLog().WriteEntry(sb.ToString(), System.Diagnostics.EventLogEntryType.Error);
+                
+                try
+                {
+                    new System.Diagnostics.EventLog().WriteEntry(sb.ToString(), System.Diagnostics.EventLogEntryType.Error);
+                }
+                catch
+                {
+                    File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dump" + DateTime.Now.ToString("yyyyMMddHHmm") + ".log"), sb.ToString());
+                }
                 throw;
             }
         }
