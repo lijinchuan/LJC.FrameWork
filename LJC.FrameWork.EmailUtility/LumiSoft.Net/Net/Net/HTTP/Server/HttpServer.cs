@@ -118,7 +118,14 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
                 data.req.Method = firstline[0];
                 data.req.Url = firstline[1];
-                data.req.HttpVersion = firstline[2].Substring(5);
+                if (firstline[2].Length >= 5)
+                {
+                    data.req.HttpVersion = firstline[2].Substring(5);
+                }
+                else
+                {
+                    data.req.HttpVersion = "1.1";
+                }
                 traceId = 3;
                 int p;
                 for (int i = 1; i < lines.Length; i++)
@@ -180,6 +187,20 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 //} else DoProcess(ci);
 
                 //ClientReadBytes(ci, new byte[0], 0); // For content length 0 body
+
+                //StringBuilder sb = new StringBuilder();
+                //sb.AppendLine("traceId:" + traceId);
+                //sb.AppendLine("text:" + text);
+                //sb.AppendLine("data.headerskip:" + data.headerskip);
+                //sb.AppendLine("HttpVersion:" + data.req.HttpVersion);
+                //sb.AppendLine("data.req.Url:" + data.req.Url);
+
+                //if (data.req.Header.TryGetValue("Cookie", out string cookieHeader2))
+                //{
+                //    sb.AppendLine("cookie:" + cookieHeader2);
+                //}
+
+                //File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tracereq.log"), sb.ToString());
             }
             catch (Exception ex)
             {
