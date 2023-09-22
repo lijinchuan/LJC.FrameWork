@@ -148,7 +148,7 @@ namespace LJC.FrameWork.Comm
 
             CacheItem<T> val = null;
 
-            if (_cacheDiction.TryGetValue(key, out val) && val != null && val.Expired < DateTime.Now)
+            if (_cacheDiction.TryGetValue(key, out val) && val != null && val.Expired >= DateTime.Now)
             {
                 return val.Item;
             }
@@ -268,6 +268,26 @@ namespace LJC.FrameWork.Comm
                 }
             }
             return val.Item;
+        }
+
+        public static bool RemoveCache(string key)
+        {
+            lock (_cacheLock)
+            {
+                if (_cacheDiction.ContainsKey(key))
+                {
+                    if (_cacheDiction[key].RefrashFunc == null)
+                    {
+                        return _cacheDiction.Remove(key);
+                    }
+                    else
+                    {
+                        return _cacheDiction.Remove(key);
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }
