@@ -426,7 +426,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
 #endif
             ByteBuilder bb = new ByteBuilder();
             bb.Add(en.GetBytes("HTTP/1.1 " + resp.ReturnCode + " " + Responses[resp.ReturnCode] +
-                    "\r\nDate: " + DateTime.Now.ToString("R") +
+                    "\r\nDate: " + DateTime.Now.ToUniversalTime().ToString("R") +
                     "\r\nServer: MyWebHost/1.0" +
                     "\r\nConnection: " + (close ? "close" : "Keep-Alive")));
             if (resp.RawContent == null)
@@ -453,6 +453,8 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 }
             }
             var cookieHeader = "Set-Cookie";
+            var dateHeader = "Date";
+            resp.Header.Remove(dateHeader);
             foreach (KeyValuePair<string, string> de in resp.Header)
             {
                 var name = de.Key;
