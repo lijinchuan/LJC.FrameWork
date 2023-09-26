@@ -447,7 +447,10 @@ namespace LJC.FrameWork.Net.HTTP.Server
             }
             if (req.Session != null)
             {
-                bb.Add(en.GetBytes("\r\nSet-Cookie: _sessid=" + req.Session.ID + "; path=/"));
+                if (!req.Cookies.ContainsKey("_sessid"))
+                {
+                    bb.Add(en.GetBytes("\r\nSet-Cookie: _sessid=" + req.Session.ID + "; path=/"));
+                }
             }
             var cookieHeader = "Set-Cookie";
             foreach (KeyValuePair<string, string> de in resp.Header)
