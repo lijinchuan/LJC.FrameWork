@@ -21,6 +21,12 @@ namespace LJC.FrameWork.EntityBuf
             }
         }
 
+        public bool IsNullAble
+        {
+            get;
+            set;
+        }
+
         /// <summary>
         /// 类名，可以是数组，类或者列表
         /// </summary>

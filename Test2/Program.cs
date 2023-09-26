@@ -826,6 +826,15 @@ namespace Test2
         }
         static void Main(string[] args)
         {
+            var manstr= EntityBufCore.Serialize(new Man
+            {
+                Age=44,
+                IsOutSide=false,
+                Birth=DateTime.Now
+            });
+            var min = EntityBufCore.DeSerialize<Man>(manstr);
+            Console.Read();
+
             Dns.GetHostName();
             TestStockSpell();
 

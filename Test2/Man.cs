@@ -43,5 +43,23 @@ namespace Test2
                 _addr = value;
             }
         }
+
+        public int? Age
+        {
+            get;
+            set;
+        }
+
+        public bool? IsOutSide
+        {
+            get;
+            set;
+        }
+
+        public DateTime? Birth
+        {
+            get;
+            set;
+        }
     }
 }

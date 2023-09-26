@@ -44,6 +44,12 @@ namespace LJC.FrameWork.EntityBuf
                 ebtype.ClassType = type;
             }
 
+            if (ebtype.ClassType.Name == "Nullable`1")
+            {
+                ebtype.IsNullAble = true;
+                ebtype.ClassType = ebtype.ClassType.GetGenericArguments().First();
+            }
+
             string typename = ebtype.ClassType.Name;
             switch (typename)
             {
@@ -121,6 +127,11 @@ namespace LJC.FrameWork.EntityBuf
                         ebtype.EntityType = EntityType.COMPLEX;
                     }
                     break;
+            }
+
+            if (ebtype.IsNullAble)
+            {
+                ebtype.DefaultValue = null;
             }
 
             return ebtype;
@@ -272,8 +283,23 @@ namespace LJC.FrameWork.EntityBuf
             //{
             //    throw new Exception("无法序列化复杂类型");
             //}
-
-            switch (bufType.EntityType)
+            var simpleType = bufType.EntityType;
+            if (bufType.IsNullAble)
+            {
+                if (val == null)
+                {
+                    EntityBufTypeFlag flag = EntityBufTypeFlag.VlaueNull;
+                    msWriter.WriteByte((byte)flag);
+                    return;
+                }
+                else
+                {
+                    EntityBufTypeFlag flag = EntityBufTypeFlag.Empty;
+                    msWriter.WriteByte((byte)flag);
+                }
+            }
+            
+            switch (simpleType)
             {
                 case EntityType.BYTE:
                     if (isArray)
@@ -747,6 +773,14 @@ namespace LJC.FrameWork.EntityBuf
             if (buftype.EntityType == EntityType.UNKNOWN)
             {
                 throw new EntityBufException("无法反序列化未知类型");
+            }
+
+            if (buftype.IsNullAble)
+            {
+                if(msReader.ReadByte()== (byte)EntityBufTypeFlag.VlaueNull)
+                {
+                    return null;
+                }
             }
 
             switch (buftype.EntityType)
