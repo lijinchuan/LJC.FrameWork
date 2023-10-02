@@ -57,11 +57,12 @@ namespace LJC.FrameWork.Comm.SNLP
                 HashSet<int> hashSet;
                 if(dic.TryGetValue(ch,out hashSet))
                 {
-                    List<List<NLPCompareDetail>> tempList = new List<List<NLPCompareDetail>>();
-                    foreach(var hs in hashSet)
+                    var maxLen = 0;
+                    List<NLPCompareDetail> maxTempListLi = default;
+                    foreach (var hs in hashSet)
                     {
                         var len = MatchFrom(src, i, dic, hs);
-                        if (len < 20)
+                        if (len < 4)
                         {
                             continue;
                         }
@@ -79,14 +80,19 @@ namespace LJC.FrameWork.Comm.SNLP
                         });
                         
                         tempDetails = BestCompare(src, i + len, target, hs + len, dic, tempDetails);
-                        tempList.Add(tempDetails);
+                        var tempLen = tempDetails.Sum(p => p.Len);
+                        if (tempLen > maxLen)
+                        {
+                            maxLen = tempLen;
+                            maxTempListLi = tempDetails;
+                        }
                     }
-                    if (!tempList.Any())
+                    if (maxTempListLi==default)
                     {
                         continue;
                     }
-                    var maxLen = tempList.Max(p => p.Sum(q => q.Len));
-                    PreNLPCompareDetails = tempList.First(p => p.Sum(q => q.Len) == maxLen);
+                    
+                    PreNLPCompareDetails = maxTempListLi;
                     break;
                 }
 
