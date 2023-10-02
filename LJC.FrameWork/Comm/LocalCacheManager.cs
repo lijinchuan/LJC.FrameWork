@@ -129,6 +129,50 @@ namespace LJC.FrameWork.Comm
             }
         }
 
+        public static List<string> Keys
+        {
+            get
+            {
+                List<KeyValuePair<string, CacheItem<T>>> items = null;
+                lock (_cacheLock)
+                {
+                    items = _cacheDiction.Where(p => p.Value.Expired < DateTime.Now).ToList();
+                    return items.Select(p => p.Key).ToList();
+                }
+            }
+        }
+
+        public static List<T> Values
+        {
+            get
+            {
+                List<KeyValuePair<string, CacheItem<T>>> items = null;
+                lock (_cacheLock)
+                {
+                    items = _cacheDiction.Where(p => p.Value.Expired < DateTime.Now).ToList();
+                    return items.Select(p => p.Value.Item).ToList();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 从缓存里面取数据，且会检查过期时间，如果过期了，用刷新方法刷新数据，
+        /// </summary>
+        /// <param name="key">缓存的Key</param>
+        /// <param name="reflashFunc">刷新方法</param>
+        /// <param name="cachedMins">缓存时间</param>
+        /// <returns></returns>
+        public static T Find(string key)
+        {
+            CacheItem<T> val;
+            if (_cacheDiction.TryGetValue(key, out val) && val != null && val.Expired >= DateTime.Now)
+            {
+                return val.Item;
+            }
+
+            return default;
+        }
+
         /// <summary>
         /// 从缓存里面取数据，且会检查过期时间，如果过期了，用刷新方法刷新数据，
         /// </summary>
