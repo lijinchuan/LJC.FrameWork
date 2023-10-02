@@ -11,6 +11,7 @@ using LJC.FrameWork.SocketApplication;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -824,8 +825,24 @@ namespace Test2
         {
             BBS, Resume
         }
+
+        public static void TestNLP()
+        {
+            var text1 = File.ReadAllText("text1.txt");
+            var text2 = File.ReadAllText("text2.txt");
+            var result=LJC.FrameWork.Comm.SNLP.NLPHelper.NLPCompare(text1, text2);
+
+            foreach (var r in result.NLPCompareDetails)
+            {
+                Console.WriteLine(text1.Substring(r.SrcStart, r.Len));
+            }
+        }
+
         static void Main(string[] args)
         {
+
+            TestNLP();
+            return;
             var manstr= EntityBufCore.Serialize(new Man
             {
                 Age=44,
