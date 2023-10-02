@@ -830,7 +830,7 @@ namespace Test2
         {
             var text1 = File.ReadAllText("text1.txt");
             var text2 = File.ReadAllText("text2.txt");
-            var result=LJC.FrameWork.Comm.SNLP.NLPHelper.NLPCompare(text1, text2);
+            var result = LJC.FrameWork.Comm.SNLP.NLPHelper.NLPCompare(text1, text2, new LJC.FrameWork.Comm.SNLP.NLPCompareOptions() { CompareMinLen = 1 });
 
             foreach (var r in result.NLPCompareDetails)
             {

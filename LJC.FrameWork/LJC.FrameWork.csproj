@@ -237,6 +237,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Comm\SNLP\NLPCompareDetail.cs" />
+    <Compile Include="Comm\SNLP\NLPCompareOptions.cs" />
     <Compile Include="Comm\SNLP\NLPCompareResult.cs" />
     <Compile Include="Comm\SNLP\NLPHelper.cs" />
     <Compile Include="Comm\StringHelper.cs">
