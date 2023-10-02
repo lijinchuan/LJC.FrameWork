@@ -48,13 +48,16 @@ namespace LJC.FrameWork.Comm.SNLP
             NLPCompareOptions options,
             Dictionary<string, List<NLPCompareDetail>> repeatDic)
         {
-            if (DateTime.Now.Subtract(options.BeinDt).TotalMilliseconds > options.TimeOutMills)
-            {
-                throw new TimeoutException();
-            }
             if (PreNLPCompareDetails == null)
             {
                 PreNLPCompareDetails = new List<NLPCompareDetail>();
+            }
+            else
+            {
+                if (DateTime.Now.Subtract(options.BeinDt).TotalMilliseconds > options.TimeOutMills)
+                {
+                    throw new TimeoutException();
+                }
             }
             if (repeatDic == null)
             {
@@ -147,12 +150,48 @@ namespace LJC.FrameWork.Comm.SNLP
             
         }
 
+        /// <summary>
+        /// 比较两个字符串相同的部分，返回接近的最佳匹配结果
+        /// </summary>
+        /// <param name="src"></param>
+        /// <param name="target"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
         public static NLPCompareResult NLPCompare(string src,string target,NLPCompareOptions options)
         {
             var result = new NLPCompareResult();
             options.BeinDt = DateTime.Now;
-            result.NLPCompareDetails = BestCompare(src, 0, target, 0, MakeDic(target), null,options,null);
+            var srcLen = src.Length;
+            var targetLen = target.Length;
+            var longText = srcLen > targetLen ? src : target;
+            var shortText = srcLen > targetLen ? target : src;
+            result.NLPCompareDetails = BestCompare(shortText, 0, longText, 0, MakeDic(longText), null,options,null);
 
+            return result;
+        }
+
+        /// <summary>
+        /// 计算文本相似度
+        /// </summary>
+        public static CalcSimilarityResult CalcSimilarity(string src,string target,CalcSimilarityOption option)
+        {
+            var result = new CalcSimilarityResult();
+
+            var srcLen = src.Length;
+            var targetLen = target.Length;
+            var maxLen = Math.Max(srcLen, targetLen);
+            var val = Math.Min(srcLen, targetLen) * 100.0 / maxLen;
+            if (option.ExpectSimilarity <= val)
+            {
+                if (option.CompareOptions == null)
+                {
+                    option.CompareOptions = new NLPCompareOptions();
+                }
+                var compareResult = NLPCompare(src, target, option.CompareOptions);
+                val =Math.Round(compareResult.NLPCompareDetails.Sum(p => p.Len) * 100.0 / maxLen,2);
+                result.CalcSimilarityValue = val;
+            }
+            
             return result;
         }
     }
