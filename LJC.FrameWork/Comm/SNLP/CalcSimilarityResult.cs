@@ -15,5 +15,11 @@ namespace LJC.FrameWork.Comm.SNLP
             get;
             set;
         }
+
+        public int UseMills
+        {
+            get;
+            internal set;
+        }
     }
 }

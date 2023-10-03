@@ -136,7 +136,7 @@ namespace LJC.FrameWork.Comm
                 List<KeyValuePair<string, CacheItem<T>>> items = null;
                 lock (_cacheLock)
                 {
-                    items = _cacheDiction.Where(p => p.Value.Expired < DateTime.Now).ToList();
+                    items = _cacheDiction.Where(p => p.Value.Expired >= DateTime.Now).ToList();
                     return items.Select(p => p.Key).ToList();
                 }
             }
@@ -149,7 +149,7 @@ namespace LJC.FrameWork.Comm
                 List<KeyValuePair<string, CacheItem<T>>> items = null;
                 lock (_cacheLock)
                 {
-                    items = _cacheDiction.Where(p => p.Value.Expired < DateTime.Now).ToList();
+                    items = _cacheDiction.Where(p => p.Value.Expired >= DateTime.Now).ToList();
                     return items.Select(p => p.Value.Item).ToList();
                 }
             }

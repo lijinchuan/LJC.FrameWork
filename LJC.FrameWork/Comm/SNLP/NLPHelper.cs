@@ -259,6 +259,7 @@ namespace LJC.FrameWork.Comm.SNLP
                 var compareResult = NLPCompare(src, target, option.CompareOptions);
                 val =Math.Round(compareResult.NLPCompareDetails.Sum(p => p.Len) * 100.0 / maxLen,2);
                 result.CalcSimilarityValue = val;
+                result.UseMills = compareResult.UseMills;
             }
             
             return result;
