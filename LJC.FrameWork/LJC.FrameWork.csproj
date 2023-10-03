@@ -236,6 +236,7 @@
     <Compile Include="Comm\SingleTimer.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Comm\SNLP\BestCompareStatics.cs" />
     <Compile Include="Comm\SNLP\CalcSimilarityOption.cs" />
     <Compile Include="Comm\SNLP\CalcSimilarityResult.cs" />
     <Compile Include="Comm\SNLP\NLPCompareDetail.cs" />

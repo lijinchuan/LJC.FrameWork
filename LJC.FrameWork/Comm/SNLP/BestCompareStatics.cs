@@ -5,15 +5,15 @@ using System.Text;
 
 namespace LJC.FrameWork.Comm.SNLP
 {
-    public class NLPCompareResult
+    public class BestCompareStatics
     {
-        public List<NLPCompareDetail> NLPCompareDetails
+        public int CallTimes
         {
             get;
-            set;
-        } = new List<NLPCompareDetail>();
+            internal set;
+        }
 
-        public int UseMills
+        public int ValidCallTimes
         {
             get;
             internal set;

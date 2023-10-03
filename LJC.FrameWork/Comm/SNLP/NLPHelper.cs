@@ -42,15 +42,43 @@ namespace LJC.FrameWork.Comm.SNLP
             return len;
         }
 
+        private static int PreCompare(string src, string target,
+            Dictionary<char, HashSet<int>> dic)
+        {
+            HashSet<int> hashSet;
+            var ret = 0;
+            var targetStart = -1;
+            for(var i = 0; i < src.Length; i++)
+            {
+                var ch = src[i];
+                if(dic.TryGetValue(ch,out hashSet))
+                {
+                    foreach(var hs in hashSet)
+                    {
+                        if (hs > targetStart)
+                        {
+                            var len= MatchFrom(src, i, dic, hs);
+                            ret += len;
+                            break;
+                        }
+                    }
+                }
+            }
+            return ret;
+        }
+
         private static List<NLPCompareDetail> BestCompare(string src,int srcStart,string target,int targetStart,
             Dictionary<char,HashSet<int>> dic,
-            List<NLPCompareDetail> PreNLPCompareDetails,
+            List<NLPCompareDetail> preNLPCompareDetails,
+            int preNLPCompareDetailsSumLen,
             NLPCompareOptions options,
-            Dictionary<string, List<NLPCompareDetail>> repeatDic)
+            Dictionary<string,Tuple<List<NLPCompareDetail>,int>> repeatDic,
+            BestCompareStatics statics)
         {
-            if (PreNLPCompareDetails == null)
+            statics.CallTimes++;
+            if (preNLPCompareDetails == null)
             {
-                PreNLPCompareDetails = new List<NLPCompareDetail>();
+                preNLPCompareDetails = new List<NLPCompareDetail>();
             }
             else
             {
@@ -61,13 +89,18 @@ namespace LJC.FrameWork.Comm.SNLP
             }
             if (repeatDic == null)
             {
-                repeatDic = new Dictionary<string, List<NLPCompareDetail>>();
+                repeatDic = new Dictionary<string, Tuple<List<NLPCompareDetail>, int>>();
                 options.RepeatDic = repeatDic;
             }
+            if (statics == null)
+            {
+                statics = new BestCompareStatics();
+            }
+            
             var srcLen = src.Length;
             HashSet<int> hashSet;
             var targetLen = target.Length;
-            var preSumLen = PreNLPCompareDetails.Sum(p => p.Len);
+            //var preSumLen = preNLPCompareDetails.Sum(p => p.Len);
             for (var i = srcStart; i < srcLen; i++)
             {
                 var ch = src[i];
@@ -81,7 +114,7 @@ namespace LJC.FrameWork.Comm.SNLP
                         var key = i + "_" + hs;
                         if (repeatDic.ContainsKey(key))
                         {
-                            if (repeatDic[key].Sum(p => p.Len) + preSumLen <= maxLen)
+                            if (repeatDic[key].Item2 + preNLPCompareDetailsSumLen <= maxLen)
                             {
                                 continue;
                             }
@@ -97,7 +130,7 @@ namespace LJC.FrameWork.Comm.SNLP
                         if (hs < targetStart)
                         {
                             tempDetails = new List<NLPCompareDetail>();
-                            foreach (var item in PreNLPCompareDetails)
+                            foreach (var item in preNLPCompareDetails)
                             {
                                 if (item.TargetStart < hs)
                                 {
@@ -107,16 +140,16 @@ namespace LJC.FrameWork.Comm.SNLP
                         }
                         else
                         {
-                            tempDetails = PreNLPCompareDetails.ToList();
+                            tempDetails = preNLPCompareDetails.ToList();
                         }
 
                         if (repeatDic.ContainsKey(key))
                         {
-                            tempDetails.AddRange(repeatDic[key]);
+                            tempDetails.AddRange(repeatDic[key].Item1);
                         }
                         else
                         {
-                            
+                            statics.ValidCallTimes++;
                             tempDetails.Add(new NLPCompareDetail
                             {
                                 Len = len,
@@ -124,10 +157,10 @@ namespace LJC.FrameWork.Comm.SNLP
                                 TargetStart = hs
                             });
 
-                            tempDetails = BestCompare(src, i + len, target, hs + len, dic, tempDetails,options, repeatDic);
+                            tempDetails = BestCompare(src, i + len, target, hs + len, dic, tempDetails, preNLPCompareDetailsSumLen + len, options, repeatDic, statics);
                             var tempDetailsMore = tempDetails.ToList();
                             tempDetailsMore.RemoveAll(p => p.TargetStart < hs);
-                            repeatDic.Add(key, tempDetailsMore);
+                            repeatDic.Add(key,new Tuple<List<NLPCompareDetail>, int>(tempDetailsMore, tempDetailsMore.Sum(p => p.Len)));                          
                         }
                         var tempLen = tempDetails.Sum(p => p.Len);
                         if (tempLen > maxLen)
@@ -135,18 +168,19 @@ namespace LJC.FrameWork.Comm.SNLP
                             maxLen = tempLen;
                             maxTempListLi = tempDetails;
                         }
+                        
                     }
                     if (maxTempListLi==default)
                     {
                         continue;
                     }
                     
-                    PreNLPCompareDetails = maxTempListLi;
+                    preNLPCompareDetails = maxTempListLi;
                     break;
                 }
 
             }
-            return PreNLPCompareDetails;
+            return preNLPCompareDetails;
             
         }
 
@@ -165,8 +199,9 @@ namespace LJC.FrameWork.Comm.SNLP
             var targetLen = target.Length;
             var longText = srcLen > targetLen ? src : target;
             var shortText = srcLen > targetLen ? target : src;
-            result.NLPCompareDetails = BestCompare(shortText, 0, longText, 0, MakeDic(longText), null,options,null);
-
+            var statics = new BestCompareStatics();
+            result.NLPCompareDetails = BestCompare(shortText, 0, longText, 0, MakeDic(longText), null, 0, options, null, statics);
+            result.UseMills = (int)DateTime.Now.Subtract(options.BeinDt).TotalMilliseconds;
             return result;
         }
 

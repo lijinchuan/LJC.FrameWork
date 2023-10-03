@@ -47,7 +47,13 @@ namespace LJC.FrameWork.Comm.SNLP
             }
         }
 
-        internal Dictionary<string, List<NLPCompareDetail>> RepeatDic
+        internal int PrepareMaxLen
+        {
+            get;
+            set;
+        }
+
+        internal Dictionary<string, Tuple<List<NLPCompareDetail>, int>> RepeatDic
         {
             get;
             set;
