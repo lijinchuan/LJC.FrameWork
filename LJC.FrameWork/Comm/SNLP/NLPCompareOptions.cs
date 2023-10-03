@@ -64,5 +64,11 @@ namespace LJC.FrameWork.Comm.SNLP
             get;
             set;
         }
+
+        internal int Deep
+        {
+            get;
+            set;
+        }
     }
 }

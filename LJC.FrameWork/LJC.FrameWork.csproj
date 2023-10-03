@@ -239,6 +239,7 @@
     <Compile Include="Comm\SNLP\BestCompareStatics.cs" />
     <Compile Include="Comm\SNLP\CalcSimilarityOption.cs" />
     <Compile Include="Comm\SNLP\CalcSimilarityResult.cs" />
+    <Compile Include="Comm\SNLP\NLPCompareBreakException.cs" />
     <Compile Include="Comm\SNLP\NLPCompareDetail.cs" />
     <Compile Include="Comm\SNLP\NLPCompareOptions.cs" />
     <Compile Include="Comm\SNLP\NLPCompareResult.cs" />

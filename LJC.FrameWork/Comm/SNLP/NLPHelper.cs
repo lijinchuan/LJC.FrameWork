@@ -70,11 +70,11 @@ namespace LJC.FrameWork.Comm.SNLP
         private static List<NLPCompareDetail> BestCompare(string src,int srcStart,string target,int targetStart,
             Dictionary<char,HashSet<int>> dic,
             List<NLPCompareDetail> preNLPCompareDetails,
-            int preNLPCompareDetailsSumLen,
             NLPCompareOptions options,
             Dictionary<string,Tuple<List<NLPCompareDetail>,int>> repeatDic,
             BestCompareStatics statics)
         {
+            options.Deep++;
             statics.CallTimes++;
             if (preNLPCompareDetails == null)
             {
@@ -100,21 +100,22 @@ namespace LJC.FrameWork.Comm.SNLP
             var srcLen = src.Length;
             HashSet<int> hashSet;
             var targetLen = target.Length;
-            //var preSumLen = preNLPCompareDetails.Sum(p => p.Len);
+            var preSumLen = preNLPCompareDetails.Sum(p => p.Len);
             for (var i = srcStart; i < srcLen; i++)
             {
+                var maxLen = Math.Max(options.PrepareMaxLen, 0);
                 var ch = src[i];
                 
                 if(dic.TryGetValue(ch,out hashSet))
                 {
-                    var maxLen = 0;
                     List<NLPCompareDetail> maxTempListLi = default;
+                    var needContinue = false;
                     foreach (var hs in hashSet)
                     {
                         var key = i + "_" + hs;
                         if (repeatDic.ContainsKey(key))
                         {
-                            if (repeatDic[key].Item2 + preNLPCompareDetailsSumLen <= maxLen)
+                            if (repeatDic[key].Item2 + preSumLen <= maxLen)
                             {
                                 continue;
                             }
@@ -123,6 +124,7 @@ namespace LJC.FrameWork.Comm.SNLP
                         var len = MatchFrom(src, i, dic, hs);
                         if (len < options.CompareMinLen)
                         {
+                            needContinue = true;
                             continue;
                         }
 
@@ -157,9 +159,13 @@ namespace LJC.FrameWork.Comm.SNLP
                                 TargetStart = hs
                             });
 
-                            tempDetails = BestCompare(src, i + len, target, hs + len, dic, tempDetails, preNLPCompareDetailsSumLen + len, options, repeatDic, statics);
-                            var tempDetailsMore = tempDetails.ToList();
-                            tempDetailsMore.RemoveAll(p => p.TargetStart < hs);
+                            tempDetails = BestCompare(src, i + len, target, hs + len, dic, tempDetails, options, repeatDic, statics);
+                            var tempDetailsMore = tempDetails;
+                            if (tempDetailsMore.First().TargetStart < hs)
+                            {
+                                tempDetailsMore = tempDetailsMore.ToList();
+                                tempDetailsMore.RemoveAll(p => p.TargetStart < hs);
+                            }
                             repeatDic.Add(key,new Tuple<List<NLPCompareDetail>, int>(tempDetailsMore, tempDetailsMore.Sum(p => p.Len)));                          
                         }
                         var tempLen = tempDetails.Sum(p => p.Len);
@@ -167,19 +173,40 @@ namespace LJC.FrameWork.Comm.SNLP
                         {
                             maxLen = tempLen;
                             maxTempListLi = tempDetails;
+                            if (tempLen > options.PrepareMaxLen)
+                            {
+                                options.PrepareMaxLen = tempLen;
+                            }
+
+                            if (maxLen + i + 1 >= srcLen)
+                            {
+                                if (options.Deep <= 1)
+                                {
+                                    return maxTempListLi;
+                                }
+                                else
+                                {
+                                    throw new NLPCompareBreakException(maxTempListLi);
+                                }
+                            }
                         }
                         
                     }
                     if (maxTempListLi==default)
                     {
-                        continue;
+                        if (needContinue)
+                            continue;
+                        else
+                            break;
                     }
                     
                     preNLPCompareDetails = maxTempListLi;
+                    
                     break;
                 }
 
             }
+            options.Deep--;
             return preNLPCompareDetails;
             
         }
@@ -191,7 +218,7 @@ namespace LJC.FrameWork.Comm.SNLP
         /// <param name="target"></param>
         /// <param name="options"></param>
         /// <returns></returns>
-        public static NLPCompareResult NLPCompare(string src,string target,NLPCompareOptions options)
+        public static NLPCompareResult NLPCompare(string src, string target, NLPCompareOptions options)
         {
             var result = new NLPCompareResult();
             options.BeinDt = DateTime.Now;
@@ -200,7 +227,14 @@ namespace LJC.FrameWork.Comm.SNLP
             var longText = srcLen > targetLen ? src : target;
             var shortText = srcLen > targetLen ? target : src;
             var statics = new BestCompareStatics();
-            result.NLPCompareDetails = BestCompare(shortText, 0, longText, 0, MakeDic(longText), null, 0, options, null, statics);
+            try
+            {
+                result.NLPCompareDetails = BestCompare(shortText, 0, longText, 0, MakeDic(longText), null, options, null, statics);
+            }
+            catch (NLPCompareBreakException ex)
+            {
+                result.NLPCompareDetails = ex.NLPCompareDetails;
+            }
             result.UseMills = (int)DateTime.Now.Subtract(options.BeinDt).TotalMilliseconds;
             return result;
         }
