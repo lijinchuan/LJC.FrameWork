@@ -94,7 +94,7 @@ namespace LJC.FrameWork.Comm.SNLP
                     resultList.Add(item);
                 }
             }
-            return resultList;
+            return resultList.OrderBy(p=>p.SrcStart).ToList();
         }
 
         /// <summary>
