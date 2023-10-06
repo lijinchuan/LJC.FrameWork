@@ -830,7 +830,15 @@ namespace Test2
         {
             var text1 = File.ReadAllText("text1.txt");
             var text2 = File.ReadAllText("text2.txt");
-            var result = LJC.FrameWork.Comm.SNLP.NLPHelper.NLPCompare(text1, text2, new LJC.FrameWork.Comm.SNLP.NLPCompareOptions() { CompareMinLen = 2, TimeOutMills=100000 });
+            var diff = 0;
+            //for(var i = 0; i < text1.Length; i++)
+            //{
+            //    if (text1[i] != text2[i])
+            //    {
+            //        diff++;
+            //    }
+            //}
+            var result = LJC.FrameWork.Comm.SNLP.NLPHelper.NLPCompare(text1, text2, new LJC.FrameWork.Comm.SNLP.NLPCompareOptions() { CompareMinLen = 4, TimeOutMills=100000000 });
             var val = LJC.FrameWork.Comm.SNLP.NLPHelper.CalcSimilarity(text1, text2, new LJC.FrameWork.Comm.SNLP.CalcSimilarityOption { 
              CompareOptions= new LJC.FrameWork.Comm.SNLP.NLPCompareOptions() { CompareMinLen = 4 }
             });

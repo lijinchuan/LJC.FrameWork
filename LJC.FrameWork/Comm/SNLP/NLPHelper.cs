@@ -7,6 +7,7 @@ namespace LJC.FrameWork.Comm.SNLP
 {
     public class NLPHelper
     {
+        private static HashSet<Char> BiaoDianHash = new HashSet<char>(new char[] { ',',';','。','?','!'});
         private static Dictionary<char,HashSet<int>> MakeDic(string source)
         {
             var dic = new Dictionary<char, HashSet<int>>();
@@ -24,191 +25,76 @@ namespace LJC.FrameWork.Comm.SNLP
             return dic;
         }
 
-        private static int MatchFrom(string src,int srcStart, Dictionary<char, HashSet<int>> dicTarget, int targetStart)
+        private static int MatchFrom(string src, int srcStart, string target, int targetStart)
         {
-            var len = 0;
+            if (srcStart > 0 && targetStart > 0)
+            {
+                if (src[srcStart - 1] == target[targetStart - 1])
+                {
+                    return 1;
+                }
+            }
+
+            var start = srcStart;
+            var srclen = src.Length;
+            var targetlen = target.Length;
+
+            while (srcStart < srclen && targetStart < targetlen)
+            {
+                if (src[srcStart] != target[targetStart])
+                {
+                    break;
+                }
+                srcStart++;
+                targetStart++;
+
+            }
+
+            return srcStart - start;
+        }
+
+
+        private static List<NLPCompareDetail> BestCompare(string src, int srcStart, string target, Dictionary<char, HashSet<int>> dic
+            , NLPCompareOptions options)
+        {
+            HashSet<int> hash;
+
+            List<NLPCompareDetail> list = new List<NLPCompareDetail>();
             for(var i = srcStart; i < src.Length; i++)
             {
                 var ch = src[i];
-                if (dicTarget.ContainsKey(ch) && dicTarget[ch].Contains(targetStart + len))
+                if (BiaoDianHash.Contains(ch))
                 {
-                    len++;
+                    continue;
                 }
-                else
+                if(dic.TryGetValue(ch,out hash))
                 {
-                    break;
-                }
-            }
-            return len;
-        }
-
-        private static int PreCompare(string src, string target,
-            Dictionary<char, HashSet<int>> dic)
-        {
-            HashSet<int> hashSet;
-            var ret = 0;
-            var targetStart = -1;
-            for(var i = 0; i < src.Length; i++)
-            {
-                var ch = src[i];
-                if(dic.TryGetValue(ch,out hashSet))
-                {
-                    foreach(var hs in hashSet)
+                    foreach(var hs in hash)
                     {
-                        if (hs > targetStart)
+                        var len = MatchFrom(src, i, target, hs);
+                        if (len >= options.CompareMinLen)
                         {
-                            var len= MatchFrom(src, i, dic, hs);
-                            ret += len;
-                            break;
-                        }
-                    }
-                }
-            }
-            return ret;
-        }
-
-        private static List<NLPCompareDetail> BestCompare(string src,int srcStart,string target,int targetStart,
-            Dictionary<char,HashSet<int>> dic,
-            List<NLPCompareDetail> preNLPCompareDetails,
-            NLPCompareOptions options,
-            Dictionary<string,Tuple<List<NLPCompareDetail>,int>> repeatDic,
-            BestCompareStatics statics)
-        {
-            options.Deep++;
-            statics.CallTimes++;
-            if (preNLPCompareDetails == null)
-            {
-                preNLPCompareDetails = new List<NLPCompareDetail>();
-            }
-            else
-            {
-                if (DateTime.Now.Subtract(options.BeinDt).TotalMilliseconds > options.TimeOutMills)
-                {
-                    throw new TimeoutException();
-                }
-            }
-            if (repeatDic == null)
-            {
-                repeatDic = new Dictionary<string, Tuple<List<NLPCompareDetail>, int>>();
-                options.RepeatDic = repeatDic;
-            }
-            if (statics == null)
-            {
-                statics = new BestCompareStatics();
-            }
-            
-            var srcLen = src.Length;
-            HashSet<int> hashSet;
-            var targetLen = target.Length;
-            var preSumLen = preNLPCompareDetails.Sum(p => p.Len);
-            for (var i = srcStart; i < srcLen; i++)
-            {
-                var maxLen = Math.Max(options.PrepareMaxLen, 0);
-                var ch = src[i];
-                
-                if(dic.TryGetValue(ch,out hashSet))
-                {
-                    List<NLPCompareDetail> maxTempListLi = default;
-                    var needContinue = false;
-                    foreach (var hs in hashSet)
-                    {
-                        var key = i + "_" + hs;
-                        if (repeatDic.ContainsKey(key))
-                        {
-                            if (repeatDic[key].Item2 + preSumLen <= maxLen)
+                            list.Add(new NLPCompareDetail
                             {
-                                continue;
-                            }
-                        }
-
-                        var len = MatchFrom(src, i, dic, hs);
-                        if (len < options.CompareMinLen)
-                        {
-                            needContinue = true;
-                            continue;
-                        }
-
-                        List<NLPCompareDetail> tempDetails = null;
-                        if (hs < targetStart)
-                        {
-                            tempDetails = new List<NLPCompareDetail>();
-                            foreach (var item in preNLPCompareDetails)
-                            {
-                                if (item.TargetStart < hs)
-                                {
-                                    tempDetails.Add(item);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            tempDetails = preNLPCompareDetails.ToList();
-                        }
-
-                        if (repeatDic.ContainsKey(key))
-                        {
-                            tempDetails.AddRange(repeatDic[key].Item1);
-                        }
-                        else
-                        {
-                            statics.ValidCallTimes++;
-                            tempDetails.Add(new NLPCompareDetail
-                            {
-                                Len = len,
-                                SrcStart = i,
-                                TargetStart = hs
+                                SrcStart=i,
+                                TargetStart=hs,
+                                Len=len
                             });
-
-                            tempDetails = BestCompare(src, i + len, target, hs + len, dic, tempDetails, options, repeatDic, statics);
-                            var tempDetailsMore = tempDetails;
-                            if (tempDetailsMore.First().TargetStart < hs)
-                            {
-                                tempDetailsMore = tempDetailsMore.ToList();
-                                tempDetailsMore.RemoveAll(p => p.TargetStart < hs);
-                            }
-                            repeatDic.Add(key,new Tuple<List<NLPCompareDetail>, int>(tempDetailsMore, tempDetailsMore.Sum(p => p.Len)));                          
                         }
-                        var tempLen = tempDetails.Sum(p => p.Len);
-                        if (tempLen > maxLen)
-                        {
-                            maxLen = tempLen;
-                            maxTempListLi = tempDetails;
-                            if (tempLen > options.PrepareMaxLen)
-                            {
-                                options.PrepareMaxLen = tempLen;
-                            }
-
-                            if (maxLen + i + 1 >= srcLen)
-                            {
-                                if (options.Deep <= 1)
-                                {
-                                    return maxTempListLi;
-                                }
-                                else
-                                {
-                                    throw new NLPCompareBreakException(maxTempListLi);
-                                }
-                            }
-                        }
-                        
                     }
-                    if (maxTempListLi==default)
-                    {
-                        if (needContinue)
-                            continue;
-                        else
-                            break;
-                    }
-                    
-                    preNLPCompareDetails = maxTempListLi;
-                    
-                    break;
                 }
-
             }
-            options.Deep--;
-            return preNLPCompareDetails;
-            
+            var ordeList= list.OrderByDescending(p=>p.Len).ToList();
+            var resultList = new List<NLPCompareDetail>();
+            foreach (var item in ordeList)
+            {
+                if (resultList.All(p => (p.SrcStart >= item.SrcStart+item.Len || p.SrcStart + p.Len <= item.SrcStart)
+                &&(p.TargetStart >= item.TargetStart + item.Len || p.TargetStart + p.Len <= item.TargetStart)))
+                {
+                    resultList.Add(item);
+                }
+            }
+            return resultList;
         }
 
         /// <summary>
@@ -226,15 +112,9 @@ namespace LJC.FrameWork.Comm.SNLP
             var targetLen = target.Length;
             var longText = srcLen > targetLen ? src : target;
             var shortText = srcLen > targetLen ? target : src;
-            var statics = new BestCompareStatics();
-            try
-            {
-                result.NLPCompareDetails = BestCompare(shortText, 0, longText, 0, MakeDic(longText), null, options, null, statics);
-            }
-            catch (NLPCompareBreakException ex)
-            {
-                result.NLPCompareDetails = ex.NLPCompareDetails;
-            }
+
+            result.NLPCompareDetails = BestCompare(shortText, 0, longText, MakeDic(longText),options);
+
             result.UseMills = (int)DateTime.Now.Subtract(options.BeinDt).TotalMilliseconds;
             return result;
         }
