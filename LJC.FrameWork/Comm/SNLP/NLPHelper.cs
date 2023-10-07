@@ -29,9 +29,9 @@ namespace LJC.FrameWork.Comm.SNLP
         {
             if (srcStart > 0 && targetStart > 0)
             {
-                if (src[srcStart - 1] == target[targetStart - 1])
+                if (src[srcStart - 1] == target[targetStart - 1] && !BiaoDianHash.Contains(src[srcStart - 1]))
                 {
-                    return 1;
+                    return 0;
                 }
             }
 
@@ -45,6 +45,7 @@ namespace LJC.FrameWork.Comm.SNLP
                 {
                     break;
                 }
+
                 srcStart++;
                 targetStart++;
 
@@ -88,8 +89,9 @@ namespace LJC.FrameWork.Comm.SNLP
             var resultList = new List<NLPCompareDetail>();
             foreach (var item in ordeList)
             {
-                if (resultList.All(p => (p.SrcStart >= item.SrcStart+item.Len || p.SrcStart + p.Len <= item.SrcStart)
-                &&(p.TargetStart >= item.TargetStart + item.Len || p.TargetStart + p.Len <= item.TargetStart)))
+                if (resultList.All(p => (p.SrcStart >= item.SrcStart + item.Len - 1 || p.SrcStart + p.Len - 1 <= item.SrcStart)
+                && (p.TargetStart >= item.TargetStart + item.Len - 1 || p.TargetStart + p.Len - 1 <= item.TargetStart)
+                && ((p.SrcStart > item.SrcStart && p.TargetStart > item.TargetStart) || (p.SrcStart < item.SrcStart && p.TargetStart < item.TargetStart))))
                 {
                     resultList.Add(item);
                 }
