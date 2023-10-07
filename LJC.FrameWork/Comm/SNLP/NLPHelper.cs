@@ -108,12 +108,8 @@ namespace LJC.FrameWork.Comm.SNLP
         {
             var result = new NLPCompareResult();
             options.BeinDt = DateTime.Now;
-            var srcLen = src.Length;
-            var targetLen = target.Length;
-            var longText = srcLen > targetLen ? src : target;
-            var shortText = srcLen > targetLen ? target : src;
 
-            result.NLPCompareDetails = BestCompare(shortText, 0, longText, MakeDic(longText),options);
+            result.NLPCompareDetails = BestCompare(src, 0, target, MakeDic(target),options);
 
             result.UseMills = (int)DateTime.Now.Subtract(options.BeinDt).TotalMilliseconds;
             return result;
