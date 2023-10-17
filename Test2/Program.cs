@@ -838,9 +838,9 @@ namespace Test2
             //        diff++;
             //    }
             //}
-            var result = LJC.FrameWork.Comm.SNLP.NLPHelper.NLPCompare(text1, text2, new LJC.FrameWork.Comm.SNLP.NLPCompareOptions() { CompareMinLen = 4, TimeOutMills=100000000 });
+            var result = LJC.FrameWork.Comm.SNLP.NLPHelper.NLPCompare(text1, text2, new LJC.FrameWork.Comm.SNLP.NLPCompareOptions() { CompareMinLen = 10, TimeOutMills=100000000 });
             var val = LJC.FrameWork.Comm.SNLP.NLPHelper.CalcSimilarity(text1, text2, new LJC.FrameWork.Comm.SNLP.CalcSimilarityOption { 
-             CompareOptions= new LJC.FrameWork.Comm.SNLP.NLPCompareOptions() { CompareMinLen = 4 }
+             CompareOptions= new LJC.FrameWork.Comm.SNLP.NLPCompareOptions() { CompareMinLen = 10 }
             });
             foreach (var r in result.NLPCompareDetails)
             {

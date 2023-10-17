@@ -52,7 +52,7 @@ namespace LJC.FrameWork.SOA
             });
             if (simulateResponse != null)
             {
-                response.Header = simulateResponse.Headers??new Dictionary<string, string>();
+                response.Header = simulateResponse.Headers ?? new Dictionary<string, string>();
                 response.RawContent = simulateResponse.ResponseData;
                 if (!string.IsNullOrWhiteSpace(simulateResponse.ContentType))
                 {
@@ -61,6 +61,17 @@ namespace LJC.FrameWork.SOA
                 response.ReturnCode = simulateResponse.ResponseCode;
                 response.Url = simulateResponse.Url;
 
+                return true;
+            }
+            else if (url.Split('?')[0].EndsWith("_sitelist", StringComparison.OrdinalIgnoreCase))
+            {
+                response.ContentType = string.Format("{0}; charset={1}", "text/html", "utf-8");
+                var html = "";
+                foreach(var web in SimulateServerManager.GetWebMapperList())
+                {
+                    html += string.Format("{0}:{1}<br/>",web.MappingRoot,web.MappingPort);
+                }
+                response.Content = html;
                 return true;
             }
             else

@@ -201,6 +201,7 @@ namespace LJC.FrameWork.SOA
             }
 
             SimulateServerManager.TransferRequest = DoWebRequest;
+            SimulateServerManager.GetWebMapperList = GetWebMapperList;
             SimulateServerManager.AddDefaultServer();
         }
 
@@ -370,6 +371,19 @@ namespace LJC.FrameWork.SOA
                         throw new NotImplementedException(string.Format("未实现的功能:{0}", funcId));
                     }
             }
+        }
+
+        internal IEnumerable<WebMapper> GetWebMapperList()
+        {
+            var list = ServiceContainer.ToList();
+            foreach (var item in list.Where(p => p.WebMappers != null && p.WebMappers.Any()))
+            {
+                foreach(var wm in item.WebMappers)
+                {
+                    yield return wm;
+                }
+            }
+
         }
 
         internal WebResponse DoWebRequest(WebRequest webRequest)

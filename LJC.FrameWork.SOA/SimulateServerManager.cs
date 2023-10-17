@@ -17,6 +17,8 @@ namespace LJC.FrameWork.SOA
 
         internal static Func<WebRequest, WebResponse> TransferRequest;
 
+        internal static Func<IEnumerable<WebMapper>> GetWebMapperList;
+
         private static object rwLocker = new object();
 
         private static Dictionary<int, SimulateServer> SimulateServers = new Dictionary<int, SimulateServer>();
@@ -59,6 +61,11 @@ namespace LJC.FrameWork.SOA
                     simulateServer.Dispose();
                 }
             }
+        }
+
+        public static List<WebMapper> ListWeb()
+        {
+            return GetWebMapperList().ToList();
         }
 
     }
