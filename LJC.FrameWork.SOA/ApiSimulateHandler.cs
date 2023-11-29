@@ -1,4 +1,5 @@
 ﻿using LJC.FrameWork.Data.EntityDataBase;
+using LJC.FrameWork.LogManager;
 using LJC.FrameWork.Net.HTTP.Server;
 using System;
 using System.Collections.Generic;
@@ -41,6 +42,10 @@ namespace LJC.FrameWork.SOA
             {
                 request.Header.Add(ipHeader, request.From.ToString());
             }
+            if (request.RawData.Length > 1024 * 1000)
+            {
+                LogHelper.Instance.Debug(string.Format("大数据请求：{0},{1}b", url, request.RawData.Length));
+            }
             var simulateResponse = SimulateServerManager.TransferRequest(new Contract.WebRequest
             {
                 Host = request.Host,
@@ -50,6 +55,10 @@ namespace LJC.FrameWork.SOA
                 Method = request.Method,
                 InputData = request.RawData
             });
+            if (request.RawData.Length > 1024 * 1000)
+            {
+                LogHelper.Instance.Debug(string.Format("大数据请求完成：{0},{1}b", url, request.RawData.Length));
+            }
             if (simulateResponse != null)
             {
                 response.Header = simulateResponse.Headers ?? new Dictionary<string, string>();
