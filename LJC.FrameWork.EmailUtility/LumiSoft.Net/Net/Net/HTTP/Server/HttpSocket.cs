@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
+using static LJC.FrameWork.Net.HTTP.Server.HttpServer;
 
 namespace LJC.FrameWork.Net.HTTP.Server
 {
@@ -307,11 +308,14 @@ namespace LJC.FrameWork.Net.HTTP.Server
             {
                 if (OnRead != null)
                 { // Simple text mode
-                    buffer += Encoding.UTF8.GetString(buf, 0, read);
-                    while (buffer.IndexOf(delim) >= 0)
+                    if (((ClientData)Data).state == ClientState.Header)
                     {
-                        if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnRead, new object[] { this, Read() });
-                        else OnRead(this, Read());
+                        buffer += Encoding.UTF8.GetString(buf, 0, read);
+                        while (buffer.IndexOf(delim) >= 0)
+                        {
+                            if (threadSyncControl != null) threadSyncControl.BeginInvoke(OnRead, new object[] { this, Read() });
+                            else OnRead(this, Read());
+                        }
                     }
                 }
             }
