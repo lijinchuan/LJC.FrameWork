@@ -13,7 +13,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 {
     public class MessageApp : IDisposable
     {
-        private const int MAXBUFFERLEN = 1024 * 1000 * 10;
+        private const int MAXBUFFERLEN = 1024 * 1024 * 10 * 8;
         private AutoResetEvent _startSign = new AutoResetEvent(false);
         protected volatile Socket socketClient;
         protected Socket socketServer;
