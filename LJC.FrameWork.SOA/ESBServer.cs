@@ -11,6 +11,8 @@ using LJC.FrameWork.EntityBuf;
 using LJC.FrameWork.SOA.Contract;
 using System.Text.RegularExpressions;
 using LJC.FrameWork.Comm;
+using LJC.FrameWork.Net.IMAP;
+using LJC.FrameWork.Net.Mime.vCard;
 
 namespace LJC.FrameWork.SOA
 {
@@ -67,15 +69,15 @@ namespace LJC.FrameWork.SOA
                 sb.AppendFormat("当前注册了{0}个服务实例<br/>", servicelist.Count);
                 if (servicelist.Count > 0)
                 {
-                    sb.AppendFormat("<table>");
+                    sb.AppendFormat("<table style=\"text-align:center\">");
                     sb.AppendFormat("<tr><th>服务号</th><th>服务实例</th></tr>");
                     foreach (var gp in servicelist.GroupBy(p => p.ServiceNo))
                     {
                         sb.AppendFormat("<tr>");
                         sb.AppendFormat("<td>{0}</td>", gp.Key);
                         sb.Append("<td>");
-                        sb.Append("<table>");
-                        sb.Append("<tr><th>服务名称</th><th>端点名称</th><th>ID</th><th>服务器地址</th><th>TCP直连</th><th>UDP直连</th></tr>");
+                        sb.Append("<table style=\"text-align:center\">");
+                        sb.Append("<tr><th>服务名称</th><th>端点名称</th><th>服务器地址</th><th>TCP直连</th><th>UDP直连</th></tr>");
                         foreach (var item in gp)
                         {
                             if (DateTime.Now.Subtract(item.Session.LastSessionTime).TotalMinutes > 1)
@@ -83,15 +85,18 @@ namespace LJC.FrameWork.SOA
                                 lock (this._esb.ServiceContainer)
                                 {
                                     _esb.ServiceContainer.Remove(item);
-                                    item.Session.Close("on resp over 1 mins");
+                                    item.Session.Close("no resp over 1 mins");
                                 }
                             }
 
-                            sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}:{4}</td><td>{5}</td><td>{6}</td></tr>",
-                                item.ServiceName,item.EndPointName,item.Session.SessionID, item.Session.IPAddress, item.Session.Port,
+                            sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td></tr>",
+                                item.ServiceName,item.EndPointName, item.Session.IPAddress, item.Session.Port,
                                 item.RedirectTcpIps == null ? "" : (string.Join(",", item.RedirectTcpIps) + ":" + item.RedirectTcpPort),
                                 item.RedirectUdpIps == null ? "" : (string.Join(",", item.RedirectUdpIps) + ":" + item.RedirectUdpPort));
+
+                            sb.Append($"<tr><td>会话</td><td colspan=\"4\">连接速度(kb/s)</td></tr>\r\n<tr><td>{item.Session.SessionID}</td><td style=\"text-align:center\" colspan=\"4\">{item.Session.BytesSendPreSec/1024}</td></tr>");
                         }
+                        
                         sb.Append("</table>");
                         sb.Append("</td>");
                         sb.AppendFormat("</tr>");

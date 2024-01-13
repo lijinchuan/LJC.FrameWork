@@ -181,7 +181,7 @@ namespace LJC.FrameWork.SocketApplication
 
             void updateSpeed()
             {
-                if (sendResult.SendCount >= 100000)
+                if (sendResult.SendCount >= 1000)
                 {
                     var millsec = sendResult.EndSend.Subtract(sendResult.Start).TotalMilliseconds;
 
