@@ -363,6 +363,7 @@
     <Compile Include="SocketApplication\Message.cs" />
     <Compile Include="SocketApplication\NegotiationEncryMessage.cs" />
     <Compile Include="SocketApplication\SendFileResultMessage.cs" />
+    <Compile Include="SocketApplication\SendMessageResult.cs" />
     <Compile Include="SocketApplication\SocketEasyUDP\Client\ClientBase.cs" />
     <Compile Include="SocketApplication\SocketEasyUDP\PipelineManualResetEventSlim.cs" />
     <Compile Include="SocketApplication\SocketEasyUDP\SendFileCheckRequestMessage.cs" />

@@ -225,12 +225,12 @@ namespace LJC.FrameWork.SocketEasy.Client
                 {
                     throw new Exception("发送失败，套接字连接失败。");
                 }
-                
+
                 //byte[] data = EntityBufCore.Serialize(message);
                 //byte[] len = BitConverter.GetBytes(data.Length);
                 //socketClient.Send(len);
                 //socketClient.Send(data);
-                return socketClient.SendMessage(message,string.Empty)>0;
+                return socketClient.SendMessage(message, string.Empty).SendCount > 0;
             }
             catch (Exception e)
             {

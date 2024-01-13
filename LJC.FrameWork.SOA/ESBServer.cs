@@ -105,7 +105,7 @@ namespace LJC.FrameWork.SOA
                 sb.AppendFormat("当前连接了{0}个客户端", clients.Count);
                 sb.Append("<table>");
                 sb.Append("<tr>");
-                sb.AppendFormat("<th>clientid</th><th>地址</th><th>连接时间</th><th>上次心跳时间</th><th>连接时长(分钟)</th><th>发送字节</th><th>接收字节</th>");
+                sb.AppendFormat("<th>clientid</th><th>地址</th><th>连接时间</th><th>上次心跳时间</th><th>连接时长(分钟)</th><th>发送字节</th><th>接收字节</th><th>发送速度（b/s）</th>");
                 sb.Append("</tr>");
                 HashSet<string> clienthash = new HashSet<string>();
                 foreach (var item in clients)
@@ -115,14 +115,14 @@ namespace LJC.FrameWork.SOA
                         clienthash.Add(item.Key);
                     }
 
-                    sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}:{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>", item.Key, item.Value.IPAddress, item.Value.Port,
                         item.Value.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
                         item.Value.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(item.Value.LastSessionTime.Subtract(item.Value.ConnectTime).TotalMinutes, 3),
-                        item.Value.BytesSend, item.Value.BytesRev);
+                        item.Value.BytesSend, item.Value.BytesRev,item.Value.BytesSendPreSec);
                 }
                 if (clients.Count > 0)
                 {
-                    sb.AppendFormat("<tr><td colspan='5'>{0}</td><td>{1}kb</td><td>{2}kb</td></tr>", "合计", (clients.Sum(p => p.Value.BytesSend) / 1024), (clients.Sum(p => p.Value.BytesRev) / 1024));
+                    sb.AppendFormat("<tr><td colspan='5'>{0}</td><td>{1}kb</td><td>{2}kb</td><td></td></tr>", "合计", (clients.Sum(p => p.Value.BytesSend) / 1024), (clients.Sum(p => p.Value.BytesRev) / 1024));
                 }
                 sb.Append("</table>");
                 sb.Append("<br/>");
@@ -153,7 +153,7 @@ namespace LJC.FrameWork.SOA
                 sb.AppendFormat("当前活跃{0}个客户端", liveclients.Count);
                 sb.Append("<table>");
                 sb.Append("<tr>");
-                sb.AppendFormat("<th>任务ID</th><th>clientid</th><th>地址</th><th>连接时间</th><th>上次心跳时间</th><th>连接时长(分钟)</th><th>发送字节</th><th>接收字节</th>");
+                sb.AppendFormat("<th>任务ID</th><th>clientid</th><th>地址</th><th>连接时间</th><th>上次心跳时间</th><th>连接时长(分钟)</th><th>发送字节</th><th>接收字节</th><th>发送速度（b/s）</th>");
                 sb.Append("</tr>");
                 foreach (var item in liveclients)
                 {
@@ -171,10 +171,10 @@ namespace LJC.FrameWork.SOA
                         }
                     }
 
-                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>", item.Key, session.SessionID, session.IPAddress, session.Port,
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td></tr>", item.Key, session.SessionID, session.IPAddress, session.Port,
                         session.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
                         session.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(session.LastSessionTime.Subtract(session.ConnectTime).TotalMinutes, 3),
-                        session.BytesSend, session.BytesRev);
+                        session.BytesSend, session.BytesRev, session.BytesSendPreSec);
                 }
                 sb.Append("</table>");
 

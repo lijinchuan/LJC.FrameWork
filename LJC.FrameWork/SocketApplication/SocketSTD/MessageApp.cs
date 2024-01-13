@@ -558,7 +558,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         {
             try
             {
-                return socketClient.SendMessage(message, this.encryKey) > 0;
+                return socketClient.SendMessage(message, this.encryKey).SendCount > 0;
             }
             catch (Exception e)
             {

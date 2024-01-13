@@ -121,6 +121,15 @@ namespace LJC.FrameWork.SocketApplication
             set;
         }
 
+        /// <summary>
+        /// 每秒钟发生字节数（速度）
+        /// </summary>
+        public int BytesSendPreSec
+        {
+            get;
+            private set;
+        } = 200000;
+
         internal Session()
         {
             HeadBeatInterVal = 10000;
@@ -158,15 +167,40 @@ namespace LJC.FrameWork.SocketApplication
             if (this.Socket == null)
                 throw new Exception("无套接字");
 
-            var sendcount = this.Socket.SendMessage(msg, this.EncryKey);
+            var sendResult = this.Socket.SendMessage(msg, this.EncryKey, d => calWaitTime(d));
 
-            if (sendcount > 0)
+            updateSpeed();
+
+            if (sendResult.SendCount > 0)
             {
                 this.LastSessionTime = DateTime.Now;
-                this.BytesSend += sendcount;
+                this.BytesSend += sendResult.SendCount;
             }
 
-            return sendcount > 0;
+            return sendResult.SendCount > 0;
+
+            void updateSpeed()
+            {
+                if (sendResult.SendCount >= 100000)
+                {
+                    var millsec = sendResult.EndSend.Subtract(sendResult.Start).TotalMilliseconds;
+
+                    if (millsec > 0)
+                    {
+                        BytesSendPreSec = (int)(sendResult.SendCount * 1000 / millsec);
+                    }
+                }
+            }
+
+            bool calWaitTime(long size)
+            {
+                if (size > 10000 && BytesSendPreSec > 0)
+                {
+                    var secs = size / BytesSendPreSec;
+                    this.LastSessionTime = DateTime.Now.AddSeconds(secs);
+                }
+                return true;
+            }
         }
 
         /// <summary>

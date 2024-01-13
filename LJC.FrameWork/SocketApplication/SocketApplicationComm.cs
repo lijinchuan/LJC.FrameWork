@@ -70,13 +70,14 @@ namespace LJC.FrameWork.SocketApplication
             }
         }
 
-        public static int SendMessage(this Socket s, Message message,string encrykey)
+        public static SendMessageResult SendMessage(this Socket s, Message message, string encrykey, Func<long, bool> beferSend = null)
         {
+            var result = new SendMessageResult();
             try
             {
                 if (s == null)
                 {
-                    return 0;
+                    return result;
                 }
 
                 byte[] data = null;
@@ -120,16 +121,23 @@ namespace LJC.FrameWork.SocketApplication
                         data[i] = crc32bytes[i - 4];
                     }
 
+                    if (beferSend != null && !beferSend(data.Length))
+                    {
+                        return result;
+                    }
+
                     lock (s)
                     {
+                        result.StartSend = DateTime.Now;
                         var sendcount = s.Send(data, SocketFlags.None);
-
+                        result.SendCount = sendcount;
+                        result.EndSend = DateTime.Now;
                         if (SocketApplicationEnvironment.TraceSocketDataBag && !string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
                         {
                             LogManager.LogHelper.Instance.Debug(s.Handle + "发送数据:" + message.MessageHeader.TransactionID + "长度:" + data.Length + ", " + Convert.ToBase64String(data));
                         }
 
-                        return sendcount;
+                        return result;
                     }
                 }
                 else
@@ -145,20 +153,26 @@ namespace LJC.FrameWork.SocketApplication
                             _sendBufferManger.Buffer[i + offset] = dataLen[i];
                         }
 
-                        var crc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(_sendBufferManger.Buffer, offset + 8, (int)size - 8);
+                        var crc32 = HashEncrypt.GetCRC32(_sendBufferManger.Buffer, offset + 8, (int)size - 8);
                         var crc32bytes = BitConverter.GetBytes(crc32);
                         for (int i = 4; i < 8; i++)
                         {
                             _sendBufferManger.Buffer[i + offset] = crc32bytes[i - 4];
                         }
 
+                        if (beferSend != null && !beferSend(size))
+                        {
+                            return result;
+                        }
+
                         int sendcount = 0;
                         lock (s)
                         {
                             SocketError senderror = SocketError.Success;
-
+                            result.StartSend = DateTime.Now;
                             sendcount = s.Send(_sendBufferManger.Buffer, offset, (int)size, SocketFlags.None, out senderror);
-
+                            result.SendCount = sendcount;
+                            result.EndSend = DateTime.Now;
                             if (SocketApplicationEnvironment.TraceSocketDataBag && !string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
                             {
                                 var sendbytes = _sendBufferManger.Buffer.Skip(offset).Take((int)size).ToArray();
@@ -170,7 +184,7 @@ namespace LJC.FrameWork.SocketApplication
                                 throw new Exception(senderror.ToString());
                             }
                         }
-                        return sendcount;
+                        return result;
                     }
                     finally
                     {
