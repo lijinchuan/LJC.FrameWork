@@ -262,6 +262,19 @@ namespace LJC.FrameWork.SOA
                     return;
                 }
             }
+            else if (message.IsMessage((int)SOAMessageType.SOACheckHealth))
+            {
+                var responseMsg = new Message((int)SOAMessageType.SOACheckHealth);
+                responseMsg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                SOACheckHealthResponse responseBody = new SOACheckHealthResponse();
+                responseBody.Ok = true;
+                responseBody.Message = "在线";
+
+                responseMsg.SetMessageBody(responseBody);
+                SendMessage(responseMsg);
+
+                return;
+            }
 
             base.ReciveMessage(message);
         }

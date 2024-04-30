@@ -57,6 +57,8 @@
     <Compile Include="Contract\RegisterServiceInfo.cs" />
     <Compile Include="Contract\RegisterServiceRequest.cs" />
     <Compile Include="Contract\RegisterServiceResponse.cs" />
+    <Compile Include="Contract\SOACheckHealthRequest.cs" />
+    <Compile Include="Contract\SOACheckHealthResponse.cs" />
     <Compile Include="Contract\SOANoticeClientMessage.cs" />
     <Compile Include="Contract\SOANoticeRequest.cs" />
     <Compile Include="Contract\SOANoticeResponse.cs" />

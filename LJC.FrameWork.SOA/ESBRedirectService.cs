@@ -38,7 +38,7 @@ namespace LJC.FrameWork.SOA
             return this.ipPort;
         }
 
-        protected override void FromApp(SocketApplication.Message message, SocketApplication.Session session)
+        protected override void FromApp(Message message, Session session)
         {
             if (message.IsMessage((int)SOAMessageType.QueryServiceNo))
             {

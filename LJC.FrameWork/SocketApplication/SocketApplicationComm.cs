@@ -114,7 +114,7 @@ namespace LJC.FrameWork.SocketApplication
                         data[i] = dataLen[i];
                     }
 
-                    var crc32 = LJC.FrameWork.Comm.HashEncrypt.GetCRC32(data, 8);
+                    var crc32 = HashEncrypt.GetCRC32(data, 8);
                     var crc32bytes = BitConverter.GetBytes(crc32);
                     for (int i = 4; i < 8; i++)
                     {

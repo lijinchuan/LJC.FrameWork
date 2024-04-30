@@ -3,16 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using LJC.FrameWork.SocketApplication;
-using System.Net.Sockets;
-using System.Diagnostics;
 using System.Threading;
 using LJC.FrameWork.LogManager;
 using LJC.FrameWork.EntityBuf;
 using LJC.FrameWork.SOA.Contract;
-using System.Text.RegularExpressions;
 using LJC.FrameWork.Comm;
-using LJC.FrameWork.Net.IMAP;
-using LJC.FrameWork.Net.Mime.vCard;
+using System.Windows.Markup;
 
 namespace LJC.FrameWork.SOA
 {
@@ -199,7 +195,7 @@ namespace LJC.FrameWork.SOA
             {
                 var manport = int.Parse(ManagerWebPortStr);
 
-                LJC.FrameWork.Net.HTTP.Server.HttpServer manhttpserver = new Net.HTTP.Server.HttpServer(new Net.HTTP.Server.Server(manport));
+                Net.HTTP.Server.HttpServer manhttpserver = new Net.HTTP.Server.HttpServer(new Net.HTTP.Server.Server(manport));
                 manhttpserver.Handlers.Add(new LJC.FrameWork.Net.HTTP.Server.RESTfulApiHandlerBase(LJC.FrameWork.Net.HTTP.Server.HMethod.GET, "/esb/index", new List<string>() { }, new DefaultHander(this)));
 
                 LogHelper.Instance.Info("管理WEB服务开启:" + manport);
@@ -391,6 +387,49 @@ namespace LJC.FrameWork.SOA
 
         }
 
+        internal bool CheckAlive(Session session)
+        {
+            try
+            {
+                var lastSessionTime = session.LastSessionTime;
+                var lastRev = session.BytesRev;
+                lock (session.Socket)
+                {
+                    if (session.LastSessionTime > lastSessionTime && session.BytesRev > lastRev)
+                    {
+                        return true;
+                    }
+
+                    string clientid = Guid.NewGuid().ToString("N");
+                    var request = new SOACheckHealthRequest();
+
+                    Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
+                    msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                    msg.SetMessageBody(request);
+
+                    if (!session.SendMessage(msg))
+                    {
+                        return false;
+                    }
+
+                    for(var i = 0; i < 1000; i++)
+                    {
+                        if(session.BytesRev > lastRev)
+                        {
+                            return true;
+                        }
+                        Thread.Sleep(3);
+                    }
+
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         internal WebResponse DoWebRequest(WebRequest webRequest)
         {
             var list = ServiceContainer.ToList();
@@ -415,12 +454,19 @@ namespace LJC.FrameWork.SOA
             {
                 if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
                 {
-                    lock (LockObj)
+                    if (!CheckAlive(serviceInfo.Session))
                     {
-                        ServiceContainer.Remove(serviceInfo);
-                        serviceInfo.Session.Close("no resp over 30s");
+                        lock (LockObj)
+                        {
+                            ServiceContainer.Remove(serviceInfo);
+                            serviceInfo.Session.Close("web session no resp over 30s and check not alived");
 
-                        return null;
+                            return null;
+                        }
+                    }
+                    else
+                    {
+                        LogHelper.Instance.Info("web session no resp over 30s but check alived");
                     }
                 }
 
@@ -428,7 +474,7 @@ namespace LJC.FrameWork.SOA
                 SOATransferWebRequest transferrequest = new SOATransferWebRequest();
                 transferrequest.ClientId = clientid;
                 transferrequest.FundId = 0;
-                transferrequest.Param = EntityBuf.EntityBufCore.Serialize(webRequest);
+                transferrequest.Param = EntityBufCore.Serialize(webRequest);
 
                 transferrequest.ClientTransactionID = clientid;
 
@@ -718,7 +764,7 @@ namespace LJC.FrameWork.SOA
                             List<WebMapper> webMappers = new List<WebMapper>();
                             if (!string.IsNullOrWhiteSpace(webMappersData))
                             {
-                                webMappers = Comm.SerializerHelper.DeserializerXML<List<WebMapper>>(webMappersData);
+                                webMappers = SerializerHelper.DeserializerXML<List<WebMapper>>(webMappersData);
 
                                 foreach (var port in webMappers.Where(p => p.MappingPort > 0).Select(p => p.MappingPort).Distinct())
                                 {
@@ -774,7 +820,7 @@ namespace LJC.FrameWork.SOA
                     lock (LockObj)
                     {
                         var remList = ServiceContainer.Where(p => p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo));
-                        List<int> mapPorts = new List<int>(); 
+                        List<int> mapPorts = new List<int>();
                         foreach (var item in remList)
                         {
                             if (item.WebMappers != null && item.WebMappers.Any())
@@ -783,7 +829,7 @@ namespace LJC.FrameWork.SOA
                             }
                             ServiceContainer.Remove(item);
                         }
-                        foreach(var port in mapPorts.Distinct())
+                        foreach (var port in mapPorts.Distinct())
                         {
                             if (ServiceContainer.Any(p => p.WebMappers != null && p.WebMappers.Any() && p.WebMappers.Any(q => q.MappingPort == port)))
                             {
@@ -883,6 +929,10 @@ namespace LJC.FrameWork.SOA
                         session.SendMessage(respmesg);
                     }
                 }
+                return;
+            }
+            else if (message.IsMessage((int)SOAMessageType.SOACheckHealth))
+            {
                 return;
             }
 
