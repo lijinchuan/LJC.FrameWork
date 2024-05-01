@@ -9,6 +9,10 @@ using LJC.FrameWork.EntityBuf;
 using LJC.FrameWork.SOA.Contract;
 using LJC.FrameWork.Comm;
 using System.Windows.Markup;
+using System.Text.RegularExpressions;
+using System.Security;
+using System.Threading.Tasks;
+using LJC.FrameWork.CodeExpression;
 
 namespace LJC.FrameWork.SOA
 {
@@ -208,7 +212,29 @@ namespace LJC.FrameWork.SOA
 
         internal System.Collections.Concurrent.ConcurrentDictionary<string, Session> GetConnectedList()
         {
-            return this._connectSocketDic;
+            return _connectSocketDic;
+        }
+
+        protected T GetParam<T>(Dictionary<string, string> header, byte[] data)
+        {
+            var isJson = header?[Consts.HeaderKey_ContentType] == Consts.HeaderValue_ContentType_JSONValue;
+            if (isJson)
+            {
+                return JsonHelper.JsonToEntity<T>(Encoding.UTF8.GetString(data));
+            }
+
+            return EntityBufCore.DeSerialize<T>(data);
+        }
+
+        protected byte[] BuildResult(Dictionary<string, string> messageHeader, object result)
+        {
+            var isJson = messageHeader?[Consts.HeaderKey_ContentType] == Consts.HeaderValue_ContentType_JSONValue;
+            if (isJson)
+            {
+                return Encoding.UTF8.GetBytes(JsonHelper.ToJson(result));
+            }
+
+            return EntityBufCore.Serialize(result);
         }
 
         internal void DoTransferResponse(SOATransferResponse response)
@@ -235,21 +261,27 @@ namespace LJC.FrameWork.SOA
                     resp.Result = response.Result;
 
                     msgRet.SetMessageBody(resp);
-                    var session = (Session)carrayObjs[0];
                     var serviceInfo = (ESBServiceInfo)carrayObjs[1];
                     var funid = (int)carrayObjs[2];
                     var startTime = (DateTime)carrayObjs[3];
                     var useSecs = (int)Math.Round(DateTime.Now.Subtract(startTime).TotalSeconds, 0);
-                    session.SendMessage(msgRet);
-
-                    serviceInfo.FunctionUsedSecs.AddOrUpdate(funid, useSecs, (key, old) => old - 30 + useSecs);
-
-                    if (SocketApplicationEnvironment.TraceMessage)
+                    if (carrayObjs[0] is Session session)
                     {
-                        var toulp = (Tuple<int, int>)session.Tag;
-                        LogHelper.Instance.Debug(string.Format("SOA响应耗时,请求序列号:{0},服务号:{1},功能号:{2},用时:{3},结果:{4}",
-                            response.ClientTransactionID, toulp.Item1, toulp.Item2, DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒",
-                            Convert.ToBase64String(response.Result)));
+                        session?.SendMessage(msgRet);
+                        serviceInfo.FunctionUsedSecs.AddOrUpdate(funid, useSecs, (key, old) => old - 30 + useSecs);
+
+                        if (SocketApplicationEnvironment.TraceMessage)
+                        {
+                            var toulp = (Tuple<int, int>)session.Tag;
+                            LogHelper.Instance.Debug(string.Format("SOA响应耗时,请求序列号:{0},服务号:{1},功能号:{2},用时:{3},结果:{4}",
+                                response.ClientTransactionID, toulp.Item1, toulp.Item2, DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒",
+                                Convert.ToBase64String(response.Result)));
+                        }
+                    }
+                    else if (carrayObjs[0] is AutoReSetEventResult<byte[]> waitHandler)
+                    {
+                        waitHandler.WaitResult = response.Result;
+                        waitHandler.Set();
                     }
                 }
                 else
@@ -308,51 +340,51 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        public virtual object DoRequest(int funcId,byte[] param)
+        public virtual object DoRequest(int funcId, byte[] param, Dictionary<string,string> header)
         {
-            switch(funcId)
+            switch (funcId)
             {
                 case Consts.FunNo_ECHO:
                     {
                         return new SOAServerEchoResponse
                         {
-                            Ok=true
+                            Ok = true
                         };
                     }
                 case Consts.FunNo_Environment:
                     {
                         return new SOAServerEnvironmentResponse
                         {
-                            MachineName=Environment.MachineName,
-                            OSVersion=Environment.OSVersion.VersionString,
-                            ProcessorCount=Environment.ProcessorCount,
+                            MachineName = Environment.MachineName,
+                            OSVersion = Environment.OSVersion.VersionString,
+                            ProcessorCount = Environment.ProcessorCount,
                         };
                     }
                 case Consts.FunNo_ExistsAServiceNo:
                     {
-                        int serviceno=EntityBuf.EntityBufCore.DeSerialize<int>(param);
+                        int serviceno = GetParam<int>(header, param);
                         return ServiceContainer.Exists(p => p.ServiceNo == serviceno);
                     }
                 case Consts.FunNo_GetRegisterServiceInfo:
                     {
-                        var req= EntityBufCore.DeSerialize<GetRegisterServiceInfoRequest>(param);
+                        var req = GetParam<GetRegisterServiceInfoRequest>(header, param);
                         GetRegisterServiceInfoResponse resp = new GetRegisterServiceInfoResponse();
 
                         resp.ServiceNo = req.ServiceNo;
                         resp.Infos = ServiceContainer.Where(p => p.ServiceNo.Equals(req.ServiceNo)).Select(p => new RegisterServiceInfo
                         {
-                            ServiceNo=p.ServiceNo,
-                            RedirectTcpIps=p.RedirectTcpIps,
-                            RedirectTcpPort=p.RedirectTcpPort,
-                            RedirectUdpIps=p.RedirectUdpIps,
-                            RedirectUdpPort=p.RedirectUdpPort,
+                            ServiceNo = p.ServiceNo,
+                            RedirectTcpIps = p.RedirectTcpIps,
+                            RedirectTcpPort = p.RedirectTcpPort,
+                            RedirectUdpIps = p.RedirectUdpIps,
+                            RedirectUdpPort = p.RedirectUdpPort,
                         }).ToArray();
 
                         return resp;
                     }
                 case Consts.FunNo_ListServiceInfos:
                     {
-                        var req = EntityBuf.EntityBufCore.DeSerialize<ListServiceInfosRequest>(param);
+                        var req = GetParam<ListServiceInfosRequest>(header, param);
                         ListServiceInfosResponse resp = new ListServiceInfosResponse();
 
                         resp.Services = ServiceContainer.Select(p => new RegisterServiceInfo
@@ -432,6 +464,37 @@ namespace LJC.FrameWork.SOA
 
         internal WebResponse DoWebRequest(WebRequest webRequest)
         {
+            var soaRequestUrl = @"esbclient/soa/(\d{1,})/(\d{1,})";
+            //LogHelper.Instance.Debug(webRequest.VirUrl);
+            var m = Regex.Match(webRequest.VirUrl, soaRequestUrl);
+            if (m.Success)
+            {
+                var resp = DoTransferRequest(null, SocketApplicationComm.GetSeqNum(),
+                    new SOARequest
+                    {
+                        FuncId = int.Parse(m.Groups[2].Value),
+                        ServiceNo = int.Parse(m.Groups[1].Value),
+                        Param = webRequest.InputData,
+                        ReqestTime = DateTime.Now
+                    }, new Dictionary<string, string>
+                {
+                    {Consts.HeaderKey_ContentType,Consts.HeaderValue_ContentType_JSONValue }
+                });
+
+                if (!resp.IsSuccess)
+                {
+                    LogHelper.Instance.Debug(webRequest.VirUrl + ":" + resp.ErrMsg);
+
+                }
+
+                return new WebResponse
+                {
+                    ResponseCode = resp.IsSuccess ? 200 : 500,
+                    ContentType = "application/json",
+                    ResponseData = resp.Result
+                };
+            }
+
             var list = ServiceContainer.ToList();
             ESBServiceInfo serviceInfo = null;
             WebMapper webMapper = null;
@@ -543,10 +606,13 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        internal void DoTransferRequest(Session session, string msgTransactionID, SOARequest request,bool sendAll=false)
+        internal SOAResponse DoTransferRequest(Session session, string msgTransactionID, SOARequest request,Dictionary<string,string> header,bool sendAll=false)
         {
-            session.BusinessTimeStamp = DateTime.Now;
-            session.Tag = new Tuple<int, int>(request.ServiceNo, request.FuncId);
+            if (session != null)
+            {
+                session.BusinessTimeStamp = DateTime.Now;
+                session.Tag = new Tuple<int, int>(request.ServiceNo, request.FuncId);
+            }
 
             SOAResponse resp = new SOAResponse();
             Message msgRet = new Message((int)SOAMessageType.DoSOAResponse);
@@ -558,8 +624,8 @@ namespace LJC.FrameWork.SOA
             {
                 try
                 {
-                    var obj = DoRequest(request.FuncId, request.Param);
-                    resp.Result = EntityBuf.EntityBufCore.Serialize(obj);
+                    var obj = DoRequest(request.FuncId, request.Param, header);
+                    resp.Result = BuildResult(header, obj);
                 }
                 catch (Exception ex)
                 {
@@ -568,7 +634,7 @@ namespace LJC.FrameWork.SOA
                 }
                 
                 msgRet.SetMessageBody(resp);
-                session.SendMessage(msgRet);
+                session?.SendMessage(msgRet);
             }
             else
             {
@@ -625,6 +691,7 @@ namespace LJC.FrameWork.SOA
                             callList.Add(serviceInfo);
                         }
 
+                        List<AutoReSetEventResult<byte[]>> waitReulst = session == null ? new List<AutoReSetEventResult<byte[]>>() : null;
                         try
                         {
                             var canUsedList = new List<ESBServiceInfo>();
@@ -660,9 +727,8 @@ namespace LJC.FrameWork.SOA
 
                             for (var i = 0; i < canUsedList.Count; i++)
                             {
-
                                 var serviceInfo = canUsedList[i];
-                                string clientid = session.SessionID;
+                                string clientid = session?.SessionID;
                                 SOATransferRequest transferrequest = new SOATransferRequest();
                                 transferrequest.ClientId = clientid;
                                 transferrequest.FundId = request.FuncId;
@@ -677,8 +743,13 @@ namespace LJC.FrameWork.SOA
                                 transferrequest.ClientTransactionID = subMsgTransactionID;
                                 try
                                 {
+                                    if (session == null)
+                                    {
+                                        waitReulst.Add(new AutoReSetEventResult<byte[]>());
+                                    }
+
                                     ConatinerLock.EnterWriteLock();
-                                    ClientSessionList.Add(subMsgTransactionID, new object[] { session, serviceInfo, request.FuncId, DateTime.Now });
+                                    ClientSessionList.Add(subMsgTransactionID, new object[] { session ?? (object)waitReulst.Last(), serviceInfo, request.FuncId, DateTime.Now });
                                 }
                                 finally
                                 {
@@ -687,6 +758,13 @@ namespace LJC.FrameWork.SOA
 
                                 Message msg = new Message((int)SOAMessageType.DoSOATransferRequest);
                                 msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                                if (header != null && header.Any())
+                                {
+                                    foreach(var kv in header)
+                                    {
+                                        msg.AddCustomData(kv.Key, kv.Value);
+                                    }
+                                }
                                 msg.SetMessageBody(transferrequest);
 
                                 if (serviceInfo.Session.SendMessage(msg))
@@ -698,7 +776,20 @@ namespace LJC.FrameWork.SOA
                                     //}
                                     if (isLast)
                                     {
-                                        return;
+                                        if (waitReulst?.Any() == true)
+                                        {
+                                            if (waitReulst.Last().WaitObj.WaitOne(30000))
+                                            {
+                                                resp.Result = waitReulst.Last().WaitResult;
+                                                resp.ResponseTime = DateTime.Now;
+                                            }
+                                            else
+                                            {
+                                                waitReulst.Last().IsTimeOut = true;
+                                                throw new TimeoutException();
+                                            }
+                                        }
+                                        return resp;
                                     }
                                 }
                                 else
@@ -713,6 +804,7 @@ namespace LJC.FrameWork.SOA
                                         ConatinerLock.ExitWriteLock();
                                     }
                                 }
+
                                 //var result = SendMessageAnsy<byte[]>(serviceInfo.Session, msg);
 
                                 //resp.Result = result;
@@ -725,15 +817,27 @@ namespace LJC.FrameWork.SOA
                             resp.IsSuccess = false;
                             resp.ErrMsg = ex.Message;
                         }
+                        finally
+                        {
+                            if(waitReulst?.Any()==true)
+                            {
+                                foreach(var item in waitReulst)
+                                {
+                                    item.Dispose();
+                                }
+                            }
+                        }
                     }
                 }
 
                 if (!resp.IsSuccess)
                 {
                     msgRet.SetMessageBody(resp);
-                    session.SendMessage(msgRet);
+                    session?.SendMessage(msgRet);
                 }
             }
+
+            return resp;
         }
 
         protected override void FromApp(Message message, Session session)
@@ -856,9 +960,9 @@ namespace LJC.FrameWork.SOA
             }
             else if (message.IsMessage((int)SOAMessageType.DoSOARequest))
             {
-                var isSendAll = message.GetCustomData("SendAll") == "1";
+                var isSendAll = message.GetCustomData(Consts.CustomParam_SendAll) == "1";
                 var req = message.GetMessageBody<SOARequest>();
-                DoTransferRequest(session, message.MessageHeader.TransactionID, req, isSendAll);
+                DoTransferRequest(session, message.MessageHeader.TransactionID, req, null, isSendAll);
                 return;
             }
             else if (message.IsMessage((int)SOAMessageType.DoSOATransferResponse))

@@ -28,6 +28,28 @@ namespace LJC.FrameWork.SOA
 
         }
 
+        protected T GetParam<T>(Dictionary<string, string> messageHeader, byte[] data)
+        {
+            var isJson = messageHeader?[Consts.HeaderKey_ContentType] == Consts.HeaderValue_ContentType_JSONValue;
+            if (isJson)
+            {
+                return JsonHelper.JsonToEntity<T>(Encoding.UTF8.GetString(data));
+            }
+
+            return EntityBufCore.DeSerialize<T>(data);
+        }
+
+        protected byte[] BuildResult(Dictionary<string, string> messageHeader, object result)
+        {
+            var isJson = messageHeader?[Consts.HeaderKey_ContentType] == Consts.HeaderValue_ContentType_JSONValue;
+            if (isJson)
+            {
+                return Encoding.UTF8.GetBytes(JsonHelper.ToJson(result));
+            }
+
+            return EntityBufCore.Serialize(result);
+        }
+
         private static bool CheckValidationResult(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certificate, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors errors)
         {
             return true;
@@ -171,8 +193,8 @@ namespace LJC.FrameWork.SOA
 
                     try
                     {
-                        var result = DoResponse(request.FundId, request.Param, request.ClientId);
-                        responseBody.Result = LJC.FrameWork.EntityBuf.EntityBufCore.Serialize(result);
+                        var result = DoResponse(request.FundId, request.Param, request.ClientId, message.MessageHeader.CustomData);
+                        responseBody.Result = BuildResult(message.MessageHeader.CustomData, result);
                         responseBody.IsSuccess = true;
 
                         if (SocketApplicationEnvironment.TraceMessage)
@@ -226,8 +248,8 @@ namespace LJC.FrameWork.SOA
 
                     try
                     {
-                        var result = DoResponse(Func_WebRequest, request.Param, request.ClientId);
-                        responseBody.Result = EntityBuf.EntityBufCore.Serialize(result);
+                        var result = DoResponse(Func_WebRequest, request.Param, request.ClientId, message.MessageHeader.CustomData);
+                        responseBody.Result = BuildResult(message.MessageHeader.CustomData, result);
                         responseBody.IsSuccess = true;
 
                         if (SocketApplicationEnvironment.TraceMessage)
@@ -641,13 +663,13 @@ namespace LJC.FrameWork.SOA
             return response;
         }
 
-        public virtual object DoResponse(int funcId, byte[] Param,string clientid)
+        public virtual object DoResponse(int funcId, byte[] Param,string clientid,Dictionary<string,string> header)
         {
             if (funcId == Func_WebRequest)
             {
                 try
                 {
-                    return DoWebResponse(EntityBufCore.DeSerialize<WebRequest>(Param));
+                    return DoWebResponse(GetParam<WebRequest>(header, Param));
                 }
                 catch(Exception ex)
                 {

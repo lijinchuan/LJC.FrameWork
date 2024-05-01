@@ -10,7 +10,7 @@ namespace LJC.FrameWork.SOA
 {
     public class ESBRedirectService : SessionServer
     {
-        public Func<int, byte[], string,object> DoResponseAction;
+        public Func<int, byte[], string, Dictionary<string, string>, object> DoResponseAction;
 
         private int _serviceNo;
 
@@ -63,7 +63,7 @@ namespace LJC.FrameWork.SOA
                     }
                     if (DoResponseAction != null)
                     {
-                        var obj = DoResponseAction(reqbag.FuncId, reqbag.Param, session.SessionID);
+                        var obj = DoResponseAction(reqbag.FuncId, reqbag.Param, session.SessionID, message.MessageHeader.CustomData);
 
                         if (!string.IsNullOrWhiteSpace(message.MessageHeader.TransactionID))
                         {

@@ -136,8 +136,10 @@ namespace LJC.FrameWork.SocketApplication
 
             if (this.MessageHeader.CustomData == null)
             {
-                this.MessageHeader.CustomData = new Dictionary<string, string>();
-                this.MessageHeader.CustomData.Add(key, val);
+                this.MessageHeader.CustomData = new Dictionary<string, string>
+                {
+                    { key, val }
+                };
             }
             else
             {

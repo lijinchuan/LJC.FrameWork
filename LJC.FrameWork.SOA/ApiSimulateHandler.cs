@@ -76,9 +76,9 @@ namespace LJC.FrameWork.SOA
             {
                 response.ContentType = string.Format("{0}; charset={1}", "text/html", "utf-8");
                 var html = "";
-                foreach(var web in SimulateServerManager.GetWebMapperList())
+                foreach (var web in SimulateServerManager.GetWebMapperList())
                 {
-                    html += string.Format("{0}:{1}<br/>",web.MappingRoot,web.MappingPort);
+                    html += string.Format("{0}:{1}<br/>", web.MappingRoot, web.MappingPort);
                 }
                 response.Content = html;
                 return true;
