@@ -432,6 +432,7 @@ namespace LJC.FrameWork.SOA
                                                             {
                                                                 try
                                                                 {
+                                                                    //这里可能会有问题
                                                                     newclient.CloseClient();
                                                                     newclient.Dispose();
                                                                 }
