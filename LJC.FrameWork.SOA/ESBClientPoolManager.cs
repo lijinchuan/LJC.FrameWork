@@ -1,4 +1,5 @@
-﻿using LJC.FrameWork.SOA.Contract;
+﻿using LJC.FrameWork.LogManager;
+using LJC.FrameWork.SOA.Contract;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -177,6 +178,7 @@ namespace LJC.FrameWork.SOA
 
         void client_Error(Exception obj)
         {
+            LogHelper.Instance.Error("esbclinet出错", obj);
             Console.WriteLine("出错:" + obj.Message);
         }
 

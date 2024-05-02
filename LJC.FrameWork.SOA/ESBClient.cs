@@ -385,6 +385,16 @@ namespace LJC.FrameWork.SOA
                                                 var resp = client.DoRedirectRequest<Contract.QueryServiceNoResponse>((int)SOAMessageType.QueryServiceNo, null);
                                                 if (resp.ServiceNo == serviceId)
                                                 {
+                                                    var esbClientPoolManager = new ESBClientPoolManager(0, (idx) =>
+                                                    {
+                                                        if (idx == 0)
+                                                        {
+                                                            return client;
+                                                        }
+                                                        var newclient = new ESBClient(ip, info.RedirectTcpPort, false);
+                                                        newclient.StartSession();
+                                                        return newclient;
+                                                    });
                                                     LogHelper.Instance.Debug("验证成功");
                                                     client.Error += (ex) =>
                                                     {
@@ -392,8 +402,7 @@ namespace LJC.FrameWork.SOA
                                                         || ex is System.Net.Sockets.SocketException
                                                         || !client.socketClient.Connected)
                                                         {
-                                                            client.CloseClient();
-                                                            client.Dispose();
+                                                            esbClientPoolManager.Dispose();
                                                             lock (_esbClientDicManager)
                                                             {
                                                                 if (_esbClientDicManager.TryGetValue(serviceId, out List<ESBClientPoolManager> oldList)
@@ -416,34 +425,7 @@ namespace LJC.FrameWork.SOA
                                                         }
                                                     };
 
-                                                    poollist.Add(new ESBClientPoolManager(0, (idx) =>
-                                                    {
-                                                        if (idx == 0)
-                                                        {
-                                                            return client;
-                                                        }
-                                                        var newclient = new ESBClient(ip, info.RedirectTcpPort, false);
-                                                        newclient.StartSession();
-                                                        newclient.Error += (ex) =>
-                                                        {
-                                                            if (ex is System.Net.WebException
-                                                            || ex is System.Net.Sockets.SocketException
-                                                            || !newclient.socketClient.Connected)
-                                                            {
-                                                                try
-                                                                {
-                                                                    //这里可能会有问题
-                                                                    newclient.CloseClient();
-                                                                    newclient.Dispose();
-                                                                }
-                                                                catch
-                                                                {
-
-                                                                }
-                                                            }
-                                                        };
-                                                        return newclient;
-                                                    }));
+                                                    poollist.Add(esbClientPoolManager);
                                                     LogHelper.Instance.Debug(string.Format("创建tcp客户端成功:{0},端口{1}", ip, info.RedirectTcpPort));
                                                     break;
                                                 }
