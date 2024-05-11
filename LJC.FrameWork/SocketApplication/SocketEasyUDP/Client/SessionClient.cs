@@ -5,6 +5,7 @@ using System.Text;
 using System.Net;
 using LJC.FrameWork.EntityBuf;
 using System.Threading;
+using LJC.FrameWork.LogManager;
 
 namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
 {
@@ -175,16 +176,19 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Client
         {
             if (!string.IsNullOrEmpty(message.MessageHeader.TransactionID))
             {
-                AutoReSetEventResult autoEvent = null;
-
                 Console.WriteLine("收到消息:" + message.MessageHeader.TransactionID);
 
+                AutoReSetEventResult autoEvent;
                 if (watingEvents.TryGetValue(message.MessageHeader.TransactionID, out autoEvent))
                 {
                     autoEvent.WaitResult = message.MessageBuffer;
                     autoEvent.IsTimeOut = false;
                     autoEvent.Set();
                     return;
+                }
+                else
+                {
+                    LogHelper.Instance.Error("收到消息:" + message.MessageHeader.TransactionID+"，没找到等待对象");
                 }
             }
 

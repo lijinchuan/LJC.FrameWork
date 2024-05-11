@@ -17,17 +17,17 @@ namespace LJC.FrameWork.SOA
 
         }
 
-        internal T DoRedirectRequest<T>(int messageType, object request)
+        internal T DoRedirectRequest<T>(int messageType, object request, int timeOut = 30000)
         {
             Message msg = new Message(messageType);
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
             msg.MessageBuffer = EntityBufCore.Serialize(request);
 
-            T result = SendMessageAnsy<T>(msg,timeOut:3000);
+            T result = SendMessageAnsy<T>(msg, timeOut);
             return result;
         }
 
-        internal T DoRequest<T>(int serviceno, int funcid, object param)
+        internal T DoRequest<T>(int serviceno, int funcid, object param, int timeOut = 30000)
         {
             SOARedirectRequest request = new SOARedirectRequest();
             request.ServiceNo = serviceno;
@@ -47,7 +47,7 @@ namespace LJC.FrameWork.SOA
 
             try
             {
-                var resp = SendMessageAnsy<SOARedirectResponse>(msg, timeOut: 5000);
+                var resp = SendMessageAnsy<SOARedirectResponse>(msg, timeOut);
                 if (TimeOutTimes > 0)
                 {
                     TimeOutTimes--;

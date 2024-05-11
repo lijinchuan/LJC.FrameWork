@@ -58,7 +58,7 @@ namespace LJC.FrameWork.SOA
             base.ReciveMessage(message);
         }
 
-        internal T DoRequest<T>(int serviceno, int funcid, object param, bool sendAll = false)
+        internal T DoRequest<T>(int serviceno, int funcid, object param, bool sendAll = false, int timeOut = 30000)
         {
             SOARequest request = new SOARequest();
             request.ServiceNo = serviceno;
@@ -81,21 +81,21 @@ namespace LJC.FrameWork.SOA
                 msg.AddCustomData("SendAll", "1");
             }
 
-            T result = SendMessageAnsy<T>(msg);
+            T result = SendMessageAnsy<T>(msg, timeOut);
             return result;
         }
 
-        internal T DoRedirectRequest<T>(int messageType, object request)
+        internal T DoRedirectRequest<T>(int messageType, object request, int timeOut = 30000)
         {
             Message msg = new Message(messageType);
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
             msg.MessageBuffer = EntityBufCore.Serialize(request);
 
-            T result = SendMessageAnsy<T>(msg);
+            T result = SendMessageAnsy<T>(msg, timeOut);
             return result;
         }
 
-        internal T DoRedirectRequest<T>(int serviceno, int funcid,object param)
+        internal T DoRedirectRequest<T>(int serviceno, int funcid,object param, int timeOut = 30000)
         {
             SOARedirectRequest request = new SOARedirectRequest();
             request.ServiceNo = serviceno;
@@ -113,7 +113,7 @@ namespace LJC.FrameWork.SOA
             msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
             msg.MessageBuffer = EntityBufCore.Serialize(request);
 
-            T result = SendMessageAnsy<T>(msg);
+            T result = SendMessageAnsy<T>(msg, timeOut);
             return result;
         }
 
@@ -153,7 +153,7 @@ namespace LJC.FrameWork.SOA
         /// <param name="param"></param>
         /// <param name="sendAll">是否发送给所有的服务端</param>
         /// <returns></returns>
-        public static T DoSOARequest<T>(int serviceId, int functionId, object param, bool sendAll = false)
+        public static T DoSOARequest<T>(int serviceId, int functionId, object param, bool sendAll = false, int timeOut = 30000)
         {
             //using (var client = new ESBClient())
             //{
@@ -179,15 +179,15 @@ namespace LJC.FrameWork.SOA
                 }
                 var i = 0;
                 T result = default;
-                foreach(var client in clients)
+                foreach (var client in clients)
                 {
                     if (i++ == 0)
                     {
-                        result = client.DoRequest<T>(serviceId, functionId, param, sendAll);
+                        result = client.DoRequest<T>(serviceId, functionId, param, sendAll, timeOut);
                     }
                     else
                     {
-                        _ = client.DoRequest<T>(serviceId, functionId, param, sendAll);
+                        _ = client.DoRequest<T>(serviceId, functionId, param, sendAll, timeOut);
                     }
                 }
                 return result;
@@ -199,7 +199,7 @@ namespace LJC.FrameWork.SOA
                 {
                     throw new SOAException("查找服务失败：" + serviceId);
                 }
-                var result = client.DoRequest<T>(serviceId, functionId, param);
+                var result = client.DoRequest<T>(serviceId, functionId, param, timeOut: timeOut);
 
                 return result;
             }
@@ -235,11 +235,11 @@ namespace LJC.FrameWork.SOA
             return 300;
         }
 
-        public static T DoSOARequest2<T>(int serviceId, int functionId, object param, bool sendAll = false)
+        public static T DoSOARequest2<T>(int serviceId, int functionId, object param, bool sendAll = false, int timeOut = 30000)
         {
             if (sendAll)
             {
-                return DoSOARequest<T>(serviceId, functionId, param, sendAll);
+                return DoSOARequest<T>(serviceId, functionId, param, sendAll, timeOut);
             }
             List<ESBUdpClient> udpclientlist = null;
             if (!_esbUdpClientDic.TryGetValue(serviceId, out udpclientlist))
@@ -340,7 +340,7 @@ namespace LJC.FrameWork.SOA
                                                 System.Threading.Thread.Sleep(10);
                                                 if (client.IsLogin)
                                                 {
-                                                    var resp = client.DoRedirectRequest<Contract.QueryServiceNoResponse>((int)SOAMessageType.QueryServiceNo, null);
+                                                    var resp = client.DoRedirectRequest<Contract.QueryServiceNoResponse>((int)SOAMessageType.QueryServiceNo, null, timeOut);
                                                     if (resp.ServiceNo == serviceId)
                                                     {
                                                         success = true;
@@ -382,7 +382,7 @@ namespace LJC.FrameWork.SOA
                                             if (client.StartSession())
                                             {
                                                 LogHelper.Instance.Debug("StartSession 成功");
-                                                var resp = client.DoRedirectRequest<Contract.QueryServiceNoResponse>((int)SOAMessageType.QueryServiceNo, null);
+                                                var resp = client.DoRedirectRequest<Contract.QueryServiceNoResponse>((int)SOAMessageType.QueryServiceNo, null, timeOut);
                                                 if (resp.ServiceNo == serviceId)
                                                 {
                                                     var esbClientPoolManager = new ESBClientPoolManager(0, (idx) =>
@@ -482,7 +482,7 @@ namespace LJC.FrameWork.SOA
             {
                 DateTime start = DateTime.Now;
                 var client = udpclientlist.First();
-                var ret = client.DoRequest<T>(serviceId, functionId, param);
+                var ret = client.DoRequest<T>(serviceId, functionId, param, timeOut);
                 LogHelper.Instance.Debug("服务" + serviceId + ",功能：" + functionId + ",UDP直连" + client.Ip + ":" + client.Port + ",耗时" + DateTime.Now.Subtract(start).TotalMilliseconds);
 
                 return ret;
@@ -499,7 +499,7 @@ namespace LJC.FrameWork.SOA
 
                     var client = poolmanager.RandClient();
 
-                    var ret = client.DoRedirectRequest<T>(serviceId, functionId, param);
+                    var ret = client.DoRedirectRequest<T>(serviceId, functionId, param, timeOut);
 
                     LogHelper.Instance.Debug("服务" + serviceId + ",功能：" + functionId + ",直连" + client.ipString + ":" + client.ipPort + ",耗时" + DateTime.Now.Subtract(start).TotalMilliseconds);
 
@@ -508,7 +508,7 @@ namespace LJC.FrameWork.SOA
                 else
                 {
                     DateTime start = DateTime.Now;
-                    var ret = DoSOARequest<T>(serviceId, functionId, param);
+                    var ret = DoSOARequest<T>(serviceId, functionId, param, timeOut: timeOut);
 
                     LogHelper.Instance.Debug("服务" + serviceId + ",功能：" + functionId + ",非直连耗时:" + DateTime.Now.Subtract(start).TotalMilliseconds);
 
