@@ -61,6 +61,7 @@ namespace LJC.FrameWork.Comm.SNLP
             HashSet<int> hash;
 
             List<NLPCompareDetail> list = new List<NLPCompareDetail>();
+            var toEnd = false;
             for(var i = srcStart; i < src.Length; i++)
             {
                 var ch = src[i];
@@ -82,7 +83,16 @@ namespace LJC.FrameWork.Comm.SNLP
                                 Len=len
                             });
                         }
+                        if (i + len == src.Length)
+                        {
+                            toEnd = true;
+                            break;
+                        }
                     }
+                }
+                if (toEnd)
+                {
+                    break;
                 }
             }
             var ordeList= list.OrderByDescending(p=>p.Len).ToList();
