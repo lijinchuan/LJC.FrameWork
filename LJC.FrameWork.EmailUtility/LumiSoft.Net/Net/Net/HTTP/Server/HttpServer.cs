@@ -336,7 +336,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
         {
             HttpResponse resp = new HttpResponse();
             resp.Url = req.Url;
-            resp.ContentType = "Content-Type: text/html; charset=utf-8";
+            resp.ContentType = "text/html; charset=utf-8";
             //注意，此处从最后添加的Handler开始遍历，如果找到合适的则退出循环
             for (int i = handlers.Count - 1; i >= 0; i--)
             {
@@ -546,7 +546,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 server.RequestSession(req);
                 resp.Url = req.Url;
                 resp.ReturnCode = (int)HttpStatusCode.InternalServerError;
-                resp.ContentType = "Content-Type: text/html; charset=utf-8";
+                resp.ContentType = "text/html; charset=utf-8";
                 StringBuilder sb = new StringBuilder();
                 sb.Append("<h3>Session</h3>");
                 sb.Append("<p>ID: " + req.Session.ID + "<br>User: " + req.Session.User);
