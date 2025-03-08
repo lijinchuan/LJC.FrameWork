@@ -279,15 +279,30 @@ namespace LJC.FrameWork.SocketEasy.Sever
             e.Completed -= Args_Completed;
 
             Socket socket = e.AcceptSocket;
-            socket.NoDelay = true;
+            
+            var endPoint = socket.RemoteEndPoint;
+            if (endPoint == null||!(endPoint is IPEndPoint ipEndPoint))
+            {
+                try
+                {
+                    socket.Close();
+                    socket.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.Instance.Error("Args_Completed endPoint为空,关闭socket", ex);
+                }
+                LogHelper.Instance.Error("Args_Completed endPoint为空");
+                return;
+            }
 
-            IPEndPoint endPoint = (IPEndPoint)socket.RemoteEndPoint;
+            socket.NoDelay = true;
             Session appSocket = new Session();
-            appSocket.IPAddress = endPoint.Address.ToString();
+            appSocket.IPAddress = ipEndPoint.Address.ToString();
             appSocket.IsValid = true;
             appSocket.SessionID = SocketApplicationComm.GetSeqNum();
             appSocket.Socket = socket;
-            appSocket.Port = endPoint.Port;
+            appSocket.Port = ipEndPoint.Port;
             appSocket.ConnectTime = DateTime.Now;
 
             var socketAsyncEventArgs = e as IOCPSocketAsyncEventArgs;
