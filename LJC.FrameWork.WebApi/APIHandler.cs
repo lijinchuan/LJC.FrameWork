@@ -79,6 +79,7 @@ namespace LJC.FrameWork.WebApi
             catch (Exception ex)
             {
                 retCode = 0;
+                LogManager.LogHelper.Instance.Error("APIHandler.ProcessRequest", ex);
                 retMsg = GetInnerException(ex).Message;
                 lastexp = ex;
             }

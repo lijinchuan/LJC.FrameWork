@@ -181,10 +181,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
         {
             lock (_realseSocketAsyncEventArgsLocker)
             {
-                if (e.AcceptSocket == null)
-                {
-                    return;
-                }
                 e.ClearBuffer();
 
                 e.Completed -= SocketAsyncEventArgs_Completed;
@@ -193,8 +189,11 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 //e.AcceptSocket.Disconnect(true);
                 try
                 {
-                    e.AcceptSocket.Shutdown(SocketShutdown.Send);
-                    e.AcceptSocket.Close();
+                    if (e.AcceptSocket != null)
+                    {
+                        e.AcceptSocket.Shutdown(SocketShutdown.Send);
+                        e.AcceptSocket.Close();
+                    }
                 }
                 catch
                 {
@@ -259,14 +258,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 args.Completed += Args_Completed;
                 //args.ClearBuffer()
                 args.IsReadPackLen = false;
-                LogManager.LogHelper.Instance.Debug("复用IOCPSocketAsyncEventArgs");
+                LogHelper.Instance.Debug("复用IOCPSocketAsyncEventArgs");
             }
             else
             {
                 args = new IOCPSocketAsyncEventArgs();
                 args.Completed += Args_Completed;
 
-                LogManager.LogHelper.Instance.Debug($"创建第{IOCPSocketAsyncEventArgs.InstanceCount}个IOCPSocketAsyncEventArgs");
+                LogHelper.Instance.Debug($"创建第{IOCPSocketAsyncEventArgs.InstanceCount}个IOCPSocketAsyncEventArgs");
             }
 
             return args;
@@ -279,9 +278,14 @@ namespace LJC.FrameWork.SocketEasy.Sever
             e.Completed -= Args_Completed;
 
             Socket socket = e.AcceptSocket;
-            
+
+            if (socket == null)
+            {
+                LogHelper.Instance.Error("Args_Completed socket为空");
+            }
+
             var endPoint = socket.RemoteEndPoint;
-            if (endPoint == null||!(endPoint is IPEndPoint ipEndPoint))
+            if (endPoint == null || !(endPoint is IPEndPoint ipEndPoint))
             {
                 try
                 {
@@ -292,9 +296,15 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 {
                     LogHelper.Instance.Error("Args_Completed endPoint为空,关闭socket", ex);
                 }
+                finally
+                {
+                    RealseSocketAsyncEventArgs(e as IOCPSocketAsyncEventArgs);
+                }
                 LogHelper.Instance.Error("Args_Completed endPoint为空");
                 return;
             }
+
+            var socketAsyncEventArgs = e as IOCPSocketAsyncEventArgs;
 
             socket.NoDelay = true;
             Session appSocket = new Session();
@@ -305,7 +315,6 @@ namespace LJC.FrameWork.SocketEasy.Sever
             appSocket.Port = ipEndPoint.Port;
             appSocket.ConnectTime = DateTime.Now;
 
-            var socketAsyncEventArgs = e as IOCPSocketAsyncEventArgs;
             socketAsyncEventArgs.AcceptSocket = socket;
             socketAsyncEventArgs.Completed += SocketAsyncEventArgs_Completed;
             socketAsyncEventArgs.UserToken = appSocket.SessionID;
@@ -322,7 +331,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 if (!socket.ReceiveAsync(socketAsyncEventArgs))
                 {
-                    //Session old;
+                    //Session old
                     //_connectSocketDic.TryRemove(appSocket.SessionID, out old);
                     //RealseSocketAsyncEventArgs(socketAsyncEventArgs);
 
@@ -331,9 +340,9 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     SocketAsyncEventArgs_Completed(null, e);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                LogHelper.Instance.Error(socket.Handle + "同步异常完成",ex);
+                LogHelper.Instance.Error(socket.Handle + "同步异常完成", ex);
                 SocketAsyncEventArgs_Completed(null, e);
             }
         }
