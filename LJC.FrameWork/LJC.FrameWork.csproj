@@ -142,6 +142,7 @@
     <Compile Include="Collections\SortedList.cs" />
     <Compile Include="Collections\StackEx.cs" />
     <Compile Include="Comm\AesEncryHelper.cs" />
+    <Compile Include="Comm\ApplicationUtils.cs" />
     <Compile Include="Comm\AutoReSetEventResult.cs">
       <SubType>Code</SubType>
     </Compile>

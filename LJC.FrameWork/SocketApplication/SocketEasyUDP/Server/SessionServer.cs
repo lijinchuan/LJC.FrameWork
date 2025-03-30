@@ -97,7 +97,7 @@ namespace LJC.FrameWork.SocketApplication.SocketEasyUDP.Server
 
             if (!canLogin)
             {
-                session.Close("login error");
+                session.Close("login error", false);
                 Console.WriteLine("{0}登录失败", request.LoginID);
             }
 

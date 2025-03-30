@@ -141,10 +141,12 @@ namespace LJC.FrameWork.SocketEasy.Sever
             {
                 try
                 {
-                    RealseSocketAsyncEventArgs(delIocpSocketAsyncEventArgs);
+                    //RealseSocketAsyncEventArgs(delIocpSocketAsyncEventArgs, "CheckConnectedClient");
+                    delIocpSocketAsyncEventArgs.AcceptSocket?.Disconnect(true);
                 }
-                catch
+                catch(Exception ex)
                 {
+                    LogHelper.Instance.Error("delIocpSocketAsyncEventArgs.AcceptSocket?.Disconnect", ex);
                     _deleteQueue.Enqueue(delIocpSocketAsyncEventArgs);
                 }
             }
@@ -161,47 +163,66 @@ namespace LJC.FrameWork.SocketEasy.Sever
                     {
                         try
                         {
-                            RealseSocketAsyncEventArgs(s.AsyncEventArgs);
+                            //RealseSocketAsyncEventArgs(s.AsyncEventArgs, "CheckConnectedClient2");
+                            s.AsyncEventArgs.AcceptSocket?.Disconnect(true);
                         }
-                        catch
+                        catch(Exception ex)
                         {
+                            LogHelper.Instance.Error("s.AsyncEventArgs.AcceptSocket?.Disconnect", ex);
                             _deleteQueue.Enqueue(s.AsyncEventArgs);
                         }
 
                     }
 
-                    s.Close("CheckConnectedClient");
+                    s.Close("CheckConnectedClient",true);
                 }
             }
         }
 
         #region server
 
-        private void RealseSocketAsyncEventArgs(IOCPSocketAsyncEventArgs e)
+        private void RealseSocketAsyncEventArgs(IOCPSocketAsyncEventArgs e, string from)
         {
-            lock (_realseSocketAsyncEventArgsLocker)
+            try
             {
-                e.ClearBuffer();
-
-                e.Completed -= SocketAsyncEventArgs_Completed;
-                _bufferpoll.RealseBuffer(e.BufferIndex);
-                
-                //e.AcceptSocket.Disconnect(true);
-                try
+                lock (_realseSocketAsyncEventArgsLocker)
                 {
-                    if (e.AcceptSocket != null)
+                    LogHelper.Instance.Debug($"RealseSocketAsyncEventArgs,from:{from},id:{e.Id}");
+
+                    //应该要确保连接关闭
+                    e.ClearBuffer();
+
+                    e.Completed -= SocketAsyncEventArgs_Completed;
+                    _bufferpoll.RealseBuffer(e.BufferIndex);
+
+                    //e.AcceptSocket.Disconnect(true);
+                    try
                     {
-                        e.AcceptSocket.Shutdown(SocketShutdown.Send);
-                        e.AcceptSocket.Close();
+                        if (e.AcceptSocket != null)
+                        {
+                            if (e.AcceptSocket.Connected)
+                            {
+                                //e.AcceptSocket.Disconnect(true);
+                                e.AcceptSocket.Shutdown(SocketShutdown.Both);
+                                //e.AcceptSocket.Close();
+                                e.AcceptSocket.Close();
+                            }
+                            e.AcceptSocket = null;
+                        }
                     }
-                }
-                catch
-                {
+                    catch(Exception ex)
+                    {
+                        LogHelper.Instance.Error("e.AcceptSocket.Shutdown", ex);
+                        e.AcceptSocket = null;
+                    }
 
+                    _iocpQueue.Enqueue(e);
                 }
-                
-                e.AcceptSocket = null;
-                _iocpQueue.Enqueue(e);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Instance.Error("RealseSocketAsyncEventArgs 出错", ex);
+                throw;
             }
         }
 
@@ -258,11 +279,13 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 args.Completed += Args_Completed;
                 //args.ClearBuffer()
                 args.IsReadPackLen = false;
-                LogHelper.Instance.Debug("复用IOCPSocketAsyncEventArgs");
+                bool isNull = args.AcceptSocket == null;
+                LogHelper.Instance.Debug("复用IOCPSocketAsyncEventArgs,id=" + args.Id + ",AcceptSocket is null:" + isNull);
             }
             else
             {
                 args = new IOCPSocketAsyncEventArgs();
+                args.DisconnectReuseSocket = true;
                 args.Completed += Args_Completed;
 
                 LogHelper.Instance.Debug($"创建第{IOCPSocketAsyncEventArgs.InstanceCount}个IOCPSocketAsyncEventArgs");
@@ -287,19 +310,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             var endPoint = socket.RemoteEndPoint;
             if (endPoint == null || !(endPoint is IPEndPoint ipEndPoint))
             {
-                try
-                {
-                    socket.Close();
-                    socket.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    LogHelper.Instance.Error("Args_Completed endPoint为空,关闭socket", ex);
-                }
-                finally
-                {
-                    RealseSocketAsyncEventArgs(e as IOCPSocketAsyncEventArgs);
-                }
+                RealseSocketAsyncEventArgs(e as IOCPSocketAsyncEventArgs, "Args_Completed");
                 LogHelper.Instance.Error("Args_Completed endPoint为空");
                 return;
             }
@@ -347,14 +358,17 @@ namespace LJC.FrameWork.SocketEasy.Sever
             }
         }
 
-        private void SetAcceptAsync()
-        {
-
-        }
-
         private void Listening()
         {
-            socketServer.AcceptAsync(GetSocketAsyncEventArgs());
+            try
+            {
+                socketServer.AcceptAsync(GetSocketAsyncEventArgs());
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Instance.Error("socketServer.AcceptAsync error:" + ex.Message, ex);
+                throw;
+            }
         }
 
         void RemoveSession(IOCPSocketAsyncEventArgs args)
@@ -367,7 +381,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
             try
             {
-                RealseSocketAsyncEventArgs(args);
+                RealseSocketAsyncEventArgs(args, "RemoveSession");
             }
             catch
             {
@@ -409,7 +423,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
                         if (SocketApplicationEnvironment.TraceSocketDataBag)
                         {
-                            LogManager.LogHelper.Instance.Debug(e.AcceptSocket.Handle + "准备接收数据:长度" + dataLen, null);
+                            LogHelper.Instance.Debug(e.AcceptSocket.Handle + "准备接收数据:长度" + dataLen, null);
                         }
 
                         if (dataLen > MaxPackageLength || dataLen <= 0)
@@ -540,7 +554,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                                     {
                                         if (connSession != null)
                                         {
-                                            connSession.Close(ex.Message);
+                                            connSession.Close(ex.Message,true);
                                         }
                                         ex.Data.Add("SessionID", connSession.SessionID);
                                         OnError(ex);

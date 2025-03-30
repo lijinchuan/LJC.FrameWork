@@ -105,7 +105,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
 
             if (!canLogin)
             {
-                session.Close("login error");
+                session.Close("login error", true);
                 Console.WriteLine("{0}登录失败", request.LoginID);
             }
 

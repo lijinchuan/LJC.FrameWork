@@ -119,7 +119,7 @@ namespace LJC.FrameWork.SOA
 
                     if (ex.Message.Contains(Consts.ERRORSERVICEMSG))
                     {
-                        session.Close(Consts.ERRORSERVICEMSG);
+                        session.Close(Consts.ERRORSERVICEMSG, false);
                     }
                 }
             }

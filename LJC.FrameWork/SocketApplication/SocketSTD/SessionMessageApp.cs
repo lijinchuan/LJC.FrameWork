@@ -349,7 +349,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
             if (!canLogin)
             {
-                session.Close("login fail");
+                session.Close("login fail", false);
                 Console.WriteLine("{0}登录失败", request.LoginID);
             }
 

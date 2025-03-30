@@ -196,7 +196,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
                 }
             }
 
-            appSocket.Close("OnSocket error");
+            appSocket.Close("OnSocket error", false);
         }
 
         protected virtual void FormApp(Message message, Session session)

@@ -141,21 +141,24 @@ namespace LJC.FrameWork.SocketApplication
             return ((int)DateTime.Now.Subtract(LastSessionTime).TotalMilliseconds) > SessionTimeOut * 2;
         }
 
-        public bool Close(string closeReason)
+        public bool Close(string closeReason,bool reuseSocket)
         {
             if (this.Socket != null)
             {
                 LogManager.LogHelper.Instance.Info($"{this.SessionID}关闭：{closeReason}");
                 try
                 {
-                    this.Socket.Shutdown(SocketShutdown.Both);
-                    this.Socket.Close();
+                    if (Socket.Connected)
+                    {
+                        this.Socket.Shutdown(SocketShutdown.Both);
+                        //this.Socket.Close();
+                    }
                 }
-                catch
+                catch(Exception ex)
                 {
-
+                    LogManager.LogHelper.Instance.Error("Close(string closeReason,bool reuseSocket)", ex);
                 }
-                
+
                 return true;
             }
             this.IsValid = false;

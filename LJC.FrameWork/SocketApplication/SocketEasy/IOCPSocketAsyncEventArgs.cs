@@ -17,9 +17,16 @@ namespace LJC.FrameWork.SocketEasy
             private set;
         }
 
+        public int Id
+        {
+            get;
+            set;
+        }
+
         public IOCPSocketAsyncEventArgs()
         {
             InstanceCount++;
+            Id = InstanceCount;
         }
 
 

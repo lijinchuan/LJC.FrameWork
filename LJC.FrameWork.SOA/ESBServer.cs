@@ -85,7 +85,7 @@ namespace LJC.FrameWork.SOA
                                 lock (this._esb.ServiceContainer)
                                 {
                                     _esb.ServiceContainer.Remove(item);
-                                    item.Session.Close("no resp over 1 mins");
+                                    item.Session.Close("no resp over 1 mins",true);
                                 }
                             }
 
@@ -522,7 +522,7 @@ namespace LJC.FrameWork.SOA
                         lock (LockObj)
                         {
                             ServiceContainer.Remove(serviceInfo);
-                            serviceInfo.Session.Close("web session no resp over 30s and check not alived");
+                            serviceInfo.Session.Close("web session no resp over 30s and check not alived", true);
 
                             return null;
                         }
@@ -702,7 +702,7 @@ namespace LJC.FrameWork.SOA
                                     lock (LockObj)
                                     {
                                         ServiceContainer.Remove(serviceInfo);
-                                        serviceInfo.Session.Close("no resp over 30s");
+                                        serviceInfo.Session.Close("no resp over 30s", true);
                                     }
                                     if (sendAll)
                                     {
@@ -858,7 +858,7 @@ namespace LJC.FrameWork.SOA
                         var remlist = ServiceContainer.Where(p => p.Session.SessionID != session.SessionID && p.Session.IPAddress.Equals(session.IPAddress) && p.Session.Port.Equals(session.Port) && p.ServiceNo.Equals(req.ServiceNo)).ToList();
                         foreach (var item in remlist)
                         {
-                            item.Session.Close($"remove same service instance,new sessionid:{session.SessionID}");
+                            item.Session.Close($"remove same service instance,new sessionid:{session.SessionID}",true);
                             ServiceContainer.Remove(item);
                         }
 
