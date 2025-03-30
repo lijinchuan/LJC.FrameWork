@@ -787,25 +787,30 @@ namespace LJC.FrameWork.SOA
         protected override void OnLoginSuccess()
         {
             base.OnLoginSuccess();
+            int trytime = 0, maxtrytimes = 10;
             while (true)
             {
                 try
                 {
                     if (RegisterService())
                     {
-                        LogHelper.Instance.Info("注册服务成功");
+                        LogHelper.Instance.Info("登录后注册服务成功");
                         break;
                     }
                     else
                     {
-                        LogHelper.Instance.Info("注册服务失败");
+                        LogHelper.Instance.Info("登录后注册服务失败");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogHelper.Instance.Error("注册服务失败", ex);
+                    LogHelper.Instance.Error("登录后注册服务失败", ex);
                 }
-                Thread.Sleep(3000);
+                if (trytime++ >= maxtrytimes)
+                {
+                    break;
+                }
+                Thread.Sleep(100 * trytime);
             }
         }
 
@@ -818,26 +823,30 @@ namespace LJC.FrameWork.SOA
         {
             base.OnSessionResume();
 
+            int trytime = 0, maxtrytimes = 10;
             while (true)
             {
                 try
                 {
                     if (RegisterService())
                     {
-                        LogHelper.Instance.Info("连接恢复后注册服务成功");
+                        LogHelper.Instance.Info("会话恢复后注册服务成功");
                         break;
                     }
                     else
                     {
-                        LogHelper.Instance.Info("连接恢复后注册服务失败");
+                        LogHelper.Instance.Info("会话恢复后注册服务失败");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogHelper.Instance.Error("连接恢复后注册服务失败", ex);
+                    LogHelper.Instance.Error("会话恢复后注册服务失败", ex);
                 }
-
-                Thread.Sleep(3000);
+                if (trytime++ >= maxtrytimes)
+                {
+                    break;
+                }
+                Thread.Sleep(100 * trytime);
             }
         }
 
