@@ -406,7 +406,7 @@ namespace LJC.FrameWork.SOA
                                                             lock (_esbClientDicManager)
                                                             {
                                                                 if (_esbClientDicManager.TryGetValue(serviceId, out List<ESBClientPoolManager> oldList)
-                                                                          && oldList.Any(p => p.EnumClients().Any(q => q == client)))
+                                                                          && oldList?.Any(p => p.EnumClients().Any(q => q == client)) == true)
                                                                 {
                                                                     LogHelper.Instance.Debug("移除TCP直连服务:" + serviceId);
                                                                     _esbClientDicManager.Remove(serviceId);
