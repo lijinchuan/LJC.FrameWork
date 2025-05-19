@@ -292,6 +292,11 @@ namespace LJC.FrameWork.Data.QuickDataBase
                             val = DBNull.Value;
                         }
                     }
+                    else if (r.Property.PropertyType.IsEnum)
+                    {
+                        dbtype = DbType.Int32;
+                        val = (int)val;
+                    }
                     db.AddInParameter(cmd, x, dbtype, val);
                 }
             }

@@ -68,7 +68,14 @@ namespace LJC.FrameWork.Data
             rpAttrList.ForEach(p =>
             {
                 DataColumn column = new DataColumn(p.Column);
-                column.DataType = p.Property.PropertyType;
+                if (p.Property.PropertyType.IsEnum)
+                {
+                    column.DataType = typeof(int);
+                }
+                else
+                {
+                    column.DataType = p.Property.PropertyType;
+                }
                 tb.Columns.Add(column);
             });
 
@@ -219,8 +226,14 @@ namespace LJC.FrameWork.Data
                         newRow[keyColumn.Column] = ++maxKeyID;
                         x.Property.SetValue(item, maxKeyID, null);
                     }
+                    else if (x.Property.PropertyType.IsEnum)
+                    {
+                        newRow[x.Column] = (int)x.Property.GetValue(item, null);
+                    }
                     else
+                    {
                         newRow[x.Column] = x.Property.GetValue(item, null);
+                    }
                 }
                 newRow[StateColumnName] = (int)DataTableRowState.Add;
                 //if (TableAttr.IsSplitTable)
