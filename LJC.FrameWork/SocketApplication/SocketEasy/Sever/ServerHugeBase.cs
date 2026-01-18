@@ -305,6 +305,7 @@ namespace LJC.FrameWork.SocketEasy.Sever
             if (socket == null)
             {
                 LogHelper.Instance.Error("Args_Completed socket为空");
+                return;
             }
 
             var endPoint = socket.RemoteEndPoint;
