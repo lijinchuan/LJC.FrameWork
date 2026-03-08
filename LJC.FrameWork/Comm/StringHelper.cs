@@ -305,7 +305,7 @@ namespace LJC.FrameWork.Comm
                                     }
                                     return ret;
                                 }).OrderByDescending(p => p.Item1.Length).FirstOrDefault();
-                            
+
                             if (matchWord != null)
                             {
                                 caps += matchWord.Item2.Py.First();
@@ -318,7 +318,7 @@ namespace LJC.FrameWork.Comm
                                 }
                                 else
                                 {
-                                    var ex = new NotSupportedException("ChineseCapNew 匹配失败,多音字“" + word + "”无法确认");
+                                    var ex = new NotSupportedException($"ChineseCapNew 匹配“{chineseStr}”失败,多音字{word}无法确认");
                                     ex.Data.Add("word", word);
                                     ex.Data.Add("chineseStr", chineseStr);
                                     throw ex;
@@ -328,7 +328,7 @@ namespace LJC.FrameWork.Comm
                     }
                     else
                     {
-                        var ex = new NotSupportedException("ChineseCapNew 匹配失败，字典不包含此字");
+                        var ex = new NotSupportedException($"ChineseCapNew 匹配“{chineseStr}”失败，字典不包含此字:{word}");
                         ex.Data.Add("word", word);
                         ex.Data.Add("chineseStr", chineseStr);
                         throw ex;
