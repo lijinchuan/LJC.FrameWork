@@ -220,6 +220,7 @@
     <Compile Include="Comm\JsonUtil.cs" />
     <Compile Include="Comm\LocalCacheManager.cs" />
     <Compile Include="Comm\LockHerper.cs" />
+    <Compile Include="Comm\LruCache.cs" />
     <Compile Include="Comm\Machine.cs">
       <SubType>Code</SubType>
     </Compile>
