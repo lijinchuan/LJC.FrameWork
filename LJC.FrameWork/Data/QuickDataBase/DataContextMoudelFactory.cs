@@ -14,11 +14,21 @@ namespace LJC.FrameWork.Data.QuickDataBase
         static void CheckMysqlConfig()
         {
             var domainname = System.Reflection.Assembly.GetCallingAssembly().GetName().Name;
-            string cfgfile = System.AppDomain.CurrentDomain.BaseDirectory + "\\Web.config";
+            string cfgfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Web.config");
 
             if (!File.Exists(cfgfile))
             {
-                cfgfile = System.AppDomain.CurrentDomain.BaseDirectory + "\\" + Assembly.GetEntryAssembly().FullName.Split(',')[0] + ".exe.config";
+                var exeConfig = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                if (exeConfig != null && !string.IsNullOrWhiteSpace(exeConfig.FilePath))
+                {
+                    cfgfile = exeConfig.FilePath;
+                }
+                else
+                {
+                    var entryAssembly = Assembly.GetEntryAssembly();
+                    var entryName = entryAssembly != null ? entryAssembly.GetName().Name : domainname;
+                    cfgfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, entryName + ".exe.config");
+                }
             }
 
             bool save = false;
