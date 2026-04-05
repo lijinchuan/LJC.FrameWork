@@ -13,6 +13,7 @@ using System.IO;
 using LJC.FrameWork.Comm;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Policy;
 
 namespace LJC.FrameWork.SOA
 {
@@ -248,15 +249,22 @@ namespace LJC.FrameWork.SOA
 
                     try
                     {
-                        var result = DoResponse(Func_WebRequest, request.Param, request.ClientId, message.MessageHeader.CustomData);
-                        responseBody.Result = BuildResult(message.MessageHeader.CustomData, result);
-                        responseBody.IsSuccess = true;
-
-                        if (SocketApplicationEnvironment.TraceMessage)
+                        var results = (IEnumerable<WebResponse>)DoResponse(Func_WebRequest, request.Param, request.ClientId, message.MessageHeader.CustomData);
+                        foreach (var result in results)
                         {
-                            LogHelper.Instance.Debug(string.Format("处理请求：请求号:{0},客户端请求号:{1},服务号:{2},功能号:{3},结果:{4},序列化结果:{5}",
-                                responseMsg.MessageHeader.TransactionID, request.ClientTransactionID, ServiceNo, request.FundId, Comm.JsonUtil<object>.Serialize(result), Convert.ToBase64String(responseBody.Result)));
+                            responseBody.Result = BuildResult(message.MessageHeader.CustomData, result);
+                            responseBody.IsSuccess = true;
 
+                            responseMsg.SetMessageBody(responseBody);
+
+                            SendMessage(responseMsg);
+
+                            if (SocketApplicationEnvironment.TraceMessage)
+                            {
+                                LogHelper.Instance.Debug(string.Format("处理请求：请求号:{0},客户端请求号:{1},服务号:{2},功能号:{3},结果:{4},序列化结果:{5}",
+                                    responseMsg.MessageHeader.TransactionID, request.ClientTransactionID, ServiceNo, request.FundId, Comm.JsonUtil<object>.Serialize(result), Convert.ToBase64String(responseBody.Result)));
+
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -264,14 +272,14 @@ namespace LJC.FrameWork.SOA
                         responseBody.IsSuccess = false;
                         responseBody.ErrMsg = ex.Message;
 
+                        responseMsg.SetMessageBody(responseBody);
+
+                        SendMessage(responseMsg);
+
                         LogHelper.Instance.Error(string.Format("服务转发出错,请求号:{0},服务号:{1},功能号:{2}",
                             request.ClientTransactionID, ServiceNo, 0), ex);
 
                     }
-
-                    responseMsg.SetMessageBody(responseBody);
-
-                    SendMessage(responseMsg);
 
                     return;
                 }
@@ -314,9 +322,8 @@ namespace LJC.FrameWork.SOA
             return base.DoMessage(message);
         }
 
-        private WebResponse DoWebResponseWithHttpClient(WebRequest request, string realUrl)
+        private IEnumerable<WebResponse> DoWebResponseWithHttpClient(WebRequest request, string realUrl)
         {
-            WebResponse response = new WebResponse();
             var client = HttpClientFactory.GetHttpClient(realUrl,false);
             
             using (HttpRequestMessage httpRequestMessage = new HttpRequestMessage(new HttpMethod(request.Method), new Uri(realUrl)))
@@ -371,22 +378,62 @@ namespace LJC.FrameWork.SOA
                 
                 using (var httpResponseMessage = client.SendAsync(httpRequestMessage).Result)
                 {
+                    WebResponse response = new WebResponse();
                     response.Headers = new Dictionary<string, string>();
                     var headers = httpResponseMessage.Headers.ToList();
-                    AddHeader(headers);
+                    AddHeader(response,headers);
 
-                    byte[] contentBuffer = httpResponseMessage.Content.ReadAsByteArrayAsync().Result;
-                    response.ResponseData = contentBuffer;
                     response.ContentType = httpResponseMessage.Content.Headers.ContentType?.ToString();
-                    AddHeader(httpResponseMessage.Content.Headers.ToList());
+                    AddHeader(response, httpResponseMessage.Content.Headers.ToList());
 
                     response.ResponseCode = (int)httpResponseMessage.StatusCode;
+
+                    var s = httpResponseMessage.Content.ReadAsStreamAsync().Result;
+
+                    var buffer = new byte[1024 * 1000];
+                    var readCount = s.Read(buffer, 0, buffer.Length);
+
+                    while (true)
+                    {
+                        byte[] next = null;
+                        var readCount2 = 0;
+
+                        if (readCount == buffer.Length)
+                        {
+                            next = new byte[1024 * 1000];
+                            readCount2 = s.Read(next, 0, next.Length);
+                        }
+
+                        if (next == null)
+                        {
+                            response.IsLast = true;
+                            byte[] newArray = buffer;
+                            if (readCount < buffer.Length)
+                            {
+                                newArray = new byte[readCount];
+                                Array.Copy(buffer, newArray, readCount);
+                            }
+
+                            response.ResponseData = newArray;
+                            yield return response;
+                            yield break;
+                        }
+                        else
+                        {
+                            response.ResponseData = buffer;
+
+                            yield return response;
+                        }
+
+                        response = new WebResponse();
+
+                        buffer = next;
+                        readCount = readCount2;
+                    }
                 }
             }
 
-            return response;
-
-            void AddHeader(List<KeyValuePair<string,IEnumerable<string>>> headers)
+            void AddHeader(WebResponse response,List<KeyValuePair<string,IEnumerable<string>>> headers)
             {
                 for (var i = 0; i < headers.Count; i++)
                 {
@@ -414,9 +461,8 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        private WebResponse DoWebResponseWithHttpWebRequest(WebRequest request, string realUrl,WebProxy proxy)
+        private IEnumerable<WebResponse> DoWebResponseWithHttpWebRequest(WebRequest request, string realUrl,WebProxy proxy)
         {
-            WebResponse response = new WebResponse();
             System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
             webRequest.Method = request.Method;
 
@@ -524,85 +570,81 @@ namespace LJC.FrameWork.SOA
             }
             Console.WriteLine(webRequest.RequestUri.ToString());
 
-            System.Net.HttpWebResponse webResponse = null;
-            try
+            using (System.Net.HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
             {
-                webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
+                var response = new WebResponse();
+                response.Headers = new Dictionary<string, string>();
 
-            }
-            catch (System.Net.WebException ex)
-            {
-                webResponse = (System.Net.HttpWebResponse)ex.Response;
-                if (webResponse == null)
+                for (var i = 0; i < webResponse.Headers.Count; i++)
                 {
-                    throw;
-                }
-            }
-            finally
-            {
-                try
-                {
-                    if (webResponse != null)
+                    var name = webResponse.Headers.GetKey(i);
+
+                    if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("Date", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
                     {
-                        response.Headers = new Dictionary<string, string>();
+                        continue;
+                    }
 
-                        for (var i = 0; i < webResponse.Headers.Count; i++)
+                    var value = webResponse.Headers.Get(i);
+                    if (name.Equals("Location", StringComparison.OrdinalIgnoreCase))
+                    {
+                        value = WebTransferSvcHelper.RelaceLocation(value, request.Host, realUrl);
+                    }
+                    response.Headers.Add(name, value);
+                }
+                response.ResponseCode = (int)webResponse.StatusCode;
+                response.ContentType = webResponse.ContentType;
+                Stream s = webResponse.GetResponseStream();
+
+                var buffer = new byte[1024 * 1000];
+                var readCount = s.Read(buffer, 0, buffer.Length);
+
+                while (true)
+                {
+                    byte[] next = null;
+                    var readCount2 = 0;
+
+                    if (readCount == buffer.Length)
+                    {
+                        next = new byte[1024 * 1000];
+                        readCount2 = s.Read(next, 0, next.Length);
+                    }
+
+                    if (next == null)
+                    {
+                        response.IsLast = true;
+                        byte[] newArray = buffer;
+                        if (readCount < buffer.Length)
                         {
-                            var name = webResponse.Headers.GetKey(i);
-
-                            if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
-                                || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
-                                || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
-                                || name.Equals("Date", StringComparison.OrdinalIgnoreCase)
-                                || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
-                            {
-                                continue;
-                            }
-
-                            var value = webResponse.Headers.Get(i);
-                            if (name.Equals("Location", StringComparison.OrdinalIgnoreCase))
-                            {
-                                value = WebTransferSvcHelper.RelaceLocation(value, request.Host, realUrl);
-                            }
-                            response.Headers.Add(name, value);
+                            newArray = new byte[readCount];
+                            Array.Copy(buffer, newArray, readCount);
                         }
 
-                        byte[] contentBuffer = null;
-                        using (MemoryStream ms = new MemoryStream())
-                        {
-                            using (Stream s = webResponse.GetResponseStream())
-                            {
-                                byte[] buffer = new byte[2048];
-                                int len = 0;
-                                while ((len = s.Read(buffer, 0, 1024)) > 0)
-                                {
-                                    ms.Write(buffer, 0, len);
-                                }
-                            }
-
-                            contentBuffer = ms.ToArray();
-
-                            response.ResponseData = contentBuffer;
-                        }
-
-                        response.ResponseCode = (int)webResponse.StatusCode;
-                        response.ContentType = webResponse.ContentType;
+                        response.ResponseData = newArray;
+                        yield return response;
+                        yield break;
                     }
-                }
-                finally
-                {
-                    if (webResponse != null)
+                    else
                     {
-                        webResponse.Close();
+                        response.ResponseData = buffer;
+
+                        yield return response;
                     }
+
+                    response = new WebResponse();
+
+                    buffer = next;
+                    readCount = readCount2;
                 }
             }
-            return response;
         }
 
-        private object DoWebResponse(WebRequest request)
+        private IEnumerable<WebResponse> DoWebResponse(WebRequest request)
         {
-            WebResponse response = new WebResponse();
+            IEnumerable<WebResponse> responses = null;
             
             var webMappers = ServiceConfig.ReadConfig()?.WebMappers;
 
@@ -634,33 +676,37 @@ namespace LJC.FrameWork.SOA
                     //|| request.Headers?.Keys.Any(p=>p.Equals("Cookie",StringComparison.OrdinalIgnoreCase)) == true
                     )
                 {
-                    response = DoWebResponseWithHttpWebRequest(request, realUrl, proxy);
+                    responses = DoWebResponseWithHttpWebRequest(request, realUrl, proxy);
                 }
                 else
                 {
-                    response = DoWebResponseWithHttpClient(request, realUrl);
+                    responses = DoWebResponseWithHttpClient(request, realUrl);
                 }
             }
 
-            if (!string.IsNullOrEmpty(matchedMapper.MappingRoot))
+            foreach (var response in responses)
             {
-                if (response.Headers?.Any() == true)
+
+                if (!string.IsNullOrEmpty(matchedMapper.MappingRoot))
                 {
-                    foreach (var head in response.Headers)
+                    if (response.Headers?.Any() == true)
                     {
-                        if (head.Key.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase))
+                        foreach (var head in response.Headers)
                         {
-                            if (!matchedMapper.NoRewirteCookie)
+                            if (head.Key.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase))
                             {
-                                response.Headers[head.Key] = Regex.Replace(response.Headers[head.Key], @"Path=[^;]+", "Path=/" + matchedMapper.MappingRoot.TrimStart('/'), RegexOptions.IgnoreCase);
+                                if (!matchedMapper.NoRewirteCookie)
+                                {
+                                    response.Headers[head.Key] = Regex.Replace(response.Headers[head.Key], @"Path=[^;]+", "Path=/" + matchedMapper.MappingRoot.TrimStart('/'), RegexOptions.IgnoreCase);
+                                }
+                                break;
                             }
-                            break;
                         }
                     }
                 }
-            }
 
-            return response;
+                yield return response;
+            }
         }
 
         public virtual object DoResponse(int funcId, byte[] Param,string clientid,Dictionary<string,string> header)

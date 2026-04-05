@@ -22,17 +22,12 @@ namespace LJC.FrameWork.SOA.Contract
             set;
         }
 
-        //public WebResponse WebResponse
-        //{
-        //    get;
-        //    set;
-        //}
-
         public byte[] Result
         {
             get;
             set;
         }
+
         public bool IsSuccess { get; set; } = false;
 
         public DateTime ResponseTime

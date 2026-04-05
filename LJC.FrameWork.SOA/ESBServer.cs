@@ -302,6 +302,7 @@ namespace LJC.FrameWork.SOA
 
         internal void DoTransferWebResponse(SOATransferWebResponse response)
         {
+            var remClientId = true;
             try
             {
                 object[] carrayObjs = null;
@@ -312,13 +313,15 @@ namespace LJC.FrameWork.SOA
 
                 if (carrayObjs != null)
                 {
-                    ConatinerLock.EnterWriteLock();
-                    ClientSessionList.Remove(response.ClientTransactionID);
-                    ConatinerLock.ExitWriteLock();
-
                     if (response.Result != null)
                     {
-                        carrayObjs[carrayObjs.Length - 1] = EntityBufCore.DeSerialize<WebResponse>(response.Result);
+                        var wp = EntityBufCore.DeSerialize<WebResponse>(response.Result);
+                        carrayObjs[carrayObjs.Length - 1] = wp;
+
+                        if (!wp.IsLast)
+                        {
+                            remClientId = false;
+                        }
                     }
 
                     var ae = (carrayObjs[0] as AutoResetEvent);
@@ -337,6 +340,15 @@ namespace LJC.FrameWork.SOA
                 ex.Data.Add("请求序列号", response.ClientTransactionID);
 
                 LogHelper.Instance.Error("DoTransferResponse出错", ex);
+            }
+            finally
+            {
+                if (remClientId)
+                {
+                    ConatinerLock.EnterWriteLock();
+                    ClientSessionList.Remove(response.ClientTransactionID);
+                    ConatinerLock.ExitWriteLock();
+                }
             }
         }
 

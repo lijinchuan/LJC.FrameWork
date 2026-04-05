@@ -42,5 +42,11 @@ namespace LJC.FrameWork.SOA.Contract
             get;
             set;
         }
+
+        public bool IsLast
+        {
+            get;
+            set;
+        }
     }
 }
