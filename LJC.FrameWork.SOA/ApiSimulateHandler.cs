@@ -2,6 +2,7 @@
 using LJC.FrameWork.LogManager;
 using LJC.FrameWork.Net.HTTP.Server;
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,7 +16,7 @@ namespace LJC.FrameWork.SOA
             server.RequestSession(request).Touch();
 
             var url = request.Url;
-            if (url.StartsWith("http",StringComparison.OrdinalIgnoreCase))
+            if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
                 var sqlArray = url.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
                 if (sqlArray.Length > 2)
@@ -46,6 +47,48 @@ namespace LJC.FrameWork.SOA
             {
                 LogHelper.Instance.Debug(string.Format("大数据请求：{0},{1}b", url, request.RawData.Length));
             }
+
+            if (SimulateServerManager.TransferRequestStream != null)
+            {
+                // Assign stream writer (HttpServer.HttpResponse.StreamWriter exists and accepted by runtime)
+                response.StreamWriter = (sendWebResponse) =>
+                {
+                    try
+                    {
+                        SimulateServerManager.TransferRequestStream(new Contract.WebRequest
+                        {
+                            Host = request.Host,
+                            VirUrl = url,
+                            Cookies = request.Cookies,
+                            Headers = request.Header,
+                            Method = request.Method,
+                            InputData = request.RawData
+                        }, (data, isLast, code, contentType, headers) =>
+                        {
+                            try
+                            {
+                                if (headers != null)
+                                {
+                                    foreach (var kv in headers)
+                                    {
+                                        response.Header[kv.Key] = kv.Value;
+                                    }
+                                }
+                                if (!string.IsNullOrWhiteSpace(contentType)) response.ContentType = contentType;
+                                sendWebResponse(data, isLast, code, contentType, headers);
+                            }
+                            catch { }
+                        });
+                    }
+                    catch (Exception)
+                    {
+                        try { sendWebResponse(new byte[0], true, 500, null, null); } catch { }
+                    }
+                };
+
+                return true;
+            }
+
             var simulateResponse = SimulateServerManager.TransferRequest(new Contract.WebRequest
             {
                 Host = request.Host,
@@ -55,6 +98,7 @@ namespace LJC.FrameWork.SOA
                 Method = request.Method,
                 InputData = request.RawData
             });
+
             if (request.RawData.Length > 1024 * 1000)
             {
                 LogHelper.Instance.Debug(string.Format("大数据请求完成：{0},{1}b", url, request.RawData.Length));

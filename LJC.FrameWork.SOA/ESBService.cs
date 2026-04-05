@@ -14,6 +14,7 @@ using LJC.FrameWork.Comm;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Policy;
+using System.Security;
 
 namespace LJC.FrameWork.SOA
 {
@@ -252,6 +253,83 @@ namespace LJC.FrameWork.SOA
                         var results = (IEnumerable<WebResponse>)DoResponse(Func_WebRequest, request.Param, request.ClientId, message.MessageHeader.CustomData);
                         foreach (var result in results)
                         {
+                            if (result.No > 1)
+                            {
+                                var kill = false;
+                                var killMsg = "";
+                                var k = 0;
+                                var checkMax = 100;
+                                var sleepMs = 100;
+                                var timeout = 5000;
+
+                                //限速
+                                for (; k < checkMax; k++)
+                                {
+                                    var breakWhile = false;
+                                    for (var i = 0; i < 3; i++)
+                                    {
+                                        try
+                                        {
+                                            var qmsg = new Message((int)SOAMessageType.QueryClientSessionRequest); // QueryClientSessionRequest
+                                            qmsg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                                            qmsg.SetMessageBody(new Contract.QueryClientSessionRequest
+                                            {
+                                                ClientTransactionID = request.ClientTransactionID
+                                            });
+                                            
+                                            QueryClientSessionResponse qresp = SendMessageAnsy<Contract.QueryClientSessionResponse>(qmsg, timeout);
+
+                                            if (!qresp.Exists)
+                                            {
+                                                killMsg = $"停止发送分片：客户端任务已不存在, tx={request.ClientTransactionID}";
+                                                kill = true;
+                                                break;
+                                            }
+                                            else if (qresp.LastNo >= result.No - 2)
+                                            {
+                                                breakWhile = true;
+                                                break;
+                                            }
+
+                                            Thread.Sleep(sleepMs);
+                                            break;
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            if (i == 2)
+                                            {
+                                                kill = true;
+                                                killMsg = $"停止发送分片：查询客户端任务失败超过3次, tx={request.ClientTransactionID}, error={ex.Message}";
+                                                break;
+                                            }
+                                            Thread.Sleep(sleepMs);
+                                        }
+                                    }
+
+                                    if (kill)
+                                    {
+                                        break;
+                                    }
+
+                                    if (breakWhile)
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                if (k >= checkMax)
+                                {
+                                    kill = true;
+                                    killMsg = $"等待网关超出最大检查次数，退出";
+                                }
+
+                                if(kill)
+                                {
+                                    LogHelper.Instance.Debug(killMsg);
+                                    break;
+                                }
+                            }
+
                             responseBody.Result = BuildResult(message.MessageHeader.CustomData, result);
                             responseBody.IsSuccess = true;
 
@@ -392,11 +470,14 @@ namespace LJC.FrameWork.SOA
 
                     var buffer = new byte[1024 * 1000];
                     var readCount = s.Read(buffer, 0, buffer.Length);
+                    var no = 0;
 
                     while (true)
                     {
                         byte[] next = null;
                         var readCount2 = 0;
+
+                        response.No = ++no;
 
                         if (readCount == buffer.Length)
                         {

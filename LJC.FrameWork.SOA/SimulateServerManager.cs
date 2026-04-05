@@ -16,6 +16,9 @@ namespace LJC.FrameWork.SOA
         internal static string DefaltWebPort = System.Configuration.ConfigurationManager.AppSettings["webwerverport"];
 
         internal static Func<WebRequest, WebResponse> TransferRequest;
+        // 流式转发：接受 WebRequest 与每片回调，回调上层应立即返回给 HttpServer
+        // callback arguments: byte[] responseData, bool isLast, int responseCode, string contentType, Dictionary<string,string> headers
+        internal static Action<WebRequest, Action<byte[], bool, int, string, Dictionary<string, string>>> TransferRequestStream;
 
         internal static Func<IEnumerable<WebMapper>> GetWebMapperList;
 

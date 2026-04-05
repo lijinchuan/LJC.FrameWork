@@ -419,11 +419,190 @@ namespace LJC.FrameWork.Net.HTTP.Server
 
         void SendResponse(ClientInfo ci, HttpRequest req, HttpResponse resp, bool close)
         {
-            //close = true;
             var en = Encoding.UTF8;
 #if DEBUG
             Console.WriteLine("Response: " + resp.ReturnCode + Responses[resp.ReturnCode]);
 #endif
+
+            // Streamed response support: if handler set resp.StreamWriter, use chunked transfer
+            if (resp.StreamWriter != null)
+            {
+                ByteBuilder bbHeader = new ByteBuilder();
+                bbHeader.Add(en.GetBytes("HTTP/1.1 " + resp.ReturnCode + " " + Responses[resp.ReturnCode] +
+                        "\r\nDate: " + DateTime.Now.ToUniversalTime().ToString("R") +
+                        "\r\nServer: MyWebHost/1.0" +
+                        "\r\nConnection: " + (close ? "close" : "Keep-Alive")));
+                bbHeader.Add(en.GetBytes("\r\nTransfer-Encoding: chunked"));
+
+                if (resp.ContentType != null)
+                {
+                    bbHeader.Add(en.GetBytes("\r\nContent-Type: " + resp.ContentType));
+                }
+
+                if (req.Session != null)
+                {
+                    if (!req.Cookies.ContainsKey("_sessid"))
+                    {
+                        bbHeader.Add(en.GetBytes("\r\nSet-Cookie: _sessid=" + req.Session.ID + "; path=/"));
+                    }
+                }
+
+                var cookieHeader = "Set-Cookie";
+                var dateHeader = "Date";
+                resp.Header.Remove(dateHeader);
+                foreach (KeyValuePair<string, string> de in resp.Header)
+                {
+                    var name = de.Key;
+                    var value = de.Value;
+                    if (name.Equals(cookieHeader, StringComparison.OrdinalIgnoreCase))
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        for (var j = 0; j < value.Length - 1; j++)
+                        {
+                            if (value[j] == ',' && value[j + 1] != ' ')
+                            {
+                                bbHeader.Add(en.GetBytes("\r\n" + de.Key + ": " + sb.ToString()));
+                                sb.Clear();
+                                continue;
+                            }
+
+                            sb.Append(value[j]);
+                        }
+                        sb.Append(value[value.Length - 1]);
+                        bbHeader.Add(en.GetBytes("\r\n" + de.Key + ": " + sb.ToString()));
+                    }
+                    else
+                    {
+                        bbHeader.Add(en.GetBytes("\r\n" + de.Key + ": " + de.Value));
+                    }
+                }
+                // End of header marker will be added when sending the header on first chunk
+
+                // build chunk sender. callback signature: (byte[] data, bool isLast, int responseCode, string contentType, Dictionary<string,string> headers)
+                bool headerSent = false;
+                object headerLock = new object();
+                Action<byte[], bool, int, string, Dictionary<string, string>> sendWebResp = (data, isLast, responseCode, contentType, headers) =>
+                {
+                    try
+                    {
+                        if (data == null) data = new byte[0];
+
+                        // On first chunk, send the HTTP header and include any headers/contentType provided by the upstream fragment
+                        if (!headerSent)
+                        {
+                            lock (headerLock)
+                            {
+                                if (!headerSent)
+                                {
+                                    // merge headers provided by fragment into response headers
+                                    try
+                                    {
+                                        if (headers != null)
+                                        {
+                                            foreach (var kv in headers)
+                                            {
+                                                resp.Header[kv.Key] = kv.Value;
+                                            }
+                                        }
+                                        if (!string.IsNullOrWhiteSpace(contentType)) resp.ContentType = contentType;
+                                    }
+                                    catch { }
+
+                                    // rebuild header bytes now with merged headers
+                                    ByteBuilder bbSendHeader = new ByteBuilder();
+                                    bbSendHeader.Add(en.GetBytes("HTTP/1.1 " + resp.ReturnCode + " " + Responses[resp.ReturnCode] +
+                                            "\r\nDate: " + DateTime.Now.ToUniversalTime().ToString("R") +
+                                            "\r\nServer: MyWebHost/1.0" +
+                                            "\r\nConnection: " + (close ? "close" : "Keep-Alive")));
+
+                                    bbSendHeader.Add(en.GetBytes("\r\nTransfer-Encoding: chunked"));
+
+                                    if (resp.ContentType != null)
+                                    {
+                                        bbSendHeader.Add(en.GetBytes("\r\nContent-Type: " + resp.ContentType));
+                                    }
+
+                                    if (req.Session != null)
+                                    {
+                                        if (!req.Cookies.ContainsKey("_sessid"))
+                                        {
+                                            bbSendHeader.Add(en.GetBytes("\r\nSet-Cookie: _sessid=" + req.Session.ID + "; path=/"));
+                                        }
+                                    }
+
+                                    resp.Header.Remove(dateHeader);
+                                    foreach (KeyValuePair<string, string> de in resp.Header)
+                                    {
+                                        var name = de.Key;
+                                        var value = de.Value;
+                                        if (name.Equals(cookieHeader, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            StringBuilder sb = new StringBuilder();
+                                            for (var j = 0; j < value.Length - 1; j++)
+                                            {
+                                                if (value[j] == ',' && value[j + 1] != ' ')
+                                                {
+                                                    bbSendHeader.Add(en.GetBytes("\r\n" + de.Key + ": " + sb.ToString()));
+                                                    sb.Clear();
+                                                    continue;
+                                                }
+
+                                                sb.Append(value[j]);
+                                            }
+                                            sb.Append(value[value.Length - 1]);
+                                            bbSendHeader.Add(en.GetBytes("\r\n" + de.Key + ": " + sb.ToString()));
+                                        }
+                                        else
+                                        {
+                                            bbSendHeader.Add(en.GetBytes("\r\n" + de.Key + ": " + de.Value));
+                                        }
+                                    }
+                                    bbSendHeader.Add(en.GetBytes("\r\n\r\n")); // End of header
+
+                                    ci.Send(bbSendHeader.Read(0, bbSendHeader.Length));
+                                    headerSent = true;
+                                }
+                            }
+                        }
+
+                        string hex = data.Length.ToString("x");
+                        ByteBuilder bch = new ByteBuilder();
+                        bch.Add(en.GetBytes(hex + "\r\n"));
+                        if (data.Length > 0) bch.Add(data);
+                        bch.Add(en.GetBytes("\r\n"));
+
+                        ci.Send(bch.Read(0, bch.Length));
+
+                        if (isLast)
+                        {
+                            ci.Send(en.GetBytes("0\r\n\r\n"));
+                            if (close)
+                            {
+                                try { ci.Close(); } catch { }
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        try { ci.Close(); } catch { }
+                    }
+                };
+
+                try
+                {
+                    resp.StreamWriter(sendWebResp);
+                }
+                catch (Exception)
+                {
+                    try { ci.Send(en.GetBytes("0\r\n\r\n")); } catch { }
+                    try { ci.Close(); } catch { }
+                }
+
+                ci.Clear();
+                return;
+            }
+
+            // non-streaming existing logic
             ByteBuilder bb = new ByteBuilder();
             bb.Add(en.GetBytes("HTTP/1.1 " + resp.ReturnCode + " " + Responses[resp.ReturnCode] +
                     "\r\nDate: " + DateTime.Now.ToUniversalTime().ToString("R") +
@@ -431,9 +610,6 @@ namespace LJC.FrameWork.Net.HTTP.Server
                     "\r\nConnection: " + (close ? "close" : "Keep-Alive")));
             if (resp.RawContent == null)
             {
-                //bb.Add(Encoding.UTF8.GetBytes("\r\nContent-Encoding: utf-8" +
-                //    "\r\nContent-Length: " + resp.Content.Length));
-
                 bb.Add(en.GetBytes("\r\nContent-Encoding: "+en.BodyName+"" +
                     "\r\nContent-Length: " + (en.GetByteCount(resp.Content))));
             }
@@ -452,14 +628,14 @@ namespace LJC.FrameWork.Net.HTTP.Server
                     bb.Add(en.GetBytes("\r\nSet-Cookie: _sessid=" + req.Session.ID + "; path=/"));
                 }
             }
-            var cookieHeader = "Set-Cookie";
-            var dateHeader = "Date";
-            resp.Header.Remove(dateHeader);
+            var cookieHeader2 = "Set-Cookie";
+            var dateHeader2 = "Date";
+            resp.Header.Remove(dateHeader2);
             foreach (KeyValuePair<string, string> de in resp.Header)
             {
                 var name = de.Key;
                 var value = de.Value;
-                if (name.Equals(cookieHeader, StringComparison.OrdinalIgnoreCase))
+                if (name.Equals(cookieHeader2, StringComparison.OrdinalIgnoreCase))
                 {
                     StringBuilder sb = new StringBuilder();
                     for (var j = 0; j < value.Length - 1; j++)
@@ -478,7 +654,6 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 }
                 else
                 {
-                    //bb.Add(Encoding.UTF8.GetBytes("\r\n" + de.Key + ": " + de.Value));
                     bb.Add(en.GetBytes("\r\n" + de.Key + ": " + de.Value));
                 }
             }
@@ -489,7 +664,6 @@ namespace LJC.FrameWork.Net.HTTP.Server
             }
             else
             {
-                //bb.Add(Encoding.UTF8.GetBytes(resp.Content));
                 bb.Add(en.GetBytes(resp.Content));
             }
             ci.Send(bb.Read(0, bb.Length));
@@ -620,15 +794,20 @@ namespace LJC.FrameWork.Net.HTTP.Server
         }
     }
 
-    public class HttpResponse
+        public class HttpResponse
     {
         public int ReturnCode = 200;
         public Dictionary<string, string> Header = new Dictionary<string, string>();
         public string Url, Content, ContentType = "text/html";
         public byte[] RawContent = null;
 
-        public HttpResponse() { }
-        public HttpResponse(int code, string content) { ReturnCode = code; Content = content; }
+            // StreamWriter: when set, HttpServer.SendResponse will use it to stream chunks.
+            // The provided Action<Action<byte[],bool,int,string,Dictionary<string,string>>> receives a callback;
+            // the callback should be called with (responseData, isLast, responseCode, contentType, headers).
+            public Action<Action<byte[], bool, int, string, Dictionary<string, string>>> StreamWriter { get; set; }
+
+            public HttpResponse() { }
+            public HttpResponse(int code, string content) { ReturnCode = code; Content = content; }
 
         public void MakeRedirect(string newurl)
         {

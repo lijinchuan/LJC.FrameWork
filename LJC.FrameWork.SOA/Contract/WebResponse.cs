@@ -43,6 +43,15 @@ namespace LJC.FrameWork.SOA.Contract
             set;
         }
 
+        /// <summary>
+        /// 序号
+        /// </summary>
+        public int No
+        {
+            get;
+            set;
+        }
+
         public bool IsLast
         {
             get;

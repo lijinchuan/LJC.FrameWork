@@ -21,6 +21,10 @@ namespace LJC.FrameWork.SOA
         QueryServiceNo,
         SOATransferWebRequest,
         SOATransferWebResponse,
-        SOACheckHealth
+        SOACheckHealth,
+
+        // query client session (used by ESBService to ask ESBServer whether a ClientTransactionID still exists)
+        QueryClientSessionRequest,
+        QueryClientSessionResponse
     }
 }

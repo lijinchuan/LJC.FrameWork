@@ -21,7 +21,7 @@ namespace LJC.FrameWork.SOA
         private static object LockObj = new object();
         protected List<ESBServiceInfo> ServiceContainer = new List<ESBServiceInfo>();
         //internal Dictionary<string, Session[]> ClientSessionList = new Dictionary<string, Session[]>();
-        internal Dictionary<string, object[]> ClientSessionList = new Dictionary<string, object[]>();
+        internal Dictionary<string, ClientSessionEntry> ClientSessionList = new Dictionary<string, ClientSessionEntry>();
         internal static ReaderWriterLockSlim ConatinerLock = new ReaderWriterLockSlim();
 
         /// <summary>
@@ -152,31 +152,37 @@ namespace LJC.FrameWork.SOA
                 }
 
                 sb.AppendFormat("</table>");
-                //客户端
+                //任务端
                 sb.Append("<br/>");
                 var liveclients = _esb.ClientSessionList.Select(p => p).ToList();
-                sb.AppendFormat("当前活跃{0}个客户端", liveclients.Count);
+                sb.AppendFormat("当前活跃{0}个任务端", liveclients.Count);
                 sb.Append("<table>");
                 sb.Append("<tr>");
                 sb.AppendFormat("<th>任务ID</th><th>clientid</th><th>地址</th><th>连接时间</th><th>上次心跳时间</th><th>连接时长(分钟)</th><th>发送字节</th><th>接收字节</th><th>发送速度（b/s）</th>");
                 sb.Append("</tr>");
                 foreach (var item in liveclients)
                 {
-                    var session = item.Value[0] as Session;
+                    var entry = item.Value;
+                    var session = entry.SessionCallback;
                     if (session == null)
                     {
                         continue;
                     }
-                    var seviceInfo = (ESBServiceInfo)item.Value[1];
-                    if (!clienthash.Contains(session.SessionID)|| !clienthash.Contains(seviceInfo.Session.SessionID))
+                    var seviceInfo = entry.ServiceInfo;
+                    if (!clienthash.Contains(session.SessionID) || !clienthash.Contains(seviceInfo.Session.SessionID) || DateTime.Now.Subtract(entry.ContinueTime).TotalSeconds > 60)
                     {
-                        lock (_esb.ClientSessionList)
+                        ESBServer.ConatinerLock.EnterWriteLock();
+                        try
                         {
                             _esb.ClientSessionList.Remove(item.Key);
                         }
+                        finally
+                        {
+                            ESBServer.ConatinerLock.ExitWriteLock();
+                        }
                     }
 
-                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td></tr>", item.Key, session.SessionID, session.IPAddress, session.Port,
+                    sb.AppendFormat("<tr><td>{0}</td><td>{1}</td><td>{2}:{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td></tr>", item.Key, session.SessionID, session.IPAddress, session.Port,
                         session.ConnectTime.ToString("yyyy-MM-dd HH:mm:ss"),
                         session.LastSessionTime.ToString("yyyy-MM-dd HH:mm:ss"), Math.Round(session.LastSessionTime.Subtract(session.ConnectTime).TotalMinutes, 3),
                         session.BytesSend, session.BytesRev, session.BytesSendPreSec);
@@ -206,8 +212,128 @@ namespace LJC.FrameWork.SOA
             }
 
             SimulateServerManager.TransferRequest = DoWebRequest;
+            SimulateServerManager.TransferRequestStream = DoWebRequestStream; // No changes made
             SimulateServerManager.GetWebMapperList = GetWebMapperList;
             SimulateServerManager.AddDefaultServer();
+        }
+
+        internal void DoWebRequestStream(WebRequest webRequest, Action<byte[], bool, int, string, Dictionary<string,string>> chunkCallback)
+        {
+            var soaRequestUrl = @"esbclient/soa/(\d{1,})/(\d{1,})";
+            var m = Regex.Match(webRequest.VirUrl, soaRequestUrl);
+            if (m.Success)
+            {
+                var resp = DoTransferRequest(null, SocketApplicationComm.GetSeqNum(),
+                    new SOARequest
+                    {
+                        FuncId = int.Parse(m.Groups[2].Value),
+                        ServiceNo = int.Parse(m.Groups[1].Value),
+                        Param = webRequest.InputData,
+                        ReqestTime = DateTime.Now
+                    }, new Dictionary<string, string>
+                {
+                    {Consts.HeaderKey_ContentType,Consts.HeaderValue_ContentType_JSONValue }
+                });
+
+                chunkCallback?.Invoke(resp.Result, true, resp.IsSuccess ? 200 : 500, "application/json", null);
+                return;
+            }
+
+            var list = ServiceContainer.ToList();
+            ESBServiceInfo serviceInfo = null;
+            WebMapper webMapper = null;
+            foreach (var item in list.Where(p => p.WebMappers != null && p.WebMappers.Any()))
+            {
+                webMapper = WebTransferSvcHelper.Find(webRequest, item.WebMappers);
+                if (webMapper != null)
+                {
+                    serviceInfo = item;
+                    break;
+                }
+            }
+
+            if (webMapper == null)
+            {
+                chunkCallback?.Invoke(Encoding.UTF8.GetBytes("Not Found"), true, 404, "text/plain", null);
+                return;
+            }
+
+            try
+            {
+                if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
+                {
+                    if (!CheckAlive(serviceInfo.Session))
+                    {
+                        lock (LockObj)
+                        {
+                            ServiceContainer.Remove(serviceInfo);
+                            serviceInfo.Session.Close("web session no resp over 30s and check not alived", true);
+
+                            chunkCallback?.Invoke(Encoding.UTF8.GetBytes("Service down"), true, 500, "text/plain", null);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        LogHelper.Instance.Info("web session no resp over 30s but check alived");
+                    }
+                }
+
+                string clientid = Guid.NewGuid().ToString("N");
+                SOATransferWebRequest transferrequest = new SOATransferWebRequest();
+                transferrequest.ClientId = clientid;
+                transferrequest.FundId = 0;
+                transferrequest.Param = EntityBufCore.Serialize(webRequest);
+
+                transferrequest.ClientTransactionID = clientid;
+
+                var entry = new ClientSessionEntry
+                {
+                    TransactionId = clientid,
+                    SessionCallback = serviceInfo.Session,
+                    StreamCallbackBytes = chunkCallback,
+                    ServiceInfo = serviceInfo,
+                    FuncId = 0,
+                    StartTime = DateTime.Now,
+                    LastWebResponse = null
+                };
+                try
+                {
+                    ConatinerLock.EnterWriteLock();
+                    ClientSessionList.Add(clientid, entry);
+                }
+                finally
+                {
+                    ConatinerLock.ExitWriteLock();
+                }
+
+                Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
+                msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                msg.SetMessageBody(transferrequest);
+
+                if (!serviceInfo.Session.SendMessage(msg))
+                {
+                    try
+                    {
+                        ConatinerLock.EnterWriteLock();
+                        ClientSessionList.Remove(clientid);
+                    }
+                    finally
+                    {
+                        ConatinerLock.ExitWriteLock();
+                    }
+                    chunkCallback?.Invoke(Encoding.UTF8.GetBytes("SendMessage failed"), true, 500, "text/plain", null);
+                    return;
+                }
+
+                return;
+            }
+            catch (Exception ex)
+            {
+                OnError(ex);
+                chunkCallback?.Invoke(Encoding.UTF8.GetBytes(ex.Message), true, 500, "text/plain", null);
+                return;
+            }
         }
 
         internal System.Collections.Concurrent.ConcurrentDictionary<string, Session> GetConnectedList()
@@ -241,17 +367,29 @@ namespace LJC.FrameWork.SOA
         {
             try
             {
-                object[] carrayObjs = null;
+                ClientSessionEntry entry = null;
 
                 ConatinerLock.EnterReadLock();
-                ClientSessionList.TryGetValue(response.ClientTransactionID, out carrayObjs);
-                ConatinerLock.ExitReadLock();
+                try
+                {
+                    ClientSessionList.TryGetValue(response.ClientTransactionID, out entry);
+                }
+                finally
+                {
+                    ConatinerLock.ExitReadLock();
+                }
 
-                if (carrayObjs != null)
+                if (entry != null)
                 {
                     ConatinerLock.EnterWriteLock();
-                    ClientSessionList.Remove(response.ClientTransactionID);
-                    ConatinerLock.ExitWriteLock();
+                    try
+                    {
+                        ClientSessionList.Remove(response.ClientTransactionID);
+                    }
+                    finally
+                    {
+                        ConatinerLock.ExitWriteLock();
+                    }
 
                     SOAResponse resp = new SOAResponse();
                     Message msgRet = new Message((int)SOAMessageType.DoSOAResponse);
@@ -261,27 +399,27 @@ namespace LJC.FrameWork.SOA
                     resp.Result = response.Result;
 
                     msgRet.SetMessageBody(resp);
-                    var serviceInfo = (ESBServiceInfo)carrayObjs[1];
-                    var funid = (int)carrayObjs[2];
-                    var startTime = (DateTime)carrayObjs[3];
+                    var serviceInfo = entry.ServiceInfo;
+                    var funid = entry.FuncId;
+                    var startTime = entry.StartTime;
                     var useSecs = (int)Math.Round(DateTime.Now.Subtract(startTime).TotalSeconds, 0);
-                    if (carrayObjs[0] is Session session)
+                    if (entry.SessionCallback!=null)
                     {
-                        session?.SendMessage(msgRet);
+                        entry.SessionCallback.SendMessage(msgRet);
                         serviceInfo.FunctionUsedSecs.AddOrUpdate(funid, useSecs, (key, old) => old - 30 + useSecs);
 
                         if (SocketApplicationEnvironment.TraceMessage)
                         {
-                            var toulp = (Tuple<int, int>)session.Tag;
+                            var toulp = (Tuple<int, int>)entry.SessionCallback.Tag;
                             LogHelper.Instance.Debug(string.Format("SOA响应耗时,请求序列号:{0},服务号:{1},功能号:{2},用时:{3},结果:{4}",
-                                response.ClientTransactionID, toulp.Item1, toulp.Item2, DateTime.Now.Subtract(session.BusinessTimeStamp).TotalMilliseconds + "毫秒",
+                                response.ClientTransactionID, toulp.Item1, toulp.Item2, DateTime.Now.Subtract(entry.SessionCallback.BusinessTimeStamp).TotalMilliseconds + "毫秒",
                                 Convert.ToBase64String(response.Result)));
                         }
                     }
-                    else if (carrayObjs[0] is AutoReSetEventResult<byte[]> waitHandler)
+                    else if (entry.WaitResult!=null)
                     {
-                        waitHandler.WaitResult = response.Result;
-                        waitHandler.Set();
+                        entry.WaitResult.WaitResult = response.Result;
+                        entry.WaitResult.Set();
                     }
                 }
                 else
@@ -305,27 +443,71 @@ namespace LJC.FrameWork.SOA
             var remClientId = true;
             try
             {
-                object[] carrayObjs = null;
+                ClientSessionEntry entry = null;
 
                 ConatinerLock.EnterReadLock();
-                ClientSessionList.TryGetValue(response.ClientTransactionID, out carrayObjs);
-                ConatinerLock.ExitReadLock();
-
-                if (carrayObjs != null)
+                try
                 {
+                    ClientSessionList.TryGetValue(response.ClientTransactionID, out entry);
+                }
+                finally
+                {
+                    ConatinerLock.ExitReadLock();
+                }
+
+                if (entry != null)
+                {
+                    entry.ContinueTime = DateTime.Now;
+
                     if (response.Result != null)
                     {
                         var wp = EntityBufCore.DeSerialize<WebResponse>(response.Result);
-                        carrayObjs[carrayObjs.Length - 1] = wp;
 
-                        if (!wp.IsLast)
+                        // 支持多种回调签名：优先支持 Action<byte[],bool,int,string,Dictionary<string,string>>（流式）
+                        if (entry.StreamCallbackBytes!=null)
                         {
-                            remClientId = false;
+                            try
+                            {
+                                lock (entry.StreamCallbackBytes)
+                                {
+                                    entry.ContinueTime = DateTime.Now;
+                                    entry.LastWebResponse = wp;
+                                    // log chunk info for debugging
+                                    try
+                                    {
+                                        LogHelper.Instance.Debug($"Web chunk -> tx:{response.ClientTransactionID}, len:{(wp.ResponseData == null ? 0 : wp.ResponseData.Length)}, isLast:{wp.IsLast}, ctype:{wp.ContentType}");
+                                    }
+                                    catch { }
+
+                                    entry.StreamCallbackBytes(wp.ResponseData, wp.IsLast, wp.ResponseCode, wp.ContentType, wp.Headers);
+                                    if (!wp.IsLast)
+                                    {
+                                        remClientId = false;
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                LogHelper.Instance.Error("Stream callback error", ex);
+                            }
+                        }
+                        else
+                        {
+                            // 兼容旧逻辑：把最后一项设置为收到的分片
+                            entry.LastWebResponse = wp;
+
+                            if (!wp.IsLast)
+                            {
+                                remClientId = false;
+                            }
                         }
                     }
 
-                    var ae = (carrayObjs[0] as AutoResetEvent);
-                    ae.Set();
+                    // 如果是等待事件的场景，Set()
+                    if (entry.WaitEvent!=null)
+                    {
+                        entry.WaitEvent.Set();
+                    }
                 }
                 else
                 {
@@ -346,8 +528,14 @@ namespace LJC.FrameWork.SOA
                 if (remClientId)
                 {
                     ConatinerLock.EnterWriteLock();
-                    ClientSessionList.Remove(response.ClientTransactionID);
-                    ConatinerLock.ExitWriteLock();
+                    try
+                    {
+                        ClientSessionList.Remove(response.ClientTransactionID);
+                    }
+                    finally
+                    {
+                        ConatinerLock.ExitWriteLock();
+                    }
                 }
             }
         }
@@ -559,11 +747,20 @@ namespace LJC.FrameWork.SOA
                     msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
                     msg.SetMessageBody(transferrequest);
 
-                    var carrayObj = new object[] { autoResetEvent, serviceInfo, 0, DateTime.Now, null };
+                    var entry = new ClientSessionEntry
+                    {
+                        TransactionId = clientid,
+                        WaitEvent = autoResetEvent,
+                        ServiceInfo = serviceInfo,
+                        SessionCallback = serviceInfo?.Session,
+                        FuncId = 0,
+                        StartTime = DateTime.Now,
+                        LastWebResponse = null
+                    };
                     try
                     {
                         ConatinerLock.EnterWriteLock();
-                        ClientSessionList.Add(clientid, carrayObj);
+                        ClientSessionList.Add(clientid, entry);
                     }
                     finally
                     {
@@ -581,7 +778,19 @@ namespace LJC.FrameWork.SOA
                             //}
                             if (autoResetEvent.WaitOne(webRequest.TimeOut))
                             {
-                                return (WebResponse)carrayObj.Last();
+                                // read last web response from entry
+                                ClientSessionEntry readEntry = null;
+                                ConatinerLock.EnterReadLock();
+                                try
+                                {
+                                    ClientSessionList.TryGetValue(clientid, out readEntry);
+                                }
+                                finally
+                                {
+                                    ConatinerLock.ExitReadLock();
+                                }
+
+                                return readEntry?.LastWebResponse;
                             }
                             else
                             {
@@ -753,15 +962,35 @@ namespace LJC.FrameWork.SOA
                                 }
 
                                 transferrequest.ClientTransactionID = subMsgTransactionID;
-                                try
+
+                                if (session == null)
                                 {
+                                    waitReulst.Add(new AutoReSetEventResult<byte[]>());
+                                }
+
+                                    var subEntry = new ClientSessionEntry
+                                    {
+                                        TransactionId = subMsgTransactionID,
+                                        ServiceInfo = serviceInfo,
+                                        SessionCallback = session,
+                                        FuncId = request.FuncId,
+                                        StartTime = DateTime.Now,
+                                        LastWebResponse = null
+                                    };
                                     if (session == null)
                                     {
-                                        waitReulst.Add(new AutoReSetEventResult<byte[]>());
+                                        // waiting case
+                                        subEntry.WaitResult = waitReulst.Last();
+                                    }
+                                    else
+                                    {
+                                        subEntry.SessionCallback = session;
                                     }
 
-                                    ConatinerLock.EnterWriteLock();
-                                    ClientSessionList.Add(subMsgTransactionID, new object[] { session ?? (object)waitReulst.Last(), serviceInfo, request.FuncId, DateTime.Now });
+                                ConatinerLock.EnterWriteLock();
+                                try
+                                {
+                                    ClientSessionList.Add(subMsgTransactionID, subEntry);
                                 }
                                 finally
                                 {
@@ -772,7 +1001,7 @@ namespace LJC.FrameWork.SOA
                                 msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
                                 if (header != null && header.Any())
                                 {
-                                    foreach(var kv in header)
+                                    foreach (var kv in header)
                                     {
                                         msg.AddCustomData(kv.Key, kv.Value);
                                     }
@@ -781,11 +1010,6 @@ namespace LJC.FrameWork.SOA
 
                                 if (serviceInfo.Session.SendMessage(msg))
                                 {
-                                    //if (sendAll)
-                                    //{
-                                    //    LogHelper.Instance.Debug(string.Format("发送SOA请求,请求序列:{0},服务号:{1},功能号:{2},subMsgTransactionID:{3}",
-                                    //        msgTransactionID, request.ServiceNo, request.FuncId,subMsgTransactionID));
-                                    //}
                                     if (isLast)
                                     {
                                         if (waitReulst?.Any() == true)
@@ -801,14 +1025,15 @@ namespace LJC.FrameWork.SOA
                                                 throw new TimeoutException();
                                             }
                                         }
+
                                         return resp;
                                     }
                                 }
                                 else
                                 {
+                                    ConatinerLock.EnterWriteLock();
                                     try
                                     {
-                                        ConatinerLock.EnterWriteLock();
                                         ClientSessionList.Remove(subMsgTransactionID);
                                     }
                                     finally
@@ -816,10 +1041,6 @@ namespace LJC.FrameWork.SOA
                                         ConatinerLock.ExitWriteLock();
                                     }
                                 }
-
-                                //var result = SendMessageAnsy<byte[]>(serviceInfo.Session, msg);
-
-                                //resp.Result = result;
                             }
                         }
                         catch (Exception ex)
@@ -1049,6 +1270,39 @@ namespace LJC.FrameWork.SOA
             }
             else if (message.IsMessage((int)SOAMessageType.SOACheckHealth))
             {
+                return;
+            }
+
+            else if (message.IsMessage((int)SOAMessageType.QueryClientSessionRequest)) // QueryClientSessionRequest
+            {
+                try
+                {
+                    var req = message.GetMessageBody<Contract.QueryClientSessionRequest>();
+                    ClientSessionEntry entry = null;
+                    ConatinerLock.EnterReadLock();
+                    try
+                    {
+                        ClientSessionList.TryGetValue(req.ClientTransactionID, out entry);
+                    }
+                    finally
+                    {
+                        ConatinerLock.ExitReadLock();
+                    }
+
+                    var respMsg = new Message((int)SOAMessageType.QueryClientSessionResponse); // QueryClientSessionResponse
+                    respMsg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                    respMsg.SetMessageBody(new Contract.QueryClientSessionResponse
+                    {
+                        Exists = entry != null,
+                        LastNo = entry?.LastWebResponse?.No ?? 0
+                    });
+
+                    session.SendMessage(respMsg);
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.Instance.Error("QueryClientSessionRequest 处理出错", ex);
+                }
                 return;
             }
 

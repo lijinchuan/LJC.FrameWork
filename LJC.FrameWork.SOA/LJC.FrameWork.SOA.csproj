@@ -48,11 +48,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ApiSimulateHandler.cs" />
+    <Compile Include="ClientSessionEntry.cs" />
     <Compile Include="Consts.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoRequest.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoResponse.cs" />
     <Compile Include="Contract\ListServiceInfosRequest.cs" />
     <Compile Include="Contract\ListServiceInfosResponse.cs" />
+    <Compile Include="Contract\QueryClientSessionRequest.cs" />
+    <Compile Include="Contract\QueryClientSessionResponse.cs" />
     <Compile Include="Contract\QueryServiceNoResponse.cs" />
     <Compile Include="Contract\RegisterServiceInfo.cs" />
     <Compile Include="Contract\RegisterServiceRequest.cs" />

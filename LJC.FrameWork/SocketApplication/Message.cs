@@ -76,6 +76,7 @@ namespace LJC.FrameWork.SocketApplication
         public void SetMessageBody(object body)
         {
             _messageBody = body;
+            _messageBuffer = null;
         }
 
         private byte[] _messageBuffer;
