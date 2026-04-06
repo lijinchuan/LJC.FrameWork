@@ -67,6 +67,7 @@ namespace LJC.FrameWork.SOA
                         {
                             try
                             {
+                                response.ReturnCode = code;
                                 if (headers != null)
                                 {
                                     foreach (var kv in headers)
