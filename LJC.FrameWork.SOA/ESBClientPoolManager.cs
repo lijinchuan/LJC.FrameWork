@@ -44,6 +44,10 @@ namespace LJC.FrameWork.SOA
                 for(var i = 0; i < count; i++)
                 {
                     var newClient = new ESBClient(item.ESBServer, item.ESBPort, item.AutoStart, item.IsSecurity);
+                    if (item.AutoStart)
+                    {
+                        newClient.Login(null, null);
+                    }
                     clients.Add(newClient);
                 }
                 BaseClients.Add(item, clients.ToArray());
