@@ -213,8 +213,190 @@ namespace LJC.FrameWork.SOA
 
             SimulateServerManager.TransferRequest = DoWebRequest;
             SimulateServerManager.TransferRequestStream = DoWebRequestStream; // No changes made
+            SimulateServerManager.TransferRequestChunkSessionFactory = CreateWebRequestChunkSession;
             SimulateServerManager.GetWebMapperList = GetWebMapperList;
             SimulateServerManager.AddDefaultServer();
+        }
+
+        private SimulateServerManager.IWebRequestChunkSession CreateWebRequestChunkSession(WebRequest webRequest, Action<byte[], bool, int, string, Dictionary<string, string>> chunkCallback)
+        {
+            return new WebRequestChunkSession(this, webRequest, chunkCallback);
+        }
+
+        private sealed class WebRequestChunkSession : SimulateServerManager.IWebRequestChunkSession
+        {
+            private readonly ESBServer server;
+            private readonly WebRequest webRequest;
+            private readonly Action<byte[], bool, int, string, Dictionary<string, string>> chunkCallback;
+            private readonly ESBServiceInfo serviceInfo;
+            private readonly string clientId;
+            private readonly string transactionId;
+            private readonly string realUrl;
+            private readonly WebProxy proxy;
+            private readonly Dictionary<string, string> customData = new Dictionary<string, string>();
+            private int chunkNo;
+            private bool started;
+
+            public WebRequestChunkSession(ESBServer server, WebRequest webRequest, Action<byte[], bool, int, string, Dictionary<string, string>> chunkCallback)
+            {
+                this.server = server;
+                this.webRequest = webRequest;
+                this.chunkCallback = chunkCallback;
+                this.clientId = Guid.NewGuid().ToString("N");
+                this.transactionId = this.clientId;
+
+                var list = server.ServiceContainer.ToList();
+                foreach (var item in list.Where(p => p.WebMappers != null && p.WebMappers.Any()))
+                {
+                    var webMapper = WebTransferSvcHelper.Find(webRequest, item.WebMappers);
+                    if (webMapper != null)
+                    {
+                        serviceInfo = item;
+                        var virUrl = webRequest.VirUrl;
+                        if (!string.IsNullOrWhiteSpace(webMapper.MappingRoot) && virUrl.StartsWith(webMapper.MappingRoot, StringComparison.OrdinalIgnoreCase))
+                        {
+                            virUrl = virUrl.Substring(webMapper.MappingRoot.Length);
+                        }
+
+                        realUrl = webMapper.TragetWebHost;
+                        if (!string.IsNullOrWhiteSpace(virUrl))
+                        {
+                            realUrl = realUrl.TrimEnd('/') + '/' + virUrl.TrimStart('/');
+                        }
+
+                        if (!string.IsNullOrEmpty(webMapper.UseProxyName))
+                        {
+                            proxy = ServiceConfig.ReadConfig().WebProxies?.FirstOrDefault(p => p.Name.Equals(webMapper.UseProxyName, StringComparison.OrdinalIgnoreCase));
+                        }
+
+                        break;
+                    }
+                }
+
+                if (serviceInfo == null)
+                {
+                    throw new Exception("Not Found");
+                }
+
+                if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
+                {
+                    if (!server.CheckAlive(serviceInfo.Session))
+                    {
+                        lock (LockObj)
+                        {
+                            server.ServiceContainer.Remove(serviceInfo);
+                            serviceInfo.Session.Close("web session no resp over 30s and check not alived", true);
+                        }
+                        throw new Exception("Service down");
+                    }
+                }
+
+                var entry = new ClientSessionEntry
+                {
+                    TransactionId = clientId,
+                    SessionCallback = serviceInfo.Session,
+                    StreamCallbackBytes = chunkCallback,
+                    ServiceInfo = serviceInfo,
+                    FuncId = 0,
+                    StartTime = DateTime.Now,
+                    LastWebResponse = null
+                };
+                try
+                {
+                    ConatinerLock.EnterWriteLock();
+                    server.ClientSessionList.Add(clientId, entry);
+                }
+                finally
+                {
+                    ConatinerLock.ExitWriteLock();
+                }
+
+                var metaRequest = new WebRequest
+                {
+                    Host = webRequest.Host,
+                    VirUrl = webRequest.VirUrl,
+                    Cookies = webRequest.Cookies,
+                    Headers = webRequest.Headers,
+                    Method = webRequest.Method,
+                    QueryString = webRequest.QueryString,
+                    TimeOut = webRequest.TimeOut,
+                    InputData = null,
+                    InputDataLength = webRequest.InputDataLength
+                };
+
+                Message metaMsg = new Message((int)SOAMessageType.SOATransferWebRequest);
+                metaMsg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                metaMsg.SetMessageBody(new SOATransferWebRequest
+                {
+                    ClientId = clientId,
+                    ClientTransactionID = transactionId,
+                    FundId = 0,
+                    Param = EntityBufCore.Serialize(metaRequest),
+                    RequestTime = DateTime.Now,
+                    IsChunked = true,
+                    IsMeta = true,
+                    IsLastChunk = false,
+                    ChunkNo = 0,
+                    InputDataLength = webRequest.InputDataLength
+                });
+
+                if (!serviceInfo.Session.SendMessage(metaMsg))
+                {
+                    throw new Exception("Send meta message failed");
+                }
+
+                started = true;
+            }
+
+            public void Append(byte[] chunk, bool isLast)
+            {
+                if (!started)
+                {
+                    return;
+                }
+
+                if (chunk == null)
+                {
+                    chunk = new byte[0];
+                }
+
+                Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
+                msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                msg.SetMessageBody(new SOATransferWebRequest
+                {
+                    ClientId = clientId,
+                    ClientTransactionID = transactionId,
+                    FundId = 0,
+                    Param = chunk,
+                    RequestTime = DateTime.Now,
+                    IsChunked = true,
+                    IsMeta = false,
+                    IsLastChunk = isLast,
+                    ChunkNo = ++chunkNo,
+                    InputDataLength = webRequest.InputDataLength
+                });
+
+                if (!serviceInfo.Session.SendMessage(msg))
+                {
+                    throw new Exception("Send chunk message failed");
+                }
+            }
+        }
+
+        private static IEnumerable<byte[]> SplitBytes(byte[] data, int chunkSize)
+        {
+            if (data == null || data.Length == 0)
+            {
+                yield break;
+            }
+
+            for (var offset = 0; offset < data.Length; offset += chunkSize)
+            {
+                var size = Math.Min(chunkSize, data.Length - offset);
+                var chunk = new byte[size];
+                Buffer.BlockCopy(data, offset, chunk, 0, size);
+                yield return chunk;
+            }
         }
 
         internal void DoWebRequestStream(WebRequest webRequest, Action<byte[], bool, int, string, Dictionary<string,string>> chunkCallback)
@@ -324,6 +506,189 @@ namespace LJC.FrameWork.SOA
                     }
                     chunkCallback?.Invoke(Encoding.UTF8.GetBytes("SendMessage failed"), true, 500, "text/plain", null);
                     return;
+                }
+
+                return;
+            }
+            catch (Exception ex)
+            {
+                OnError(ex);
+                chunkCallback?.Invoke(Encoding.UTF8.GetBytes(ex.Message), true, 500, "text/plain", null);
+                return;
+            }
+        }
+
+        internal void DoWebRequestStreamChunked(WebRequest webRequest, IEnumerable<byte[]> requestChunks, Action<byte[], bool, int, string, Dictionary<string, string>> chunkCallback)
+        {
+            var soaRequestUrl = @"esbclient/soa/(\d{1,})/(\d{1,})";
+            var chunkList = requestChunks?.ToList() ?? new List<byte[]>();
+            var m = Regex.Match(webRequest.VirUrl, soaRequestUrl);
+            if (m.Success)
+            {
+                byte[] requestBytes = webRequest.InputData;
+                if (requestBytes == null && chunkList.Any())
+                {
+                    var totalLen = chunkList.Sum(p => p == null ? 0 : p.Length);
+                    requestBytes = new byte[totalLen];
+                    var offset = 0;
+                    foreach (var chunk in chunkList)
+                    {
+                        if (chunk == null || chunk.Length == 0)
+                        {
+                            continue;
+                        }
+                        Buffer.BlockCopy(chunk, 0, requestBytes, offset, chunk.Length);
+                        offset += chunk.Length;
+                    }
+                }
+                var resp = DoTransferRequest(null, SocketApplicationComm.GetSeqNum(),
+                    new SOARequest
+                    {
+                        FuncId = int.Parse(m.Groups[2].Value),
+                        ServiceNo = int.Parse(m.Groups[1].Value),
+                        Param = requestBytes,
+                        ReqestTime = DateTime.Now
+                    }, new Dictionary<string, string>
+                {
+                    {Consts.HeaderKey_ContentType,Consts.HeaderValue_ContentType_JSONValue }
+                });
+
+                chunkCallback?.Invoke(resp.Result, true, resp.IsSuccess ? 200 : 500, "application/json", null);
+                return;
+            }
+
+            var list = ServiceContainer.ToList();
+            ESBServiceInfo serviceInfo = null;
+            WebMapper webMapper = null;
+            foreach (var item in list.Where(p => p.WebMappers != null && p.WebMappers.Any()))
+            {
+                webMapper = WebTransferSvcHelper.Find(webRequest, item.WebMappers);
+                if (webMapper != null)
+                {
+                    serviceInfo = item;
+                    break;
+                }
+            }
+
+            if (webMapper == null)
+            {
+                chunkCallback?.Invoke(Encoding.UTF8.GetBytes("Not Found"), true, 404, "text/plain", null);
+                return;
+            }
+
+            try
+            {
+                if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
+                {
+                    if (!CheckAlive(serviceInfo.Session))
+                    {
+                        lock (LockObj)
+                        {
+                            ServiceContainer.Remove(serviceInfo);
+                            serviceInfo.Session.Close("web session no resp over 30s and check not alived", true);
+
+                            chunkCallback?.Invoke(Encoding.UTF8.GetBytes("Service down"), true, 500, "text/plain", null);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        LogHelper.Instance.Info("web session no resp over 30s but check alived");
+                    }
+                }
+
+                string clientid = Guid.NewGuid().ToString("N");
+
+                var entry = new ClientSessionEntry
+                {
+                    TransactionId = clientid,
+                    SessionCallback = serviceInfo.Session,
+                    StreamCallbackBytes = chunkCallback,
+                    ServiceInfo = serviceInfo,
+                    FuncId = 0,
+                    StartTime = DateTime.Now,
+                    LastWebResponse = null
+                };
+                try
+                {
+                    ConatinerLock.EnterWriteLock();
+                    ClientSessionList.Add(clientid, entry);
+                }
+                finally
+                {
+                    ConatinerLock.ExitWriteLock();
+                }
+
+                var metaRequest = new WebRequest
+                {
+                    Host = webRequest.Host,
+                    VirUrl = webRequest.VirUrl,
+                    Cookies = webRequest.Cookies,
+                    Headers = webRequest.Headers,
+                    Method = webRequest.Method,
+                    QueryString = webRequest.QueryString,
+                    TimeOut = webRequest.TimeOut,
+                    InputData = null,
+                    InputDataLength = webRequest.InputDataLength
+                };
+
+                Message metaMsg = new Message((int)SOAMessageType.SOATransferWebRequest);
+                metaMsg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                metaMsg.SetMessageBody(new SOATransferWebRequest
+                {
+                    ClientId = clientid,
+                    ClientTransactionID = clientid,
+                    FundId = 0,
+                    Param = EntityBufCore.Serialize(metaRequest),
+                    RequestTime = DateTime.Now,
+                    IsChunked = true,
+                    IsMeta = true,
+                    IsLastChunk = false,
+                    ChunkNo = 0
+                });
+
+                if (!serviceInfo.Session.SendMessage(metaMsg))
+                {
+                    try
+                    {
+                        ConatinerLock.EnterWriteLock();
+                        ClientSessionList.Remove(clientid);
+                    }
+                    finally
+                    {
+                        ConatinerLock.ExitWriteLock();
+                    }
+                    chunkCallback?.Invoke(Encoding.UTF8.GetBytes("SendMessage failed"), true, 500, "text/plain", null);
+                    return;
+                }
+
+                if (chunkList.Count == 0)
+                {
+                    chunkList.Add(new byte[0]);
+                }
+
+                for (var i = 0; i < chunkList.Count; i++)
+                {
+                    var chunk = chunkList[i] ?? new byte[0];
+                    Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
+                    msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                    msg.SetMessageBody(new SOATransferWebRequest
+                    {
+                        ClientId = clientid,
+                        ClientTransactionID = clientid,
+                        FundId = 0,
+                        Param = chunk,
+                        RequestTime = DateTime.Now,
+                        IsChunked = true,
+                        IsMeta = false,
+                        IsLastChunk = i == chunkList.Count - 1,
+                        ChunkNo = i + 1
+                    });
+
+                    if (!serviceInfo.Session.SendMessage(msg))
+                    {
+                        throw new Exception("Send chunk message failed");
+                    }
                 }
 
                 return;

@@ -54,5 +54,11 @@ namespace LJC.FrameWork.SOA.Contract
             get;
             set;
         }
+
+        public int InputDataLength
+        {
+            get;
+            set;
+        }
     }
 }

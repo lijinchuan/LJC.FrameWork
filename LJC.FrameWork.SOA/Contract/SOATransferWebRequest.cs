@@ -39,5 +39,35 @@ namespace LJC.FrameWork.SOA.Contract
             get;
             set;
         }
+
+        public bool IsChunked
+        {
+            get;
+            set;
+        }
+
+        public bool IsMeta
+        {
+            get;
+            set;
+        }
+
+        public bool IsLastChunk
+        {
+            get;
+            set;
+        }
+
+        public int ChunkNo
+        {
+            get;
+            set;
+        }
+
+        public int InputDataLength
+        {
+            get;
+            set;
+        }
     }
 }

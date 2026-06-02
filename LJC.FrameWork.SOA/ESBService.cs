@@ -20,6 +20,15 @@ namespace LJC.FrameWork.SOA
 {
     public class ESBService:SessionClient,IService
     {
+        private sealed class ChunkedWebRequestContext
+        {
+            public WebRequest Request { get; set; }
+            public List<byte[]> Chunks { get; } = new List<byte[]>();
+        }
+
+        private readonly object chunkRequestLocker = new object();
+        private readonly Dictionary<string, ChunkedWebRequestContext> chunkRequestContexts = new Dictionary<string, ChunkedWebRequestContext>();
+
         static ESBService()
         {
             ThreadPoolHelper.CheckSetMinThreads(100, 100);
@@ -248,6 +257,12 @@ namespace LJC.FrameWork.SOA
                         LogHelper.Instance.Debug(string.Format("接收服务请求,请求号:{0}", request.ClientTransactionID));
                     }
 
+                    if (request.IsChunked)
+                    {
+                        HandleChunkedWebRequest(message, request);
+                        return;
+                    }
+
                     try
                     {
                         var results = (IEnumerable<WebResponse>)DoResponse(Func_WebRequest, request.Param, request.ClientId, message.MessageHeader.CustomData);
@@ -385,6 +400,136 @@ namespace LJC.FrameWork.SOA
             }
 
             base.ReciveMessage(message);
+        }
+
+        private void HandleChunkedWebRequest(Message message, SOATransferWebRequest request)
+        {
+            try
+            {
+                if (request.IsMeta)
+                {
+                    var meta = GetParam<WebRequest>(message.MessageHeader.CustomData, request.Param);
+                    var context = new ChunkedWebRequestContext
+                    {
+                        Request = meta
+                    };
+
+                    lock (chunkRequestLocker)
+                    {
+                        chunkRequestContexts[request.ClientTransactionID] = context;
+                    }
+
+                    return;
+                }
+
+                ChunkedWebRequestContext chunkContext = null;
+                lock (chunkRequestLocker)
+                {
+                    chunkRequestContexts.TryGetValue(request.ClientTransactionID, out chunkContext);
+                }
+
+                if (chunkContext == null)
+                {
+                    throw new Exception($"分片请求上下文不存在:{request.ClientTransactionID}");
+                }
+
+                if (request.Param != null && request.Param.Length > 0)
+                {
+                    lock (chunkContext)
+                    {
+                        chunkContext.Chunks.Add(request.Param);
+                    }
+                }
+
+                if (!request.IsLastChunk)
+                {
+                    return;
+                }
+
+                lock (chunkRequestLocker)
+                {
+                    chunkRequestContexts.Remove(request.ClientTransactionID);
+                }
+
+                var responseMsg = new Message((int)SOAMessageType.SOATransferWebResponse);
+                responseMsg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                SOATransferWebResponse responseBody = new SOATransferWebResponse();
+                responseBody.ClientTransactionID = request.ClientTransactionID;
+                responseBody.ClientId = request.ClientId;
+
+                var webRequest = chunkContext.Request;
+                var list = ServiceConfig.ReadConfig()?.WebMappers;
+                WebMapper matchedMapper = WebTransferSvcHelper.Find(webRequest, list);
+                if (matchedMapper == null)
+                {
+                    responseBody.IsSuccess = false;
+                    responseBody.ErrMsg = "Not Found";
+                    responseBody.Result = Encoding.UTF8.GetBytes("Not Found");
+                    responseMsg.SetMessageBody(responseBody);
+                    SendMessage(responseMsg);
+                    return;
+                }
+
+                var virUrl = webRequest.VirUrl;
+                if (!string.IsNullOrWhiteSpace(matchedMapper.MappingRoot) && virUrl.StartsWith(matchedMapper.MappingRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    virUrl = virUrl.Substring(matchedMapper.MappingRoot.Length);
+                }
+
+                var realUrl = matchedMapper.TragetWebHost;
+                if (!string.IsNullOrWhiteSpace(virUrl))
+                {
+                    realUrl = realUrl.TrimEnd('/') + '/' + virUrl.TrimStart('/');
+                }
+
+                WebProxy proxy = null;
+                if (!string.IsNullOrEmpty(matchedMapper.UseProxyName))
+                {
+                    proxy = ServiceConfig.ReadConfig().WebProxies?.FirstOrDefault(p => p.Name.Equals(matchedMapper.UseProxyName, StringComparison.OrdinalIgnoreCase));
+                }
+
+                var results = DoWebResponseWithHttpWebRequestChunked(webRequest, realUrl, proxy, chunkContext.Chunks);
+                foreach (var result in results)
+                {
+                    responseBody.Result = BuildResult(message.MessageHeader.CustomData, result);
+                    responseBody.IsSuccess = true;
+                    responseBody.ErrMsg = null;
+
+                    responseMsg.SetMessageBody(responseBody);
+                    SendMessage(responseMsg);
+
+                    responseBody = new SOATransferWebResponse
+                    {
+                        ClientTransactionID = request.ClientTransactionID,
+                        ClientId = request.ClientId
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Instance.Error("HandleChunkedWebRequest出错", ex);
+                lock (chunkRequestLocker)
+                {
+                    chunkRequestContexts.Remove(request.ClientTransactionID);
+                }
+                try
+                {
+                    var responseMsg = new Message((int)SOAMessageType.SOATransferWebResponse);
+                    responseMsg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                    responseMsg.SetMessageBody(new SOATransferWebResponse
+                    {
+                        ClientTransactionID = request.ClientTransactionID,
+                        ClientId = request.ClientId,
+                        IsSuccess = false,
+                        ErrMsg = ex.Message,
+                        Result = Encoding.UTF8.GetBytes(ex.Message)
+                    });
+                    SendMessage(responseMsg);
+                }
+                catch
+                {
+                }
+            }
         }
 
         protected override byte[] DoMessage(LJC.FrameWork.SocketApplication.Message message)
@@ -542,6 +687,227 @@ namespace LJC.FrameWork.SOA
             }
         }
 
+        private IEnumerable<WebResponse> DoWebResponseWithHttpWebRequestChunked(WebRequest request, string realUrl, WebProxy proxy, IList<byte[]> requestChunks)
+        {
+            System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
+            webRequest.Method = request.Method;
+
+            if (proxy != null)
+            {
+                webRequest.SetCredential(proxy.Address, proxy.UserName, proxy.UserPassWord);
+            }
+
+            foreach (var kv in request.Headers)
+            {
+                if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                    || kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase)
+                    || kv.Key.Equals("Expect", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.Referer = kv.Value;
+                }
+                else if (kv.Key.Equals("Expect", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.Expect = kv.Value;
+                }
+                else if (kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+                {
+                }
+                else if (kv.Key.Equals("Proxy-Connection", StringComparison.OrdinalIgnoreCase))
+                {
+                }
+                else if (kv.Key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.UserAgent = kv.Value;
+                }
+                else if (kv.Key.Equals("Accept", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.Accept = kv.Value;
+                }
+                else if (kv.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.ContentType = kv.Value;
+                }
+                else if (kv.Key.Equals("If-Modified-Since", StringComparison.OrdinalIgnoreCase))
+                {
+                    webRequest.IfModifiedSince = DateTime.Parse(kv.Value);
+                }
+                else
+                {
+                    webRequest.Headers.Add(kv.Key, kv.Value);
+                }
+            }
+
+            webRequest.AllowAutoRedirect = false;
+            webRequest.KeepAlive = false;
+            webRequest.AllowWriteStreamBuffering = true;
+
+            if (!webRequest.Headers.AllKeys.Any(p => "Cookie".Equals(p, StringComparison.OrdinalIgnoreCase)))
+            {
+                webRequest.CookieContainer = new System.Net.CookieContainer();
+                var cookDomain = webRequest.Host.Split(':').First();
+                foreach (var kv in request.Cookies)
+                {
+                    webRequest.CookieContainer.Add(new System.Net.Cookie
+                    {
+                        Name = kv.Key,
+                        Value = WebUtility.UrlEncode(kv.Value),
+                        Domain = cookDomain,
+                        Path = "/"
+                    });
+                }
+            }
+
+            if (request.TimeOut > 0)
+            {
+                webRequest.Timeout = request.TimeOut;
+            }
+
+            webRequest.ContentLength = request.InputDataLength > 0 ? request.InputDataLength : requestChunks.Sum(p => p == null ? 0 : p.Length);
+
+            using (Stream requestStream = webRequest.GetRequestStream())
+            {
+                foreach (var chunk in requestChunks)
+                {
+                    if (chunk == null || chunk.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    requestStream.Write(chunk, 0, chunk.Length);
+                }
+            }
+
+            var responses = new List<WebResponse>();
+            try
+            {
+                using (System.Net.HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
+                {
+                    FillWebResponseChunks(request, realUrl, webResponse, responses);
+                }
+            }
+            catch (System.Net.WebException webEx)
+            {
+                var httpResponse = webEx.Response as System.Net.HttpWebResponse;
+                if (httpResponse != null)
+                {
+                    using (httpResponse)
+                    {
+                        FillWebResponseChunks(request, realUrl, httpResponse, responses);
+                    }
+                }
+                else
+                {
+                    responses.Add(new WebResponse
+                    {
+                        ResponseCode = 500,
+                        ContentType = string.Format("{0}; charset={1}", "text/html", "utf-8"),
+                        ResponseData = Encoding.UTF8.GetBytes(webEx.Message),
+                        IsLast = true
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                responses.Add(new WebResponse
+                {
+                    ResponseCode = 500,
+                    ContentType = string.Format("{0}; charset={1}", "text/html", "utf-8"),
+                    ResponseData = Encoding.UTF8.GetBytes(ex.Message),
+                    IsLast = true
+                });
+            }
+
+            foreach (var item in responses)
+            {
+                yield return item;
+            }
+        }
+
+        private void FillWebResponseChunks(WebRequest request, string realUrl, System.Net.HttpWebResponse webResponse, List<WebResponse> responses)
+        {
+            var response = new WebResponse();
+            response.Headers = new Dictionary<string, string>();
+
+            for (var i = 0; i < webResponse.Headers.Count; i++)
+            {
+                var name = webResponse.Headers.GetKey(i);
+
+                if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                    || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
+                    || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
+                    || name.Equals("Date", StringComparison.OrdinalIgnoreCase)
+                    || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var value = webResponse.Headers.Get(i);
+                if (name.Equals("Location", StringComparison.OrdinalIgnoreCase))
+                {
+                    value = WebTransferSvcHelper.RelaceLocation(value, request.Host, realUrl);
+                }
+                response.Headers.Add(name, value);
+            }
+
+            response.ResponseCode = (int)webResponse.StatusCode;
+            response.ContentType = webResponse.ContentType;
+            Stream s = webResponse.GetResponseStream();
+
+            if (s == null)
+            {
+                response.IsLast = true;
+                response.ResponseData = new byte[0];
+                responses.Add(response);
+                return;
+            }
+
+            var buffer = new byte[1024 * 1000];
+            var readCount = s.Read(buffer, 0, buffer.Length);
+
+            while (true)
+            {
+                byte[] next = null;
+                var readCount2 = 0;
+
+                if (readCount == buffer.Length)
+                {
+                    next = new byte[1024 * 1000];
+                    readCount2 = s.Read(next, 0, next.Length);
+                }
+
+                if (next == null)
+                {
+                    response.IsLast = true;
+                    byte[] newArray = buffer;
+                    if (readCount < buffer.Length)
+                    {
+                        newArray = new byte[readCount];
+                        Array.Copy(buffer, newArray, readCount);
+                    }
+
+                    response.ResponseData = newArray;
+                    responses.Add(response);
+                    return;
+                }
+                else
+                {
+                    response.ResponseData = buffer;
+
+                    responses.Add(response);
+                }
+
+                response = new WebResponse();
+
+                buffer = next;
+                readCount = readCount2;
+            }
+        }
+
         private IEnumerable<WebResponse> DoWebResponseWithHttpWebRequest(WebRequest request, string realUrl,WebProxy proxy)
         {
             System.Net.HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
@@ -651,75 +1017,49 @@ namespace LJC.FrameWork.SOA
             }
             Console.WriteLine(webRequest.RequestUri.ToString());
 
-            using (System.Net.HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
+            var responses = new List<WebResponse>();
+            try
             {
-                var response = new WebResponse();
-                response.Headers = new Dictionary<string, string>();
-
-                for (var i = 0; i < webResponse.Headers.Count; i++)
+                using (System.Net.HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
                 {
-                    var name = webResponse.Headers.GetKey(i);
-
-                    if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
-                        || name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
-                        || name.Equals("Server", StringComparison.OrdinalIgnoreCase)
-                        || name.Equals("Date", StringComparison.OrdinalIgnoreCase)
-                        || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    var value = webResponse.Headers.Get(i);
-                    if (name.Equals("Location", StringComparison.OrdinalIgnoreCase))
-                    {
-                        value = WebTransferSvcHelper.RelaceLocation(value, request.Host, realUrl);
-                    }
-                    response.Headers.Add(name, value);
+                    FillWebResponseChunks(request, realUrl, webResponse, responses);
                 }
-                response.ResponseCode = (int)webResponse.StatusCode;
-                response.ContentType = webResponse.ContentType;
-                Stream s = webResponse.GetResponseStream();
-
-                var buffer = new byte[1024 * 1000];
-                var readCount = s.Read(buffer, 0, buffer.Length);
-
-                while (true)
+            }
+            catch (System.Net.WebException webEx)
+            {
+                var httpResponse = webEx.Response as System.Net.HttpWebResponse;
+                if (httpResponse != null)
                 {
-                    byte[] next = null;
-                    var readCount2 = 0;
-
-                    if (readCount == buffer.Length)
+                    using (httpResponse)
                     {
-                        next = new byte[1024 * 1000];
-                        readCount2 = s.Read(next, 0, next.Length);
+                        FillWebResponseChunks(request, realUrl, httpResponse, responses);
                     }
-
-                    if (next == null)
-                    {
-                        response.IsLast = true;
-                        byte[] newArray = buffer;
-                        if (readCount < buffer.Length)
-                        {
-                            newArray = new byte[readCount];
-                            Array.Copy(buffer, newArray, readCount);
-                        }
-
-                        response.ResponseData = newArray;
-                        yield return response;
-                        yield break;
-                    }
-                    else
-                    {
-                        response.ResponseData = buffer;
-
-                        yield return response;
-                    }
-
-                    response = new WebResponse();
-
-                    buffer = next;
-                    readCount = readCount2;
                 }
+                else
+                {
+                    responses.Add(new WebResponse
+                    {
+                        ResponseCode = 500,
+                        ContentType = string.Format("{0}; charset={1}", "text/html", "utf-8"),
+                        ResponseData = Encoding.UTF8.GetBytes(webEx.Message),
+                        IsLast = true
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                responses.Add(new WebResponse
+                {
+                    ResponseCode = 500,
+                    ContentType = string.Format("{0}; charset={1}", "text/html", "utf-8"),
+                    ResponseData = Encoding.UTF8.GetBytes(ex.Message),
+                    IsLast = true
+                });
+            }
+
+            foreach (var item in responses)
+            {
+                yield return item;
             }
         }
 

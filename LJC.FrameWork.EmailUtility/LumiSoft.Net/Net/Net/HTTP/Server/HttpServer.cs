@@ -13,6 +13,8 @@ namespace LJC.FrameWork.Net.HTTP.Server
 {
     public class HttpServer
     {
+        private const int StreamingBodyThreshold = 1024 * 1000;
+
         Server s;
         Hashtable hostmap = Hashtable.Synchronized(new Hashtable());    // Map<string, string>: Host => Home folder
         ArrayList handlers = new ArrayList();        // List<IHttpHandler>
@@ -177,13 +179,47 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 }
 
                 string contentLengthString;
-                if (data.req.Header.TryGetValue("Content-Length", out contentLengthString))
+                if (TryGetHeaderValue(data.req.Header, "Content-Length", out contentLengthString))
                     data.req.ContentLength = Int32.Parse(contentLengthString);
                 else data.req.ContentLength = 0;
+
+                string expectHeader;
+                if (TryGetHeaderValue(data.req.Header, "Expect", out expectHeader) &&
+                    data.req.ContentLength > 0 &&
+                    expectHeader.IndexOf("100-continue", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    ci.Send(Encoding.ASCII.GetBytes("HTTP/1.1 100 Continue\r\n\r\n"));
+                }
 
                 //if(data.req.ContentLength > 0){
                 data.state = ClientState.PreContent;
                 data.skip = text.Length + 4;
+
+                if (data.req.ContentLength > 1024 * 1000)
+                {
+                    var streamHandler = FindStreamHandler();
+                    if (streamHandler != null)
+                    {
+                        data.streamHandler = streamHandler;
+                        data.streamResponse = new HttpResponse();
+                        data.streamResponse.Url = data.req.Url;
+                        data.streamResponse.ContentType = "text/html; charset=utf-8";
+                        if (streamHandler.Begin(this, data.req, data.streamResponse))
+                        {
+                            SendResponse(ci, data.req, data.streamResponse, false);
+                        }
+                        else
+                        {
+                            data.streamHandler = null;
+                            data.streamResponse = null;
+                        }
+                    }
+                }
+
+                if (data.req.ContentLength <= 0)
+                {
+                    DoProcess(ci);
+                }
                 //} else DoProcess(ci);
 
                 //ClientReadBytes(ci, new byte[0], 0); // For content length 0 body
@@ -271,6 +307,42 @@ namespace LJC.FrameWork.Net.HTTP.Server
             }
             try
             {
+                if (data.streamHandler != null)
+                {
+                    var chunkLen = len - ofs;
+                    if (chunkLen > 0)
+                    {
+                        data.req.BytesRead += chunkLen;
+                        data.streamHandler.Append(this, data.req, bytes, ofs, chunkLen, data.req.BytesRead >= data.req.ContentLength);
+                    }
+
+                    if (data.req.BytesRead >= data.req.ContentLength)
+                    {
+                        data.streamHandler = null;
+                        data.streamResponse = null;
+                        data.state = ClientState.Header;
+                        data.read = 0;
+                    }
+                    return;
+                }
+
+                if (data.streamingRequest && data.req.RawStream is ChunkedRequestStream)
+                {
+                    var chunkLen = len - ofs;
+                    if (chunkLen > 0)
+                    {
+                        data.req.RawStream.Write(bytes, ofs, chunkLen);
+                        data.req.BytesRead += chunkLen;
+                        data.headerskip += chunkLen;
+                    }
+
+                    if (data.req.BytesRead >= data.req.ContentLength)
+                    {
+                        ((ChunkedRequestStream)data.req.RawStream).Complete();
+                    }
+                    return;
+                }
+
                 if (data.req.RawStream == null)
                 {
                     data.req.RawStream = new MemoryStream();
@@ -358,6 +430,9 @@ namespace LJC.FrameWork.Net.HTTP.Server
             internal HttpRequest req = new HttpRequest();
             internal ClientState state = ClientState.Header;
             internal int skip, read, headerskip;
+            internal bool streamingRequest;
+            internal IStreamingHttpHandler streamHandler;
+            internal HttpResponse streamResponse;
 
             internal ClientData(ClientInfo ci)
             {
@@ -369,7 +444,176 @@ namespace LJC.FrameWork.Net.HTTP.Server
                 req.Clear();
                 state = ClientState.Header;
                 skip = read = headerskip = default;
+                streamingRequest = false;
+                streamHandler = null;
+                streamResponse = null;
             }
+        }
+
+        private sealed class ChunkedRequestStream : Stream
+        {
+            private readonly Queue<byte[]> chunks = new Queue<byte[]>();
+            private readonly object syncRoot = new object();
+            private byte[] currentChunk;
+            private int currentChunkOffset;
+            private bool completed;
+            private bool disposed;
+            private long length;
+
+            public void Complete()
+            {
+                lock (syncRoot)
+                {
+                    completed = true;
+                    System.Threading.Monitor.PulseAll(syncRoot);
+                }
+            }
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length
+            {
+                get
+                {
+                    lock (syncRoot)
+                    {
+                        return length;
+                    }
+                }
+            }
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            public override void Flush()
+            {
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+                if (offset < 0 || count < 0 || buffer.Length - offset < count) throw new ArgumentOutOfRangeException();
+
+                lock (syncRoot)
+                {
+                    while (true)
+                    {
+                        if (disposed)
+                        {
+                            return 0;
+                        }
+
+                        if (currentChunk != null)
+                        {
+                            int available = currentChunk.Length - currentChunkOffset;
+                            if (available > 0)
+                            {
+                                int toCopy = Math.Min(available, count);
+                                Buffer.BlockCopy(currentChunk, currentChunkOffset, buffer, offset, toCopy);
+                                currentChunkOffset += toCopy;
+                                if (currentChunkOffset >= currentChunk.Length)
+                                {
+                                    currentChunk = null;
+                                    currentChunkOffset = 0;
+                                }
+                                return toCopy;
+                            }
+
+                            currentChunk = null;
+                            currentChunkOffset = 0;
+                        }
+
+                        if (chunks.Count > 0)
+                        {
+                            currentChunk = chunks.Dequeue();
+                            currentChunkOffset = 0;
+                            continue;
+                        }
+
+                        if (completed)
+                        {
+                            return 0;
+                        }
+
+                        System.Threading.Monitor.Wait(syncRoot);
+                    }
+                }
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+                if (offset < 0 || count < 0 || buffer.Length - offset < count) throw new ArgumentOutOfRangeException();
+                if (count == 0) return;
+
+                byte[] copy = new byte[count];
+                Buffer.BlockCopy(buffer, offset, copy, 0, count);
+
+                lock (syncRoot)
+                {
+                    if (disposed) throw new ObjectDisposedException(nameof(ChunkedRequestStream));
+                    chunks.Enqueue(copy);
+                    length += count;
+                    System.Threading.Monitor.PulseAll(syncRoot);
+                }
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotSupportedException();
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                lock (syncRoot)
+                {
+                    disposed = true;
+                    completed = true;
+                    chunks.Clear();
+                    currentChunk = null;
+                    currentChunkOffset = 0;
+                    System.Threading.Monitor.PulseAll(syncRoot);
+                }
+
+                base.Dispose(disposing);
+            }
+        }
+
+        private IStreamingHttpHandler FindStreamHandler()
+        {
+            for (int i = handlers.Count - 1; i >= 0; i--)
+            {
+                var handler = handlers[i] as IStreamingHttpHandler;
+                if (handler != null)
+                {
+                    return handler;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool TryGetHeaderValue(Dictionary<string, string> headers, string name, out string value)
+        {
+            foreach (var kv in headers)
+            {
+                if (kv.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = kv.Value;
+                    return true;
+                }
+            }
+
+            value = null;
+            return false;
         }
 
         public Session RequestSession(HttpRequest req)
@@ -580,6 +824,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
                             {
                                 try { ci.Close(); } catch { }
                             }
+                            try { ci.Clear(); } catch { }
                         }
                     }
                     catch (Exception)
@@ -598,7 +843,6 @@ namespace LJC.FrameWork.Net.HTTP.Server
                     try { ci.Close(); } catch { }
                 }
 
-                ci.Clear();
                 return;
             }
 
@@ -746,11 +990,12 @@ namespace LJC.FrameWork.Net.HTTP.Server
         public bool GotHeader = false;
         public string Method, Url, Page, HttpVersion, Host, HeaderText, QueryString;
         public IPAddress From;
-        internal MemoryStream RawStream;
+        internal Stream RawStream;
         public Dictionary<string, string> Query = new Dictionary<string, string>(), Header = new Dictionary<string, string>(), Cookies = new Dictionary<string, string>();
 
         public int ContentLength, BytesRead;
         public Session Session;
+        public object Tag;
 
         private string _content = null;
         public string GetContent(Encoding encoding = null)
@@ -770,7 +1015,15 @@ namespace LJC.FrameWork.Net.HTTP.Server
             {
                 if (RawStream != null && _rawData == null)
                 {
-                    _rawData = RawStream.ToArray();
+                    if (RawStream.CanSeek)
+                    {
+                        RawStream.Seek(0, SeekOrigin.Begin);
+                    }
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        RawStream.CopyTo(ms);
+                        _rawData = ms.ToArray();
+                    }
                     RawStream.Dispose();
                     RawStream = default;
                 }
@@ -791,6 +1044,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
             Header.Clear();
             Cookies.Clear();
             ContentLength = BytesRead = default;
+            Tag = null;
         }
     }
 
@@ -820,6 +1074,12 @@ namespace LJC.FrameWork.Net.HTTP.Server
     public interface IHttpHandler
     {
         bool Process(HttpServer server, HttpRequest request, HttpResponse response);
+    }
+
+    public interface IStreamingHttpHandler : IHttpHandler
+    {
+        bool Begin(HttpServer server, HttpRequest request, HttpResponse response);
+        void Append(HttpServer server, HttpRequest request, byte[] bytes, int offset, int count, bool isLast);
     }
 
     public class Session

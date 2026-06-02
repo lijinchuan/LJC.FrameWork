@@ -97,7 +97,7 @@ namespace LJC.FrameWork.Net.HTTP.Server
         public Control ThreadSyncControl { get { return threadSyncControl; } set { threadSyncControl = value; } }
 
         private string delim;
-        public const int BUFSIZE = 1024;
+        public const int BUFSIZE = 1024000;
         byte[] buf = new byte[BUFSIZE];
         ByteBuilder bytes = new ByteBuilder(10);
 

@@ -19,6 +19,13 @@ namespace LJC.FrameWork.SOA
         // 流式转发：接受 WebRequest 与每片回调，回调上层应立即返回给 HttpServer
         // callback arguments: byte[] responseData, bool isLast, int responseCode, string contentType, Dictionary<string,string> headers
         internal static Action<WebRequest, Action<byte[], bool, int, string, Dictionary<string, string>>> TransferRequestStream;
+        // 分片请求转发：先创建会话，再按顺序传递请求体分片，最终通过回调返回响应
+        internal interface IWebRequestChunkSession
+        {
+            void Append(byte[] chunk, bool isLast);
+        }
+
+        internal static Func<WebRequest, Action<byte[], bool, int, string, Dictionary<string, string>>, IWebRequestChunkSession> TransferRequestChunkSessionFactory;
 
         internal static Func<IEnumerable<WebMapper>> GetWebMapperList;
 
