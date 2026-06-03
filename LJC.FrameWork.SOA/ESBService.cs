@@ -23,7 +23,10 @@ namespace LJC.FrameWork.SOA
         private sealed class ChunkedWebRequestContext
         {
             public WebRequest Request { get; set; }
-            public List<byte[]> Chunks { get; } = new List<byte[]>();
+            public System.Net.HttpWebRequest HttpRequest { get; set; }
+            public Stream RequestStream { get; set; }
+            public string RealUrl { get; set; }
+            public WebProxy Proxy { get; set; }
         }
 
         private readonly object chunkRequestLocker = new object();
@@ -409,10 +412,7 @@ namespace LJC.FrameWork.SOA
                 if (request.IsMeta)
                 {
                     var meta = GetParam<WebRequest>(message.MessageHeader.CustomData, request.Param);
-                    var context = new ChunkedWebRequestContext
-                    {
-                        Request = meta
-                    };
+                    var context = CreateChunkedWebRequestContext(meta);
 
                     lock (chunkRequestLocker)
                     {
@@ -437,7 +437,13 @@ namespace LJC.FrameWork.SOA
                 {
                     lock (chunkContext)
                     {
-                        chunkContext.Chunks.Add(request.Param);
+                        if (chunkContext.RequestStream == null)
+                        {
+                            throw new Exception($"分片请求流未初始化:{request.ClientTransactionID}");
+                        }
+
+                        chunkContext.RequestStream.Write(request.Param, 0, request.Param.Length);
+                        chunkContext.RequestStream.Flush();
                     }
                 }
 
@@ -451,44 +457,30 @@ namespace LJC.FrameWork.SOA
                     chunkRequestContexts.Remove(request.ClientTransactionID);
                 }
 
+                lock (chunkContext)
+                {
+                    try
+                    {
+                        chunkContext.RequestStream?.Flush();
+                    }
+                    catch { }
+
+                    try
+                    {
+                        chunkContext.RequestStream?.Dispose();
+                    }
+                    catch { }
+
+                    chunkContext.RequestStream = null;
+                }
+
                 var responseMsg = new Message((int)SOAMessageType.SOATransferWebResponse);
                 responseMsg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
                 SOATransferWebResponse responseBody = new SOATransferWebResponse();
                 responseBody.ClientTransactionID = request.ClientTransactionID;
                 responseBody.ClientId = request.ClientId;
 
-                var webRequest = chunkContext.Request;
-                var list = ServiceConfig.ReadConfig()?.WebMappers;
-                WebMapper matchedMapper = WebTransferSvcHelper.Find(webRequest, list);
-                if (matchedMapper == null)
-                {
-                    responseBody.IsSuccess = false;
-                    responseBody.ErrMsg = "Not Found";
-                    responseBody.Result = Encoding.UTF8.GetBytes("Not Found");
-                    responseMsg.SetMessageBody(responseBody);
-                    SendMessage(responseMsg);
-                    return;
-                }
-
-                var virUrl = webRequest.VirUrl;
-                if (!string.IsNullOrWhiteSpace(matchedMapper.MappingRoot) && virUrl.StartsWith(matchedMapper.MappingRoot, StringComparison.OrdinalIgnoreCase))
-                {
-                    virUrl = virUrl.Substring(matchedMapper.MappingRoot.Length);
-                }
-
-                var realUrl = matchedMapper.TragetWebHost;
-                if (!string.IsNullOrWhiteSpace(virUrl))
-                {
-                    realUrl = realUrl.TrimEnd('/') + '/' + virUrl.TrimStart('/');
-                }
-
-                WebProxy proxy = null;
-                if (!string.IsNullOrEmpty(matchedMapper.UseProxyName))
-                {
-                    proxy = ServiceConfig.ReadConfig().WebProxies?.FirstOrDefault(p => p.Name.Equals(matchedMapper.UseProxyName, StringComparison.OrdinalIgnoreCase));
-                }
-
-                var results = DoWebResponseWithHttpWebRequestChunked(webRequest, realUrl, proxy, chunkContext.Chunks);
+                var results = SendChunkedRequestAndReadResponse(chunkContext);
                 foreach (var result in results)
                 {
                     responseBody.Result = BuildResult(message.MessageHeader.CustomData, result);
@@ -529,6 +521,167 @@ namespace LJC.FrameWork.SOA
                 catch
                 {
                 }
+            }
+        }
+
+        private ChunkedWebRequestContext CreateChunkedWebRequestContext(WebRequest webRequest)
+        {
+            var list = ServiceConfig.ReadConfig()?.WebMappers;
+            WebMapper matchedMapper = WebTransferSvcHelper.Find(webRequest, list);
+            if (matchedMapper == null)
+            {
+                throw new Exception("Not Found");
+            }
+
+            var virUrl = webRequest.VirUrl;
+            if (!string.IsNullOrWhiteSpace(matchedMapper.MappingRoot) && virUrl.StartsWith(matchedMapper.MappingRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                virUrl = virUrl.Substring(matchedMapper.MappingRoot.Length);
+            }
+
+            var realUrl = matchedMapper.TragetWebHost;
+            if (!string.IsNullOrWhiteSpace(virUrl))
+            {
+                realUrl = realUrl.TrimEnd('/') + '/' + virUrl.TrimStart('/');
+            }
+
+            WebProxy proxy = null;
+            if (!string.IsNullOrEmpty(matchedMapper.UseProxyName))
+            {
+                proxy = ServiceConfig.ReadConfig().WebProxies?.FirstOrDefault(p => p.Name.Equals(matchedMapper.UseProxyName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var httpRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(realUrl);
+            httpRequest.Method = webRequest.Method;
+            httpRequest.AllowAutoRedirect = false;
+            httpRequest.KeepAlive = false;
+            httpRequest.AllowWriteStreamBuffering = false;
+            httpRequest.SendChunked = true;
+
+            if (proxy != null)
+            {
+                httpRequest.SetCredential(proxy.Address, proxy.UserName, proxy.UserPassWord);
+            }
+
+            foreach (var kv in webRequest.Headers)
+            {
+                if (kv.Key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                    || kv.Key.Equals("host", StringComparison.OrdinalIgnoreCase)
+                    || kv.Key.Equals("Expect", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (kv.Key.Equals("Referer", StringComparison.OrdinalIgnoreCase))
+                {
+                    httpRequest.Referer = kv.Value;
+                }
+                else if (kv.Key.Equals("Connection", StringComparison.OrdinalIgnoreCase))
+                {
+                }
+                else if (kv.Key.Equals("Proxy-Connection", StringComparison.OrdinalIgnoreCase))
+                {
+                }
+                else if (kv.Key.Equals("User-Agent", StringComparison.OrdinalIgnoreCase))
+                {
+                    httpRequest.UserAgent = kv.Value;
+                }
+                else if (kv.Key.Equals("Accept", StringComparison.OrdinalIgnoreCase))
+                {
+                    httpRequest.Accept = kv.Value;
+                }
+                else if (kv.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    httpRequest.ContentType = kv.Value;
+                }
+                else if (kv.Key.Equals("If-Modified-Since", StringComparison.OrdinalIgnoreCase))
+                {
+                    httpRequest.IfModifiedSince = DateTime.Parse(kv.Value);
+                }
+                else
+                {
+                    httpRequest.Headers.Add(kv.Key, kv.Value);
+                }
+            }
+
+            if (!httpRequest.Headers.AllKeys.Any(p => "Cookie".Equals(p, StringComparison.OrdinalIgnoreCase)))
+            {
+                httpRequest.CookieContainer = new System.Net.CookieContainer();
+                var cookDomain = httpRequest.Host.Split(':').First();
+                foreach (var kv in webRequest.Cookies)
+                {
+                    httpRequest.CookieContainer.Add(new System.Net.Cookie
+                    {
+                        Name = kv.Key,
+                        Value = WebUtility.UrlEncode(kv.Value),
+                        Domain = cookDomain,
+                        Path = "/"
+                    });
+                }
+            }
+
+            if (webRequest.TimeOut > 0)
+            {
+                httpRequest.Timeout = webRequest.TimeOut;
+            }
+
+            var requestStream = httpRequest.GetRequestStream();
+
+            return new ChunkedWebRequestContext
+            {
+                Request = webRequest,
+                HttpRequest = httpRequest,
+                RequestStream = requestStream,
+                RealUrl = realUrl,
+                Proxy = proxy
+            };
+        }
+
+        private IEnumerable<WebResponse> SendChunkedRequestAndReadResponse(ChunkedWebRequestContext chunkContext)
+        {
+            var responses = new List<WebResponse>();
+            try
+            {
+                using (var httpResponse = (System.Net.HttpWebResponse)chunkContext.HttpRequest.GetResponse())
+                {
+                    FillWebResponseChunks(chunkContext.Request, chunkContext.RealUrl, httpResponse, responses);
+                }
+            }
+            catch (System.Net.WebException webEx)
+            {
+                var httpResponse = webEx.Response as System.Net.HttpWebResponse;
+                if (httpResponse != null)
+                {
+                    using (httpResponse)
+                    {
+                        FillWebResponseChunks(chunkContext.Request, chunkContext.RealUrl, httpResponse, responses);
+                    }
+                }
+                else
+                {
+                    responses.Add(new WebResponse
+                    {
+                        ResponseCode = 500,
+                        ContentType = string.Format("{0}; charset={1}", "text/html", "utf-8"),
+                        ResponseData = Encoding.UTF8.GetBytes(webEx.Message),
+                        IsLast = true
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                responses.Add(new WebResponse
+                {
+                    ResponseCode = 500,
+                    ContentType = string.Format("{0}; charset={1}", "text/html", "utf-8"),
+                    ResponseData = Encoding.UTF8.GetBytes(ex.Message),
+                    IsLast = true
+                });
+            }
+
+            foreach (var item in responses)
+            {
+                yield return item;
             }
         }
 
