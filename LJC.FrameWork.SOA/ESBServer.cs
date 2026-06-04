@@ -383,22 +383,6 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        private static IEnumerable<byte[]> SplitBytes(byte[] data, int chunkSize)
-        {
-            if (data == null || data.Length == 0)
-            {
-                yield break;
-            }
-
-            for (var offset = 0; offset < data.Length; offset += chunkSize)
-            {
-                var size = Math.Min(chunkSize, data.Length - offset);
-                var chunk = new byte[size];
-                Buffer.BlockCopy(data, offset, chunk, 0, size);
-                yield return chunk;
-            }
-        }
-
         internal void DoWebRequestStream(WebRequest webRequest, Action<byte[], bool, int, string, Dictionary<string,string>> chunkCallback)
         {
             var soaRequestUrl = @"esbclient/soa/(\d{1,})/(\d{1,})";
