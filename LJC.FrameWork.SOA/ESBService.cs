@@ -541,8 +541,11 @@ namespace LJC.FrameWork.SOA
                 var ackResp = SendMessageAnsy<AckChunkResponse>(ackMsg);
                 if (!ackResp.Success)
                 {
+                    LogHelper.Instance.Info($"数据接收失败，确认失败:{ackResp.Message}");
                     throw new Exception($"数据接收失败，确认失败:{ackResp.Message}");
                 }
+
+                LogHelper.Instance.Info($"数据接收成功，确认成功: tx={request.ClientTransactionID}, chunkNo={request.ChunkNo},消息大小:{request.Param?.Length}");
             }
         }
 

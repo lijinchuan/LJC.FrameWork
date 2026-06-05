@@ -169,7 +169,7 @@ namespace LJC.FrameWork.SOA
                         continue;
                     }
                     var seviceInfo = entry.ServiceInfo;
-                    if (!clienthash.Contains(session.SessionID) || !clienthash.Contains(seviceInfo.Session.SessionID) || DateTime.Now.Subtract(entry.ContinueTime).TotalSeconds > 60)
+                    if (!clienthash.Contains(session.SessionID) || !clienthash.Contains(seviceInfo.Session.SessionID) || DateTime.Now.Subtract(entry.ContinueTime).TotalSeconds > 600)
                     {
                         ESBServer.ConatinerLock.EnterWriteLock();
                         try
@@ -361,6 +361,7 @@ namespace LJC.FrameWork.SOA
                     chunk = new byte[0];
                 }
 
+                LogHelper.Instance.Info($"Append chunk, clientId: {clientId}, transactionId: {transactionId}, chunkNo: {chunkNo}, chunkLength: {chunk.Length}, isLast: {isLast}");
                 //等上一个传输完成
                 var max = 10000;
                 var i = 0;
@@ -379,6 +380,7 @@ namespace LJC.FrameWork.SOA
 
                     if (clientSession == null)
                     {
+                        LogHelper.Instance.Error($"持续会话信息不存在，ClientId: {clientId}");
                         throw new Exception("持续会话信息不存在");
                     }
 
@@ -392,11 +394,13 @@ namespace LJC.FrameWork.SOA
 
                 if (i >= max)
                 {
+                    LogHelper.Instance.Debug($"代理服务接收数据超时，ClientId: {clientId}, chunkNo: {chunkNo}");
                     throw new Exception("代理服务接收数据超时");
                 }
 
                 chunkNo ++;
                 clientSession.LastTrunkNo = this.chunkNo;
+                LogHelper.Instance.Info($"Send chunk, clientId: {clientId}, transactionId: {transactionId}, chunkNo: {chunkNo}, chunkLength: {chunk.Length}, isLast: {isLast}");
 
                 Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
                 msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
@@ -416,8 +420,11 @@ namespace LJC.FrameWork.SOA
 
                 if (!serviceInfo.Session.SendMessage(msg))
                 {
+                    LogHelper.Instance.Info($"Send chunk message failed, clientId: {clientId}, transactionId: {transactionId}, chunkNo: {chunkNo}");
                     throw new Exception("Send chunk message failed");
                 }
+
+                LogHelper.Instance.Info($"Send chunk message success, clientId: {clientId}, transactionId: {transactionId}, chunkNo: {chunkNo}");
             }
         }
 
