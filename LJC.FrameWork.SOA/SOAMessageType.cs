@@ -25,6 +25,9 @@ namespace LJC.FrameWork.SOA
 
         // query client session (used by ESBService to ask ESBServer whether a ClientTransactionID still exists)
         QueryClientSessionRequest,
-        QueryClientSessionResponse
+        QueryClientSessionResponse,
+        AckTrunkRequest,
+        AckTrunkResponse,
+
     }
 }

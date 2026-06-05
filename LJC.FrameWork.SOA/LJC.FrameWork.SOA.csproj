@@ -50,6 +50,8 @@
     <Compile Include="ApiSimulateHandler.cs" />
     <Compile Include="ClientSessionEntry.cs" />
     <Compile Include="Consts.cs" />
+    <Compile Include="Contract\AckChunkRequest.cs" />
+    <Compile Include="Contract\AckChunkResponse.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoRequest.cs" />
     <Compile Include="Contract\GetRegisterServiceInfoResponse.cs" />
     <Compile Include="Contract\ListServiceInfosRequest.cs" />

@@ -38,6 +38,24 @@ namespace LJC.FrameWork.SOA
         } = DateTime.Now;
 
         /// <summary>
+        /// 
+        /// </summary>
+        public int LastTrunkNo
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// 客户端确认的TrunkNo
+        /// </summary>
+        public int AckTrunkNo
+        {
+            get;
+            set;
+        } = -1;
+
+        /// <summary>
         /// 尝试释放/唤醒等待对象（如果存在），并标记超时（如果是 AutoReSetEventResult）
         /// </summary>
         public void ReleaseWaiterAsTimeout()

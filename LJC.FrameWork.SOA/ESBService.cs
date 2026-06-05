@@ -15,6 +15,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Policy;
 using System.Security;
+using System.Runtime.InteropServices;
 
 namespace LJC.FrameWork.SOA
 {
@@ -419,8 +420,10 @@ namespace LJC.FrameWork.SOA
                         chunkRequestContexts[request.ClientTransactionID] = context;
                     }
 
+                    AckMessage();
                     return;
                 }
+
 
                 ChunkedWebRequestContext chunkContext = null;
                 lock (chunkRequestLocker)
@@ -446,6 +449,8 @@ namespace LJC.FrameWork.SOA
                         chunkContext.RequestStream.Flush();
                     }
                 }
+
+                AckMessage();
 
                 if (!request.IsLastChunk)
                 {
@@ -520,6 +525,23 @@ namespace LJC.FrameWork.SOA
                 }
                 catch
                 {
+                }
+            }
+
+            void AckMessage()
+            {
+                //确认消息
+                var ackMsg = new Message((int)SOAMessageType.AckTrunkRequest);
+                ackMsg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+                ackMsg.SetMessageBody(new AckChunkRequest
+                {
+                    ClientId = request.ClientTransactionID,
+                    ChunkNo = request.ChunkNo
+                });
+                var ackResp = SendMessageAnsy<AckChunkResponse>(ackMsg);
+                if (!ackResp.Success)
+                {
+                    throw new Exception($"数据接收失败，确认失败:{ackResp.Message}");
                 }
             }
         }
@@ -1019,45 +1041,18 @@ namespace LJC.FrameWork.SOA
                 return;
             }
 
-            var buffer = new byte[1024 * 1000];
-            var readCount = s.Read(buffer, 0, buffer.Length);
-
-            while (true)
+            var buffer = new byte[1024 * 4];
+            var readCount = 0;
+            using (var ms = new MemoryStream())
             {
-                byte[] next = null;
-                var readCount2 = 0;
-
-                if (readCount == buffer.Length)
+                while ((readCount = s.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    next = new byte[1024 * 1000];
-                    readCount2 = s.Read(next, 0, next.Length);
+                    ms.Write(buffer, 0, readCount);
                 }
 
-                if (next == null)
-                {
-                    response.IsLast = true;
-                    byte[] newArray = buffer;
-                    if (readCount < buffer.Length)
-                    {
-                        newArray = new byte[readCount];
-                        Array.Copy(buffer, newArray, readCount);
-                    }
-
-                    response.ResponseData = newArray;
-                    responses.Add(response);
-                    return;
-                }
-                else
-                {
-                    response.ResponseData = buffer;
-
-                    responses.Add(response);
-                }
-
-                response = new WebResponse();
-
-                buffer = next;
-                readCount = readCount2;
+                response.IsLast = true;
+                response.ResponseData = ms.ToArray();
+                responses.Add(response);
             }
         }
 

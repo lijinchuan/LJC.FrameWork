@@ -298,6 +298,7 @@ namespace LJC.FrameWork.SOA
                     StreamCallbackBytes = chunkCallback,
                     ServiceInfo = serviceInfo,
                     FuncId = 0,
+                    LastTrunkNo = 0,
                     StartTime = DateTime.Now,
                     LastWebResponse = null
                 };
@@ -360,6 +361,43 @@ namespace LJC.FrameWork.SOA
                     chunk = new byte[0];
                 }
 
+                //等上一个传输完成
+                var max = 10000;
+                var i = 0;
+                ClientSessionEntry clientSession =null;
+                for (; i < max; i++)
+                {
+                    try
+                    {
+                        ConatinerLock.EnterReadLock();
+                        server.ClientSessionList.TryGetValue(clientId, out clientSession);
+                    }
+                    finally
+                    {
+                        ConatinerLock.ExitReadLock();
+                    }
+
+                    if (clientSession == null)
+                    {
+                        throw new Exception("持续会话信息不存在");
+                    }
+
+                    if (clientSession.AckTrunkNo == this.chunkNo)
+                    {
+                        break;
+                    }
+
+                    Thread.Sleep(3);
+                }
+
+                if (i >= max)
+                {
+                    throw new Exception("代理服务接收数据超时");
+                }
+
+                chunkNo ++;
+                clientSession.LastTrunkNo = this.chunkNo;
+
                 Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
                 msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
                 msg.SetMessageBody(new SOATransferWebRequest
@@ -372,7 +410,7 @@ namespace LJC.FrameWork.SOA
                     IsChunked = true,
                     IsMeta = false,
                     IsLastChunk = isLast,
-                    ChunkNo = ++chunkNo,
+                    ChunkNo = chunkNo,
                     InputDataLength = webRequest.InputDataLength
                 });
 
@@ -502,188 +540,188 @@ namespace LJC.FrameWork.SOA
             }
         }
 
-        internal void DoWebRequestStreamChunked(WebRequest webRequest, IEnumerable<byte[]> requestChunks, Action<byte[], bool, int, string, Dictionary<string, string>> chunkCallback)
-        {
-            var soaRequestUrl = @"esbclient/soa/(\d{1,})/(\d{1,})";
-            var chunkList = requestChunks?.ToList() ?? new List<byte[]>();
-            var m = Regex.Match(webRequest.VirUrl, soaRequestUrl);
-            if (m.Success)
-            {
-                byte[] requestBytes = webRequest.InputData;
-                if (requestBytes == null && chunkList.Any())
-                {
-                    var totalLen = chunkList.Sum(p => p == null ? 0 : p.Length);
-                    requestBytes = new byte[totalLen];
-                    var offset = 0;
-                    foreach (var chunk in chunkList)
-                    {
-                        if (chunk == null || chunk.Length == 0)
-                        {
-                            continue;
-                        }
-                        Buffer.BlockCopy(chunk, 0, requestBytes, offset, chunk.Length);
-                        offset += chunk.Length;
-                    }
-                }
-                var resp = DoTransferRequest(null, SocketApplicationComm.GetSeqNum(),
-                    new SOARequest
-                    {
-                        FuncId = int.Parse(m.Groups[2].Value),
-                        ServiceNo = int.Parse(m.Groups[1].Value),
-                        Param = requestBytes,
-                        ReqestTime = DateTime.Now
-                    }, new Dictionary<string, string>
-                {
-                    {Consts.HeaderKey_ContentType,Consts.HeaderValue_ContentType_JSONValue }
-                });
+        //internal void DoWebRequestStreamChunked(WebRequest webRequest, IEnumerable<byte[]> requestChunks, Action<byte[], bool, int, string, Dictionary<string, string>> chunkCallback)
+        //{
+        //    var soaRequestUrl = @"esbclient/soa/(\d{1,})/(\d{1,})";
+        //    var chunkList = requestChunks?.ToList() ?? new List<byte[]>();
+        //    var m = Regex.Match(webRequest.VirUrl, soaRequestUrl);
+        //    if (m.Success)
+        //    {
+        //        byte[] requestBytes = webRequest.InputData;
+        //        if (requestBytes == null && chunkList.Any())
+        //        {
+        //            var totalLen = chunkList.Sum(p => p == null ? 0 : p.Length);
+        //            requestBytes = new byte[totalLen];
+        //            var offset = 0;
+        //            foreach (var chunk in chunkList)
+        //            {
+        //                if (chunk == null || chunk.Length == 0)
+        //                {
+        //                    continue;
+        //                }
+        //                Buffer.BlockCopy(chunk, 0, requestBytes, offset, chunk.Length);
+        //                offset += chunk.Length;
+        //            }
+        //        }
+        //        var resp = DoTransferRequest(null, SocketApplicationComm.GetSeqNum(),
+        //            new SOARequest
+        //            {
+        //                FuncId = int.Parse(m.Groups[2].Value),
+        //                ServiceNo = int.Parse(m.Groups[1].Value),
+        //                Param = requestBytes,
+        //                ReqestTime = DateTime.Now
+        //            }, new Dictionary<string, string>
+        //        {
+        //            {Consts.HeaderKey_ContentType,Consts.HeaderValue_ContentType_JSONValue }
+        //        });
 
-                chunkCallback?.Invoke(resp.Result, true, resp.IsSuccess ? 200 : 500, "application/json", null);
-                return;
-            }
+        //        chunkCallback?.Invoke(resp.Result, true, resp.IsSuccess ? 200 : 500, "application/json", null);
+        //        return;
+        //    }
 
-            var list = ServiceContainer.ToList();
-            ESBServiceInfo serviceInfo = null;
-            WebMapper webMapper = null;
-            foreach (var item in list.Where(p => p.WebMappers != null && p.WebMappers.Any()))
-            {
-                webMapper = WebTransferSvcHelper.Find(webRequest, item.WebMappers);
-                if (webMapper != null)
-                {
-                    serviceInfo = item;
-                    break;
-                }
-            }
+        //    var list = ServiceContainer.ToList();
+        //    ESBServiceInfo serviceInfo = null;
+        //    WebMapper webMapper = null;
+        //    foreach (var item in list.Where(p => p.WebMappers != null && p.WebMappers.Any()))
+        //    {
+        //        webMapper = WebTransferSvcHelper.Find(webRequest, item.WebMappers);
+        //        if (webMapper != null)
+        //        {
+        //            serviceInfo = item;
+        //            break;
+        //        }
+        //    }
 
-            if (webMapper == null)
-            {
-                chunkCallback?.Invoke(Encoding.UTF8.GetBytes("Not Found"), true, 404, "text/plain", null);
-                return;
-            }
+        //    if (webMapper == null)
+        //    {
+        //        chunkCallback?.Invoke(Encoding.UTF8.GetBytes("Not Found"), true, 404, "text/plain", null);
+        //        return;
+        //    }
 
-            try
-            {
-                if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
-                {
-                    if (!CheckAlive(serviceInfo.Session))
-                    {
-                        lock (LockObj)
-                        {
-                            ServiceContainer.Remove(serviceInfo);
-                            serviceInfo.Session.Close("web session no resp over 30s and check not alived", true);
+        //    try
+        //    {
+        //        if (DateTime.Now.Subtract(serviceInfo.Session.LastSessionTime).TotalSeconds > 30)
+        //        {
+        //            if (!CheckAlive(serviceInfo.Session))
+        //            {
+        //                lock (LockObj)
+        //                {
+        //                    ServiceContainer.Remove(serviceInfo);
+        //                    serviceInfo.Session.Close("web session no resp over 30s and check not alived", true);
 
-                            chunkCallback?.Invoke(Encoding.UTF8.GetBytes("Service down"), true, 500, "text/plain", null);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        LogHelper.Instance.Info("web session no resp over 30s but check alived");
-                    }
-                }
+        //                    chunkCallback?.Invoke(Encoding.UTF8.GetBytes("Service down"), true, 500, "text/plain", null);
+        //                    return;
+        //                }
+        //            }
+        //            else
+        //            {
+        //                LogHelper.Instance.Info("web session no resp over 30s but check alived");
+        //            }
+        //        }
 
-                string clientid = Guid.NewGuid().ToString("N");
+        //        string clientid = Guid.NewGuid().ToString("N");
 
-                var entry = new ClientSessionEntry
-                {
-                    TransactionId = clientid,
-                    SessionCallback = serviceInfo.Session,
-                    StreamCallbackBytes = chunkCallback,
-                    ServiceInfo = serviceInfo,
-                    FuncId = 0,
-                    StartTime = DateTime.Now,
-                    LastWebResponse = null
-                };
-                try
-                {
-                    ConatinerLock.EnterWriteLock();
-                    ClientSessionList.Add(clientid, entry);
-                }
-                finally
-                {
-                    ConatinerLock.ExitWriteLock();
-                }
+        //        var entry = new ClientSessionEntry
+        //        {
+        //            TransactionId = clientid,
+        //            SessionCallback = serviceInfo.Session,
+        //            StreamCallbackBytes = chunkCallback,
+        //            ServiceInfo = serviceInfo,
+        //            FuncId = 0,
+        //            StartTime = DateTime.Now,
+        //            LastWebResponse = null
+        //        };
+        //        try
+        //        {
+        //            ConatinerLock.EnterWriteLock();
+        //            ClientSessionList.Add(clientid, entry);
+        //        }
+        //        finally
+        //        {
+        //            ConatinerLock.ExitWriteLock();
+        //        }
 
-                var metaRequest = new WebRequest
-                {
-                    Host = webRequest.Host,
-                    VirUrl = webRequest.VirUrl,
-                    Cookies = webRequest.Cookies,
-                    Headers = webRequest.Headers,
-                    Method = webRequest.Method,
-                    QueryString = webRequest.QueryString,
-                    TimeOut = webRequest.TimeOut,
-                    InputData = null,
-                    InputDataLength = webRequest.InputDataLength
-                };
+        //        var metaRequest = new WebRequest
+        //        {
+        //            Host = webRequest.Host,
+        //            VirUrl = webRequest.VirUrl,
+        //            Cookies = webRequest.Cookies,
+        //            Headers = webRequest.Headers,
+        //            Method = webRequest.Method,
+        //            QueryString = webRequest.QueryString,
+        //            TimeOut = webRequest.TimeOut,
+        //            InputData = null,
+        //            InputDataLength = webRequest.InputDataLength
+        //        };
 
-                Message metaMsg = new Message((int)SOAMessageType.SOATransferWebRequest);
-                metaMsg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
-                metaMsg.SetMessageBody(new SOATransferWebRequest
-                {
-                    ClientId = clientid,
-                    ClientTransactionID = clientid,
-                    FundId = 0,
-                    Param = EntityBufCore.Serialize(metaRequest),
-                    RequestTime = DateTime.Now,
-                    IsChunked = true,
-                    IsMeta = true,
-                    IsLastChunk = false,
-                    ChunkNo = 0
-                });
+        //        Message metaMsg = new Message((int)SOAMessageType.SOATransferWebRequest);
+        //        metaMsg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+        //        metaMsg.SetMessageBody(new SOATransferWebRequest
+        //        {
+        //            ClientId = clientid,
+        //            ClientTransactionID = clientid,
+        //            FundId = 0,
+        //            Param = EntityBufCore.Serialize(metaRequest),
+        //            RequestTime = DateTime.Now,
+        //            IsChunked = true,
+        //            IsMeta = true,
+        //            IsLastChunk = false,
+        //            ChunkNo = 0
+        //        });
 
-                if (!serviceInfo.Session.SendMessage(metaMsg))
-                {
-                    try
-                    {
-                        ConatinerLock.EnterWriteLock();
-                        ClientSessionList.Remove(clientid);
-                    }
-                    finally
-                    {
-                        ConatinerLock.ExitWriteLock();
-                    }
-                    chunkCallback?.Invoke(Encoding.UTF8.GetBytes("SendMessage failed"), true, 500, "text/plain", null);
-                    return;
-                }
+        //        if (!serviceInfo.Session.SendMessage(metaMsg))
+        //        {
+        //            try
+        //            {
+        //                ConatinerLock.EnterWriteLock();
+        //                ClientSessionList.Remove(clientid);
+        //            }
+        //            finally
+        //            {
+        //                ConatinerLock.ExitWriteLock();
+        //            }
+        //            chunkCallback?.Invoke(Encoding.UTF8.GetBytes("SendMessage failed"), true, 500, "text/plain", null);
+        //            return;
+        //        }
 
-                if (chunkList.Count == 0)
-                {
-                    chunkList.Add(new byte[0]);
-                }
+        //        if (chunkList.Count == 0)
+        //        {
+        //            chunkList.Add(new byte[0]);
+        //        }
 
-                for (var i = 0; i < chunkList.Count; i++)
-                {
-                    var chunk = chunkList[i] ?? new byte[0];
-                    Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
-                    msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
-                    msg.SetMessageBody(new SOATransferWebRequest
-                    {
-                        ClientId = clientid,
-                        ClientTransactionID = clientid,
-                        FundId = 0,
-                        Param = chunk,
-                        RequestTime = DateTime.Now,
-                        IsChunked = true,
-                        IsMeta = false,
-                        IsLastChunk = i == chunkList.Count - 1,
-                        ChunkNo = i + 1
-                    });
+        //        for (var i = 0; i < chunkList.Count; i++)
+        //        {
+        //            var chunk = chunkList[i] ?? new byte[0];
+        //            Message msg = new Message((int)SOAMessageType.SOATransferWebRequest);
+        //            msg.MessageHeader.TransactionID = SocketApplicationComm.GetSeqNum();
+        //            msg.SetMessageBody(new SOATransferWebRequest
+        //            {
+        //                ClientId = clientid,
+        //                ClientTransactionID = clientid,
+        //                FundId = 0,
+        //                Param = chunk,
+        //                RequestTime = DateTime.Now,
+        //                IsChunked = true,
+        //                IsMeta = false,
+        //                IsLastChunk = i == chunkList.Count - 1,
+        //                ChunkNo = i + 1
+        //            });
 
-                    if (!serviceInfo.Session.SendMessage(msg))
-                    {
-                        throw new Exception("Send chunk message failed");
-                    }
-                }
+        //            if (!serviceInfo.Session.SendMessage(msg))
+        //            {
+        //                throw new Exception("Send chunk message failed");
+        //            }
+        //        }
 
-                return;
-            }
-            catch (Exception ex)
-            {
-                OnError(ex);
-                chunkCallback?.Invoke(Encoding.UTF8.GetBytes(ex.Message), true, 500, "text/plain", null);
-                return;
-            }
-        }
+        //        return;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        OnError(ex);
+        //        chunkCallback?.Invoke(Encoding.UTF8.GetBytes(ex.Message), true, 500, "text/plain", null);
+        //        return;
+        //    }
+        //}
 
         internal System.Collections.Concurrent.ConcurrentDictionary<string, Session> GetConnectedList()
         {
@@ -1621,7 +1659,47 @@ namespace LJC.FrameWork.SOA
             {
                 return;
             }
+            else if (message.IsMessage((int)SOAMessageType.AckTrunkRequest))
+            {
+                var req = message.GetMessageBody<Contract.AckChunkRequest>();
+                bool success = false;
+                string msg = string.Empty;
+                ClientSessionEntry clientSession = null;
+                try
+                {
+                    ConatinerLock.EnterReadLock();
+                    ClientSessionList.TryGetValue(req.ClientId, out clientSession);
+                }
+                finally
+                {
+                    ConatinerLock.ExitReadLock();
+                }
 
+                if (clientSession == null)
+                {
+                    msg = "确认失败:会话不存在";
+                }
+                else if (clientSession.LastTrunkNo != req.ChunkNo)
+                {
+                    msg = "确认失败，TrunkNo不一致";
+                }
+                else
+                {
+                    clientSession.AckTrunkNo= req.ChunkNo;
+                    success = true;
+                    msg = "确认成功";
+                }
+
+                var respMsg = new Message((int)SOAMessageType.AckTrunkResponse); // QueryClientSessionResponse
+                respMsg.MessageHeader.TransactionID = message.MessageHeader.TransactionID;
+                respMsg.SetMessageBody(new Contract.AckChunkResponse
+                {
+                     Success =success,
+                     Message = msg
+                });
+
+                session.SendMessage(respMsg);
+            }
             else if (message.IsMessage((int)SOAMessageType.QueryClientSessionRequest)) // QueryClientSessionRequest
             {
                 try
