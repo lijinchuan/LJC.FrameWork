@@ -1,5 +1,6 @@
 ﻿using LJC.FrameWork.Comm;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         /// 是否第一次报超时
         /// </summary>
         private bool isFirstTimeOut = true;
-        protected Dictionary<string, Session> appSockets;
+        protected ConcurrentDictionary<string, Session> appSockets;
 
         public event Action SessionTimeOut;
         public event Action SessionResume;
@@ -38,7 +39,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
         public SessionMessageApp(int port)
             : base(string.Empty, port)
         {
-            appSockets = new Dictionary<string, Session>();
+            appSockets = new ConcurrentDictionary<string, Session>();
         }
 
         public Session LookUpSession()
@@ -323,7 +324,7 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
 
                 //session.Socket = s;
                 //session.IPAddress = ((System.Net.IPEndPoint)s.RemoteEndPoint).Address.ToString();
-                appSockets.Add(session.SessionID, session);
+                appSockets[session.SessionID] = session;
                 Console.WriteLine("{0}成功登陆", request.LoginID);
             }
             else
@@ -364,7 +365,8 @@ namespace LJC.FrameWork.SocketApplication.SocketSTD
             Message msg = new Message(MessageType.LOGOUT);
 
             session.SendMessage(msg);
-            appSockets.Remove(session.SessionID);
+            Session removedSession;
+            appSockets.TryRemove(session.SessionID, out removedSession);
             session.IsValid = false;
 
             Console.WriteLine(string.Format("{0}已退出登陆", session.UserName));
